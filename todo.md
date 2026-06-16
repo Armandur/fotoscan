@@ -12,9 +12,6 @@
   VIKTIGT: fotots egen `gps_lat/lon` (exakt fotografposition) lever kvar
   oberoende och är frikopplad från platsen - olika foton med samma plats kan ha
   olika (eller ingen) exakt GPS. Place = grov hink, foto-GPS = exaktheten.
-- [ ] **Infinite-scroll i par-modalen.** Kandidatlistan vid hopparning är
-  begränsad (limit 60) och man kan inte alltid söka på negativen vettigt. Lägg
-  lazy-loading/infinite-scroll så man kan bläddra igenom alla kandidater.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -47,6 +44,7 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Infinite-scroll i par-modalen (paginerade kandidater, offset/limit).
 - [x] Tidslinjevy: foton grupperade per år/månad (med "okänd månad"/"okänt
   datum"-grupper) + år-snabbnavigering.
 - [x] Taggar-vy: lista, detalj, skapa, byt namn (merge), ta bort.

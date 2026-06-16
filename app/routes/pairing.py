@@ -36,6 +36,7 @@ def _photo_brief(p: Photo) -> dict:
 @router.get("/api/photos/{photo_id}/pair-candidates")
 def pair_candidates(
     photo_id: int, q: str = "", show_matched: bool = False,
+    offset: int = 0, limit: int = 60,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -54,7 +55,8 @@ def pair_candidates(
             Photo.date_text.ilike(like),
         ))
     photos = (
-        query.order_by(Photo.folder, Photo.filename).limit(60).all()
+        query.order_by(Photo.folder, Photo.filename)
+        .offset(max(0, offset)).limit(min(limit, 200)).all()
     )
     return [_photo_brief(p) for p in photos]
 

@@ -26,49 +26,70 @@
     const list = document.getElementById("pair-candidates");
     const conflictsBox = document.getElementById("pair-conflicts");
 
+    const loadingEl = document.getElementById("pair-loading");
+    const LIMIT = 60;
+    let offset = 0, loading = false, done = false;
+
     function openPairModal() {
         conflictsBox.hidden = true;
+        list.hidden = false;
         modal.show();
-        loadCandidates();
+        resetAndLoad();
     }
     pairBtn.addEventListener("click", openPairModal);
     window.openPairModal = openPairModal;  // för kortkommando M
 
-    async function loadCandidates() {
+    function makeCandidateCard(c) {
+        const card = document.createElement("div");
+        card.className = "card photo-card";
+        card.style.cursor = "pointer";
+        const neg = c.is_negative ? `<span class="badge text-bg-secondary">negativ</span>` : "";
+        card.innerHTML =
+            `<img loading="lazy" class="card-img-top loaded" src="/thumb/${c.id}" alt="">` +
+            `<div class="card-body p-2">` +
+            `<div class="text-info small text-truncate">${escapeHtml(c.date) || "?"} ${neg}</div>` +
+            `<div class="text-secondary small text-truncate">${escapeHtml(c.filename)}</div>` +
+            `<div class="text-secondary small text-truncate"><i class="bi bi-folder"></i> ${escapeHtml(c.folder) || "(rot)"}</div>` +
+            `</div>`;
+        card.addEventListener("click", () => attemptPair(c.id));
+        return card;
+    }
+
+    async function loadMore() {
+        if (loading || done) return;
+        loading = true;
+        loadingEl.hidden = false;
         const params = new URLSearchParams({
             q: search.value.trim(),
             show_matched: showMatched.checked ? "true" : "false",
+            offset: offset, limit: LIMIT,
         });
         try {
             const cands = await apiFetch(`/api/photos/${photoId}/pair-candidates?${params}`);
-            renderCandidates(cands);
+            if (offset === 0 && !cands.length) {
+                list.innerHTML = `<div class="text-secondary p-3">Inga matchande foton</div>`;
+                done = true;
+                return;
+            }
+            cands.forEach(c => list.appendChild(makeCandidateCard(c)));
+            offset += cands.length;
+            if (cands.length < LIMIT) done = true;
         } catch (e) {
-            list.innerHTML = `<div class="text-secondary">Kunde inte hämta kandidater</div>`;
+            if (offset === 0) list.innerHTML = `<div class="text-secondary p-3">Kunde inte hämta kandidater</div>`;
+        } finally {
+            loading = false;
+            loadingEl.hidden = true;
         }
     }
 
-    function renderCandidates(cands) {
-        list.innerHTML = "";
-        if (!cands.length) {
-            list.innerHTML = `<div class="text-secondary p-3">Inga matchande foton</div>`;
-            return;
-        }
-        cands.forEach(c => {
-            const card = document.createElement("div");
-            card.className = "card photo-card";
-            card.style.cursor = "pointer";
-            const neg = c.is_negative ? `<span class="badge text-bg-secondary">negativ</span>` : "";
-            card.innerHTML =
-                `<img loading="lazy" class="card-img-top loaded" src="/thumb/${c.id}" alt="">` +
-                `<div class="card-body p-2">` +
-                `<div class="text-info small text-truncate">${escapeHtml(c.date) || "?"} ${neg}</div>` +
-                `<div class="text-secondary small text-truncate">${escapeHtml(c.filename)}</div>` +
-                `<div class="text-secondary small text-truncate"><i class="bi bi-folder"></i> ${escapeHtml(c.folder) || "(rot)"}</div>` +
-                `</div>`;
-            card.addEventListener("click", () => attemptPair(c.id));
-            list.appendChild(card);
-        });
+    function resetAndLoad() {
+        offset = 0; done = false; list.innerHTML = "";
+        loadMore();
     }
+
+    list.addEventListener("scroll", () => {
+        if (list.scrollTop + list.clientHeight >= list.scrollHeight - 250) loadMore();
+    });
 
     async function attemptPair(otherId, resolutions) {
         try {
@@ -120,7 +141,7 @@
     let searchTimer = null;
     search.addEventListener("input", () => {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(loadCandidates, 250);
+        searchTimer = setTimeout(resetAndLoad, 250);
     });
-    showMatched.addEventListener("change", loadCandidates);
+    showMatched.addEventListener("change", resetAndLoad);
 })();

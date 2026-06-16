@@ -234,7 +234,10 @@
                         <label class="form-check-label" for="pair-show-matched">Visa matchade</label>
                     </div>
                 </div>
-                <div id="pair-candidates" class="gallery-grid"></div>
+                <div id="pair-candidates" class="gallery-grid" style="max-height:55vh;overflow-y:auto"></div>
+                <div id="pair-loading" class="text-secondary small text-center py-2" hidden>
+                    <span class="spinner-border spinner-border-sm"></span> Laddar fler...
+                </div>
                 <div id="pair-conflicts" hidden></div>
             </div>
         </div>

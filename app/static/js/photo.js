@@ -196,6 +196,47 @@
     attachAutocomplete(field("people"), "person");
     attachAutocomplete(field("tags"), "tag");
 
+    // Enkelvärdes-autocomplete för Plats mot redan registrerade platser.
+    function attachPlaceAutocomplete(input) {
+        const box = document.createElement("div");
+        box.className = "ac-box";
+        box.hidden = true;
+        input.parentElement.style.position = "relative";
+        input.parentElement.appendChild(box);
+        let active = -1, items = [];
+        async function search() {
+            try { items = await apiFetch(`/api/places?q=${encodeURIComponent(input.value.trim())}`); }
+            catch (e) { items = []; }
+            active = -1; render();
+        }
+        function render() {
+            const cur = input.value.trim().toLowerCase();
+            const matches = items.filter(p => p.name.toLowerCase() !== cur).slice(0, 8);
+            if (!matches.length) { box.hidden = true; return; }
+            box.innerHTML = matches.map((p, i) =>
+                `<div class="ac-item${i === active ? " active" : ""}" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>`
+            ).join("");
+            box.hidden = false;
+        }
+        input.addEventListener("input", search);
+        input.addEventListener("focus", search);
+        input.addEventListener("blur", () => setTimeout(() => { box.hidden = true; }, 150));
+        box.addEventListener("mousedown", (e) => {
+            const item = e.target.closest(".ac-item");
+            if (item) { e.preventDefault(); input.value = item.dataset.name; box.hidden = true; }
+        });
+        input.addEventListener("keydown", (e) => {
+            if (box.hidden) return;
+            const els = [...box.querySelectorAll(".ac-item")];
+            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, els.length - 1); render(); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+            else if ((e.key === "Enter" || e.key === "Tab") && active >= 0) {
+                e.preventDefault(); input.value = els[active].dataset.name; box.hidden = true;
+            }
+        });
+    }
+    attachPlaceAutocomplete(field("location"));
+
     // ---- Globala kortkommandon ----
     const fieldKeys = {
         d: "date_text", l: "location", p: "people",

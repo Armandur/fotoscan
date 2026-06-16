@@ -25,6 +25,9 @@
             notes: field("notes").value,
             source: field("source").value,
             is_negative: field("is_negative").checked,
+            gps_lat: field("gps_lat").value.trim() ? parseFloat(field("gps_lat").value) : null,
+            gps_lon: field("gps_lon").value.trim() ? parseFloat(field("gps_lon").value) : null,
+            gps_radius_m: field("gps_radius_m").value.trim() ? parseInt(field("gps_radius_m").value, 10) : null,
             tags,
             mark_reviewed: markReviewed,
         };

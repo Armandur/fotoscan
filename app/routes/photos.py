@@ -243,6 +243,9 @@ def update_photo(
     photo.notes = data.notes.strip()
     photo.source = data.source.strip()
     photo.is_negative = 1 if data.is_negative else 0
+    photo.gps_lat = data.gps_lat
+    photo.gps_lon = data.gps_lon
+    photo.gps_radius_m = data.gps_radius_m
 
     photo.tags = [
         _get_or_create_tag(db, t.name, t.kind)

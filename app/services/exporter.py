@@ -46,6 +46,16 @@ def _metadata_args(photo: Photo, skip_orientation: bool = False) -> list[str]:
 
     if photo.location:
         args.append(f"-XMP-iptcCore:Location={photo.location}")
+
+    if photo.gps_lat is not None and photo.gps_lon is not None:
+        args += [
+            f"-GPSLatitude={abs(photo.gps_lat)}",
+            f"-GPSLatitudeRef={'N' if photo.gps_lat >= 0 else 'S'}",
+            f"-GPSLongitude={abs(photo.gps_lon)}",
+            f"-GPSLongitudeRef={'E' if photo.gps_lon >= 0 else 'W'}",
+        ]
+        if photo.gps_radius_m:
+            args.append(f"-GPSHPositioningError={photo.gps_radius_m}")
     if photo.notes:
         args.append(f"-XMP-dc:Description={photo.notes}")
     if photo.source:

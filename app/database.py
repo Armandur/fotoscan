@@ -56,6 +56,10 @@ class Photo(Base):
     )
 
     location = Column(String, default="")
+    # Fotografens position (där bilden togs). Valfri osäkerhetsradie i meter.
+    gps_lat = Column(Float, nullable=True)
+    gps_lon = Column(Float, nullable=True)
+    gps_radius_m = Column(Integer, nullable=True)
     notes = Column(Text, default="")
     # Källa: vem fotot kommer från (t.ex. mormors album).
     source = Column(String, default="")
@@ -168,3 +172,7 @@ def init_db() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE photos ADD COLUMN paired_with_id INTEGER"
             )
+        for _c, _t in (("gps_lat", "FLOAT"), ("gps_lon", "FLOAT"),
+                       ("gps_radius_m", "INTEGER")):
+            if not _column_exists(conn, "photos", _c):
+                conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")

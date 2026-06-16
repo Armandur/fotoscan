@@ -28,6 +28,7 @@ app/
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
+    geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
@@ -65,6 +66,11 @@ photos/                exempel/testbilder (gitignored)
   `/image` (och thumbnail), live-preview i UI via CSS-filter på `/image?raw=1`.
   Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
   OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
+- **Position/karta** (`Photo.gps_lat/gps_lon/gps_radius_m`): fotografens position
+  sätts via en Leaflet/OSM-karta (självhostad under `static/vendor/leaflet/`,
+  `map.js`). Adress-sök går via backend-proxyn `/api/geocode` (Nominatim, med
+  korrekt User-Agent). Exporteras som EXIF GPS + `GPSHPositioningError` (radie).
+  OBS: Leaflet kan inte browser-testas i obscura (kastar headless).
 - **Hopparning** (`Photo.is_negative`, `Photo.paired_with_id`): symmetrisk 1:1-
   länk mellan ett negativ och dess skannade foto. Vid hopparning slås metadatan
   samman (fält som bara en har auto-fylls; konflikter löses i en diff-vy;

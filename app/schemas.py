@@ -47,6 +47,9 @@ class PhotoUpdate(BaseModel):
     notes: str = ""
     source: str = ""
     is_negative: bool = False
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+    gps_radius_m: int | None = None
     # Hela uppsättningen taggar/personer för fotot (ersätter befintliga).
     tags: list[TagItem] = Field(default_factory=list)
     mark_reviewed: bool = False

@@ -1,6 +1,9 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Platser-vy.** Sök på plats (likt taggar/personer) och en vy där man
+  bläddrar foton per plats. Överväg att normalisera plats (egen tabell) i stället
+  för fritextfält, ev. med koppling till GPS-koordinater/karta.
 - [ ] **Taggar-vy.** Bläddra foton via taggar; skapa, ta bort och byt namn på
   taggar (som personvyn fast för vanliga taggar). Hierarkiska taggar om det går
   att exportera - XMP stödjer det via Lightroom `lr:hierarchicalSubject`
@@ -25,13 +28,6 @@
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
 - [ ] Galleri-navigering med tangentbord (pilar/Enter för att öppna).
 - [ ] Bulk-redigering: sätt datum/tagg på flera markerade foton.
-- [ ] **Kartstöd för plats (koordinater).** "Ange på karta"-knapp vid Plats som
-  öppnar en Leaflet-karta med OSM-tiles; klicka för att sätta position (lat/lon),
-  ev. en radie för osäkerhet. DB: lat, lon, ev. accuracy_m. Export till EXIF GPS
-  (GPSLatitude/GPSLongitude) + osäkerhet via EXIF GPSHPositioningError (meter) -
-  så radie stöds av standarden. Påminn om att det är FOTOGRAFENS position.
-  Leaflet bör självhostas (som Bootstrap). OBS: Leaflet/canvas kastar i obscura
-  headless - kan inte browser-testas där, kräver manuell test.
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
 - [ ] Backup/databasexport.
 
@@ -43,6 +39,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Kartstöd för plats: Leaflet/OSM-karta (självhostad) för fotografens
+  position, adress-sök via Nominatim-proxy, osäkerhetsradie, export till EXIF GPS
+  + GPSHPositioningError. (Kartinteraktionen ej obscura-testbar.)
 - [x] Hopparning negativ<->foto: negativ-flagga, sök kandidater (matchade dolda
   som default + toggle), metadata-merge med diff-vy vid konflikt, koppla isär.
 - [x] Personvy: lista, detalj, namnbyte, merge (söklista med thumbnails),

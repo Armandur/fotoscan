@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ photo.filename }} - Fotoscan{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
 
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ pos }} / {{ total }}</span>
@@ -126,9 +127,18 @@
 
             <div class="mb-3">
                 <label class="form-label">Plats <kbd class="kbd-hint">L</kbd></label>
-                <input type="text" class="form-control" name="location" value="{{ photo.location }}"
-                       placeholder="ex. Storgatan, Luleå">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="location" value="{{ photo.location }}"
+                           placeholder="ex. Storgatan, Luleå">
+                    <button type="button" class="btn btn-outline-secondary" id="map-btn">
+                        <i class="bi bi-geo-alt"></i> Karta
+                    </button>
+                </div>
                 <div class="form-text">Ange <strong>fotografens</strong> position (där bilden togs), inte motivets.</div>
+                <input type="hidden" name="gps_lat" value="{{ photo.gps_lat if photo.gps_lat is not none else '' }}">
+                <input type="hidden" name="gps_lon" value="{{ photo.gps_lon if photo.gps_lon is not none else '' }}">
+                <input type="hidden" name="gps_radius_m" value="{{ photo.gps_radius_m if photo.gps_radius_m is not none else '' }}">
+                <div class="form-text" id="gps-summary"></div>
             </div>
 
             <div class="mb-3 autocomplete-wrap">
@@ -229,6 +239,36 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="map-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ange fotografens position</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-2">
+                    <input id="map-search" class="form-control" placeholder="Sök adress eller plats...">
+                    <button class="btn btn-outline-secondary" id="map-search-btn" type="button">Sök</button>
+                </div>
+                <div id="map-search-results" class="list-group mb-2"></div>
+                <div id="map" style="height:50vh;border-radius:var(--bs-border-radius)"></div>
+                <div class="d-flex gap-2 align-items-center mt-2 flex-wrap">
+                    <label class="small text-nowrap mb-0">Osäkerhetsradie (m)</label>
+                    <input type="number" id="map-radius" class="form-control form-control-sm"
+                           style="width:120px" min="0" step="10" placeholder="0">
+                    <span class="small text-secondary" id="map-coords"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-danger me-auto" id="map-clear" type="button">Rensa position</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Avbryt</button>
+                <button class="btn btn-primary" id="map-use" type="button">Använd</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -236,4 +276,6 @@
 <script src="/static/js/faces.js"></script>
 <script src="/static/js/adjust.js"></script>
 <script src="/static/js/pairing.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/js/map.js"></script>
 {% endblock %}

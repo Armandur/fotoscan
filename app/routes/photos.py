@@ -334,6 +334,29 @@ def adjust_photo(
     return JSONResponse({"ok": True})
 
 
+# Metadata som delas inom en hopparning (foto + negativ = en kombination).
+# Per-bild-fält (is_negative, rotation, justeringar, exif_datetime, bildfilen)
+# delas INTE.
+_SHARED_META = [
+    "date_text", "date_year", "date_month", "date_precision",
+    "location", "notes", "source", "gps_lat", "gps_lon", "gps_radius_m",
+    "reviewed_at",
+]
+
+
+def _sync_pair_metadata(db: Session, photo: Photo) -> None:
+    """Spegla delad metadata + taggar till det hopparade fotot, så att en
+    hopparning beter sig som en kombination (redigera en -> uppdaterar båda)."""
+    if not photo.paired_with_id:
+        return
+    partner = db.get(Photo, photo.paired_with_id)
+    if not partner:
+        return
+    for f in _SHARED_META:
+        setattr(partner, f, getattr(photo, f))
+    partner.tags = list(photo.tags)
+
+
 def _get_or_create_tag(db: Session, name: str, kind: str) -> Tag:
     name = name.strip()
     tag = (
@@ -376,5 +399,6 @@ def update_photo(
     if data.mark_reviewed:
         photo.reviewed_at = _now()
 
+    _sync_pair_metadata(db, photo)
     db.commit()
     return JSONResponse({"ok": True})

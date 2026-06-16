@@ -434,6 +434,13 @@ def update_photo(
         for t in data.tags
         if t.name.strip()
     ]
+    # Personer med ansiktsregion på fotot måste alltid finnas i Personer-fältet
+    # (man kan inte ta bort en person ur fältet om dess ansikte är markerat).
+    present = {t.id for t in photo.tags}
+    for f in photo.faces:
+        if f.tag_id not in present:
+            photo.tags.append(f.tag)
+            present.add(f.tag_id)
 
     if data.mark_reviewed:
         photo.reviewed_at = _now()

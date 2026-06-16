@@ -62,6 +62,9 @@
                 <option value="all" {% if filter == 'all' %}selected{% endif %}>Alla</option>
                 <option value="unreviewed" {% if filter == 'unreviewed' %}selected{% endif %}>Ej granskade</option>
                 <option value="reviewed" {% if filter == 'reviewed' %}selected{% endif %}>Granskade</option>
+                <option value="negative" {% if filter == 'negative' %}selected{% endif %}>Negativ</option>
+                <option value="negative_unmatched" {% if filter == 'negative_unmatched' %}selected{% endif %}>Negativ - omatchade</option>
+                <option value="unmatched" {% if filter == 'unmatched' %}selected{% endif %}>Ej hopparade</option>
             </select>
         </div>
         <div class="col-6 col-md-auto">

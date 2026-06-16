@@ -48,6 +48,12 @@ def _filtered_query(db: Session, q: str, filter: str, folder: str, recursive: bo
         query = query.filter(Photo.reviewed_at.is_(None))
     elif filter == "reviewed":
         query = query.filter(Photo.reviewed_at.isnot(None))
+    elif filter == "negative":
+        query = query.filter(Photo.is_negative == 1)
+    elif filter == "negative_unmatched":
+        query = query.filter(Photo.is_negative == 1, Photo.paired_with_id.is_(None))
+    elif filter == "unmatched":
+        query = query.filter(Photo.paired_with_id.is_(None))
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
         if recursive:

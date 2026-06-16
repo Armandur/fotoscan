@@ -1,18 +1,13 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Para ihop negativ + skannat foto (samma motiv).** Länka två (eller
-  flera) foton som representerar samma bild. Designidé: en självrefererande
-  länk (photo_links eller group_id). Vid hopparning: slå samman metadatan -
-  om båda har värden i samma fält och de skiljer sig, visa en diff-/merge-vy
-  där man väljer vilket värde som gäller (eller behåller båda för taggar/
-  personer). Ansiktsregioner hör till respektive bild men personlistan kan
-  delas. Fundera på vilken bild som är "primär" vid export.
-  Förfinat:
-    - Flagga/tagg på foto: "skannat negativ" (eget fält, t.ex. is_negative),
-      används för att hitta negativ att para ihop.
-    - Sökläge för matchning: redan matchade negativ visas INTE som default i
-      sökträfflistan, men en toggle kan visa även redan matchade.
+- [ ] **Taggar-vy.** Bläddra foton via taggar; skapa, ta bort och byt namn på
+  taggar (som personvyn fast för vanliga taggar). Hierarkiska taggar om det går
+  att exportera - XMP stödjer det via Lightroom `lr:hierarchicalSubject`
+  (pipe-separerat, t.ex. "Familj|Farfar") parallellt med platta `dc:subject`.
+- [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
+  (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
+  hela bilden med en rektangel som markerar aktuellt visat område.
 - [ ] **Mer metadata på personer.** Idag är en person bara en tagg (namn). I
   framtiden: födelse-/dödsår, relation, alias/smeknamn, anteckningar, ev. länk
   mellan personer (familj). Kräver en egen Person-modell (eller utökad Tag) -
@@ -42,6 +37,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Hopparning negativ<->foto: negativ-flagga, sök kandidater (matchade dolda
+  som default + toggle), metadata-merge med diff-vy vid konflikt, koppla isär.
+- [x] Personvy: lista, detalj, namnbyte, merge (söklista med thumbnails),
+  borttagning, samt "ta bort sista taggning -> radera person".
 - [x] Färg-/tonkorrigering: auto-ton + ljusstyrka/kontrast/gamma/mättnad/per-
   kanal (Pillow). Sparas i DB, renderas on-the-fly med live-preview, bakas in
   vid export. Originalet orört.

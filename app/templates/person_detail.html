@@ -16,14 +16,20 @@
             <input type="text" class="form-control" id="person-name" value="{{ person.name }}">
             <button class="btn btn-primary" id="rename-btn">Spara namn</button>
         </div>
-        <div class="input-group mt-2" style="max-width:420px">
-            <span class="input-group-text">Slå ihop med</span>
-            <select class="form-select" id="merge-select">
-                <option value="">Välj person...</option>
-            </select>
-            <button class="btn btn-outline-warning" id="merge-btn">Slå ihop</button>
+        <div class="mt-2 position-relative" style="max-width:420px">
+            <div class="input-group">
+                <span class="input-group-text">Slå ihop med</span>
+                <input type="text" class="form-control" id="merge-search"
+                       placeholder="Sök person..." autocomplete="off">
+            </div>
+            <div class="face-ac" id="merge-ac" style="position:absolute;left:0;right:0;z-index:30"></div>
         </div>
-        <div class="text-secondary small mt-1">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} där personen förekommer</div>
+        <div class="d-flex gap-2 align-items-center mt-2">
+            <button class="btn btn-outline-danger btn-sm" id="delete-person-btn">
+                <i class="bi bi-trash"></i> Ta bort person
+            </button>
+            <span class="text-secondary small">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} där personen förekommer</span>
+        </div>
     </div>
 </div>
 
@@ -59,35 +65,72 @@
 <script>
 const personId = document.querySelector("[data-person-id]").dataset.personId;
 
-// Fyll merge-listan med övriga personer
-(async () => {
-    try {
-        const persons = await apiFetch("/api/persons");
-        const sel = document.getElementById("merge-select");
-        persons.filter(p => String(p.id) !== String(personId)).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = `${p.name} (${p.count})`;
-            sel.appendChild(opt);
-        });
-    } catch (e) {}
-})();
+// Merge via söklista med thumbnails
+const mergeSearch = document.getElementById("merge-search");
+const mergeAc = document.getElementById("merge-ac");
+let mergeItems = [], mergeActive = -1;
 
-document.getElementById("merge-btn").addEventListener("click", async (e) => {
-    const sel = document.getElementById("merge-select");
-    const intoId = sel.value;
-    if (!intoId) { showToast("Välj en person att slå ihop med", true); return; }
-    const targetLabel = sel.options[sel.selectedIndex].textContent;
-    if (!confirm(`Slå ihop "${document.getElementById('person-name').value}" in i "${targetLabel}"? Detta går inte att ångra.`)) return;
-    e.target.disabled = true;
+function renderMerge() {
+    mergeAc.innerHTML = mergeItems.map((p, i) => {
+        const thumb = p.region_id
+            ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
+            : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
+        return `<div class="face-ac-item${i === mergeActive ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
+            + thumb
+            + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+            + `<span class="face-ac-count">${p.count}</span></div>`;
+    }).join("");
+    mergeAc.classList.toggle("show", mergeItems.length > 0);
+}
+
+async function mergeSearchRun() {
+    try {
+        const all = await apiFetch(`/api/persons?q=${encodeURIComponent(mergeSearch.value.trim())}`);
+        mergeItems = all.filter(p => String(p.id) !== String(personId));
+    } catch (e) { mergeItems = []; }
+    mergeActive = -1;
+    renderMerge();
+}
+
+async function doMerge(intoId, name) {
+    if (!confirm(`Slå ihop "${document.getElementById('person-name').value}" in i "${name}"? Detta går inte att ångra.`)) return;
     try {
         const res = await apiFetch(`/api/persons/${personId}/merge`, {
             method: "POST", body: { into_id: parseInt(intoId, 10) },
         });
         showToast("Personerna sammanslagna");
-        setTimeout(() => { location.href = `/persons/${res.id}`; }, 700);
+        setTimeout(() => { location.href = `/persons/${res.id}`; }, 600);
     } catch (err) {
         showToast("Kunde inte slå ihop: " + err.message, true);
+    }
+}
+
+mergeSearch.addEventListener("input", mergeSearchRun);
+mergeSearch.addEventListener("focus", mergeSearchRun);
+mergeSearch.addEventListener("blur", () => setTimeout(() => mergeAc.classList.remove("show"), 150));
+mergeAc.addEventListener("mousedown", (e) => {
+    const item = e.target.closest(".face-ac-item");
+    if (item) { e.preventDefault(); doMerge(item.dataset.id, item.dataset.name); }
+});
+mergeSearch.addEventListener("keydown", (e) => {
+    if (!mergeItems.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); mergeActive = Math.min(mergeActive + 1, mergeItems.length - 1); renderMerge(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); mergeActive = Math.max(mergeActive - 1, 0); renderMerge(); }
+    else if (e.key === "Enter" && mergeActive >= 0) {
+        e.preventDefault();
+        doMerge(mergeItems[mergeActive].id, mergeItems[mergeActive].name);
+    }
+});
+
+document.getElementById("delete-person-btn").addEventListener("click", async (e) => {
+    if (!confirm(`Ta bort personen "${document.getElementById('person-name').value}" helt? Ansiktstaggningar för personen tas bort. Detta går inte att ångra.`)) return;
+    e.target.disabled = true;
+    try {
+        await apiFetch(`/api/persons/${personId}`, { method: "DELETE" });
+        showToast("Personen borttagen");
+        setTimeout(() => { location.href = "/persons"; }, 600);
+    } catch (err) {
+        showToast("Kunde inte ta bort: " + err.message, true);
         e.target.disabled = false;
     }
 });

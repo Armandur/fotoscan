@@ -8,6 +8,7 @@ from app.config import (
 )
 from app.database import Photo
 from app.services.adjust import apply_adjustments, has_adjustments
+from app.services.dates import parse_date_text
 
 _DATETIME_ORIGINAL = 0x9003  # DateTimeOriginal, ligger i Exif-sub-IFD
 _DATETIME = 0x0132           # DateTime (ModifyDate) i IFD0, fallback
@@ -126,12 +127,15 @@ def scan_directory(db: Session) -> dict:
                 exif_raw, date_text, year = _read_exif_date(img)
             rel_parent = path.relative_to(PHOTO_DIR).parent
             folder = "" if str(rel_parent) == "." else rel_parent.as_posix()
+            p_year, p_month, p_prec = parse_date_text(date_text)
             photo = Photo(
                 path=abspath,
                 filename=path.name,
                 folder=folder,
                 date_text=date_text,
-                date_year=year,
+                date_year=p_year or year,
+                date_month=p_month,
+                date_precision=p_prec,
                 exif_datetime=exif_raw,
             )
             db.add(photo)

@@ -15,6 +15,7 @@ from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import has_adjustments
+from app.services.dates import parse_date_text
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
 )
@@ -296,7 +297,14 @@ def update_photo(
         raise HTTPException(404, "Foto hittades inte")
 
     photo.date_text = data.date_text.strip()
-    photo.date_year = data.date_year
+    # Härled år/månad/precision ur fritexten; falla tillbaka till det explicita
+    # År-fältet om fritexten inte ger något år.
+    p_year, p_month, p_prec = parse_date_text(photo.date_text)
+    if p_year is None and data.date_year:
+        p_year, p_prec = data.date_year, "year"
+    photo.date_year = p_year
+    photo.date_month = p_month
+    photo.date_precision = p_prec
     photo.location = data.location.strip()
     photo.notes = data.notes.strip()
     photo.source = data.source.strip()

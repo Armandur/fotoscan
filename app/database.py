@@ -43,6 +43,9 @@ class Photo(Base):
     date_text = Column(String, default="")
     # Valfritt sorterbart år, fylls i när det går att tolka.
     date_year = Column(Integer, nullable=True, index=True)
+    # Härlett ur date_text: månad (1-12) och precision (day/month/season/year/"").
+    date_month = Column(Integer, nullable=True, index=True)
+    date_precision = Column(String, default="")
     # Råt inbäddat fotodatum ur filens EXIF (DateTimeOriginal), läses en gång vid
     # scan och skrivs aldrig över. Visas read-only så användaren ser vad filen
     # faktiskt innehåller även efter att date_text redigerats.
@@ -173,6 +176,7 @@ def init_db() -> None:
                 "ALTER TABLE photos ADD COLUMN paired_with_id INTEGER"
             )
         for _c, _t in (("gps_lat", "FLOAT"), ("gps_lon", "FLOAT"),
-                       ("gps_radius_m", "INTEGER")):
+                       ("gps_radius_m", "INTEGER"), ("date_month", "INTEGER"),
+                       ("date_precision", "VARCHAR")):
             if not _column_exists(conn, "photos", _c):
                 conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")

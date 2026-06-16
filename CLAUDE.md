@@ -44,8 +44,11 @@ photos/                exempel/testbilder (gitignored)
 ## Designbeslut
 - **Metadata i DB, inte i filerna.** Snabb sökning, ångerbart, funkar för
   negativ utan EXIF. Inbäddning/export till EXIF/XMP är en framtida funktion.
-- **Datum som fritext + valfritt år.** `date_text` ("ca 1975") för människor,
-  `date_year` (int, nullable) för sortering/filtrering.
+- **Datum som fritext + härledda fält.** `date_text` ("ca 1975", "sommaren 1962",
+  "2003-10-01") för människor. `services/dates.parse_date_text` härleder
+  `date_year`, `date_month` och `date_precision` (day/month/season/year/"") vid
+  scan och sparning - hanterar ofullständiga datum och årstider. Underlag för
+  framtida tidslinjevy.
 - **Personer och taggar i samma tabell** (`Tag.kind` = "person" | "tag"),
   many-to-many via `photo_tags`.
 - **Metadatafält:** date_text, date_year, location, source (vem fotot kommer

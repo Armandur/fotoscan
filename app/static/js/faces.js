@@ -80,8 +80,9 @@
                 box.remove();
                 showToast("Ansiktstagg borttagen");
                 const p = res.person;
-                if (p && p.orphaned &&
-                    confirm(`"${p.name}" har inga taggningar kvar. Ta bort personen ur registret?`)) {
+                if (p && p.orphaned && await showConfirm(
+                    `"${p.name}" har inga taggningar kvar. Ta bort personen ur registret?`,
+                    { okLabel: "Ta bort", okClass: "btn-danger" })) {
                     await apiFetch(`/api/persons/${p.id}`, { method: "DELETE" });
                     showToast("Personen borttagen");
                 }

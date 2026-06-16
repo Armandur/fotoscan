@@ -29,6 +29,30 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+// Bekräftelsedialog via Bootstrap-modal. Returnerar Promise<boolean>.
+// Använd denna i stället för window.confirm().
+function showConfirm(message, { okLabel = "OK", okClass = "btn-primary" } = {}) {
+    return new Promise((resolve) => {
+        const el = document.getElementById("confirm-modal");
+        if (!el) { resolve(false); return; }
+        document.getElementById("confirm-modal-body").textContent = message;
+        const okBtn = document.getElementById("confirm-ok");
+        okBtn.className = "btn " + okClass;
+        okBtn.textContent = okLabel;
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        let confirmed = false;
+        const onOk = () => { confirmed = true; modal.hide(); };
+        const onHide = () => {
+            okBtn.removeEventListener("click", onOk);
+            el.removeEventListener("hidden.bs.modal", onHide);
+            resolve(confirmed);
+        };
+        okBtn.addEventListener("click", onOk);
+        el.addEventListener("hidden.bs.modal", onHide);
+        modal.show();
+    });
+}
+
 // Lightbox: visa en bild i helskärmsoverlay. Klick eller Esc stänger.
 function showLightbox(src) {
     const lb = document.getElementById("lightbox");

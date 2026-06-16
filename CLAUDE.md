@@ -5,9 +5,10 @@ läses orörda på plats (flyttas/döps/skrivs aldrig till).
 
 ## Stack
 - Python 3.12 + FastAPI (uvicorn), SQLAlchemy ORM, SQLite
-- Jinja2 + vanilla JS + Bootstrap 5.3 (CDN, `data-bs-theme="dark"`) + Bootstrap
-  Icons (CDN). Ingen bundler. `static/css/style.css` kompletterar bara Bootstrap
-  (galleri-grid, autocomplete-dropdown, detaljvyns bild).
+- Jinja2 + vanilla JS + Bootstrap 5.3 (`data-bs-theme="dark"`) + Bootstrap Icons,
+  **självhostade** under `static/vendor/` (inte CDN - undviker FOUC/vit bakgrund
+  och funkar offline). Ingen bundler. `static/css/style.css` kompletterar bara
+  Bootstrap (galleri-grid, autocomplete-dropdown, detaljvyns bild).
 - Pillow för thumbnails och EXIF-datum
 - `uv` för beroenden/körning
 
@@ -80,6 +81,11 @@ photos/                exempel/testbilder (gitignored)
   apt-installerar `libimage-exiftool-perl`. `docker-compose.yml` = drift (GHCR-
   image, volymer för /data, /export, read-only /photos), `docker-compose.dev.yml`
   = lokal build med --reload.
+
+## Konventioner
+- **Använd aldrig `alert()` eller `confirm()`** - använd Bootstrap-modaler.
+  För bekräftelser finns `showConfirm(message, {okLabel, okClass})` i `utils.js`
+  som returnerar en `Promise<boolean>`.
 
 ## Fallgropar
 - `Jinja2Templates.TemplateResponse` kräver nya signaturen

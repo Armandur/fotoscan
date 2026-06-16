@@ -93,7 +93,10 @@ async function mergeSearchRun() {
 }
 
 async function doMerge(intoId, name) {
-    if (!confirm(`Slå ihop "${document.getElementById('person-name').value}" in i "${name}"? Detta går inte att ångra.`)) return;
+    const ok = await showConfirm(
+        `Slå ihop "${document.getElementById('person-name').value}" in i "${name}"? Detta går inte att ångra.`,
+        { okLabel: "Slå ihop", okClass: "btn-warning" });
+    if (!ok) return;
     try {
         const res = await apiFetch(`/api/persons/${personId}/merge`, {
             method: "POST", body: { into_id: parseInt(intoId, 10) },
@@ -123,7 +126,10 @@ mergeSearch.addEventListener("keydown", (e) => {
 });
 
 document.getElementById("delete-person-btn").addEventListener("click", async (e) => {
-    if (!confirm(`Ta bort personen "${document.getElementById('person-name').value}" helt? Ansiktstaggningar för personen tas bort. Detta går inte att ångra.`)) return;
+    const ok = await showConfirm(
+        `Ta bort personen "${document.getElementById('person-name').value}" helt? Ansiktstaggningar för personen tas bort. Detta går inte att ångra.`,
+        { okLabel: "Ta bort", okClass: "btn-danger" });
+    if (!ok) return;
     e.target.disabled = true;
     try {
         await apiFetch(`/api/persons/${personId}`, { method: "DELETE" });

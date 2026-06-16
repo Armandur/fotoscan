@@ -25,7 +25,13 @@
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
 - [ ] Galleri-navigering med tangentbord (pilar/Enter för att öppna).
 - [ ] Bulk-redigering: sätt datum/tagg på flera markerade foton.
-- [ ] Kartstöd för plats (koordinater).
+- [ ] **Kartstöd för plats (koordinater).** "Ange på karta"-knapp vid Plats som
+  öppnar en Leaflet-karta med OSM-tiles; klicka för att sätta position (lat/lon),
+  ev. en radie för osäkerhet. DB: lat, lon, ev. accuracy_m. Export till EXIF GPS
+  (GPSLatitude/GPSLongitude) + osäkerhet via EXIF GPSHPositioningError (meter) -
+  så radie stöds av standarden. Påminn om att det är FOTOGRAFENS position.
+  Leaflet bör självhostas (som Bootstrap). OBS: Leaflet/canvas kastar i obscura
+  headless - kan inte browser-testas där, kräver manuell test.
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
 - [ ] Backup/databasexport.
 

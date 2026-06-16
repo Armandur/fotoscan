@@ -64,6 +64,8 @@
     const sourceLabel = document.getElementById("pair-source-label");
     const ownSrc = sourceImg ? sourceImg.dataset.own : null;
     const ownLabel = sourceLabel ? sourceLabel.textContent.trim() : "";
+    const hoverImg = document.getElementById("pair-hover-img");
+    const hoverLabel = document.getElementById("pair-hover-label");
     const LIMIT = 60;
     let offset = 0, loading = false, done = false;
     let conflictPeekOn = null, conflictPeekOff = null;  // sätts i konfliktvyn (håll för att jämföra)
@@ -98,6 +100,9 @@
             `<div class="text-secondary small text-truncate"><i class="bi bi-folder"></i> ${escapeHtml(c.folder) || "(rot)"}</div>` +
             `</div>`;
         card.addEventListener("click", () => attemptPair(c));
+        card.addEventListener("mouseenter", () => {
+            if (hoverImg) { hoverImg.src = `/image/${c.id}`; hoverLabel.textContent = c.filename; }
+        });
         return card;
     }
 

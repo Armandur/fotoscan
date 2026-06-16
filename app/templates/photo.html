@@ -235,14 +235,21 @@
                 <div class="row g-3">
                     <div class="col-lg-4">
                         <div class="text-secondary small mb-1">Utgångsfoto</div>
-                        <div class="img-wrap" style="max-height:60vh">
+                        <div class="img-wrap" style="max-height:32vh">
                             <img id="pair-source-img"
                                  src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
                                  data-own="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
-                                 alt="{{ photo.filename }}" style="max-height:60vh;max-width:100%;object-fit:contain">
+                                 alt="{{ photo.filename }}" style="max-height:32vh;max-width:100%;object-fit:contain">
                         </div>
                         <div class="small text-truncate mt-1" id="pair-source-label">{{ photo.filename }}</div>
                         {% if photo.is_negative %}<span class="badge text-bg-secondary">negativ</span>{% endif %}
+
+                        <div class="text-secondary small mb-1 mt-3">Förhandsvisning (hovra en kandidat)</div>
+                        <div class="img-wrap" style="height:38vh">
+                            <img id="pair-hover-img" alt=""
+                                 style="max-height:38vh;max-width:100%;object-fit:contain">
+                        </div>
+                        <div class="small text-truncate mt-1 text-secondary" id="pair-hover-label"></div>
                     </div>
                     <div class="col-lg-8">
                         <div class="d-flex gap-2 mb-3 align-items-center">

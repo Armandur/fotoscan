@@ -27,6 +27,8 @@ app/
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
+    tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
+    places.py          platsvy (lista/detalj per plats-fält) + byt namn på plats
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/

@@ -1,13 +1,11 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Platser-vy.** Sök på plats (likt taggar/personer) och en vy där man
-  bläddrar foton per plats. Överväg att normalisera plats (egen tabell) i stället
-  för fritextfält, ev. med koppling till GPS-koordinater/karta.
-- [ ] **Taggar-vy.** Bläddra foton via taggar; skapa, ta bort och byt namn på
-  taggar (som personvyn fast för vanliga taggar). Hierarkiska taggar om det går
-  att exportera - XMP stödjer det via Lightroom `lr:hierarchicalSubject`
-  (pipe-separerat, t.ex. "Familj|Farfar") parallellt med platta `dc:subject`.
+- [ ] **Hierarkiska taggar.** Taggar-vyn finns (platt). Lägg till hierarki -
+  XMP stödjer det via Lightroom `lr:hierarchicalSubject` (pipe-separerat, t.ex.
+  "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
+- [ ] **Normalisera plats.** Platser-vyn finns (grupperar fritextfältet). Överväg
+  en egen plats-tabell kopplad till GPS-koordinater/karta.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -39,6 +37,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Taggar-vy: lista, detalj, skapa, byt namn (merge), ta bort.
+- [x] Platser-vy: lista (grupperar plats-fältet) med sök, detalj per plats,
+  byt namn på plats (uppdaterar alla foton).
 - [x] Mappträdvy med rekursivt läge (visa undermappars foton).
 - [x] Urval + massåtgärder i galleriet (markera negativ/granskad, per urval eller
   hela filtret).

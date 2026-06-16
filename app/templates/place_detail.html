@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_cards.html" import photocard %}
+{% block title %}{{ place }} - Platser{% endblock %}
+
+{% block headeractions %}
+    <a class="btn btn-outline-secondary btn-sm" href="/places">Alla platser</a>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3" data-place="{{ place }}">
+    <div class="input-group" style="max-width:520px">
+        <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+        <input type="text" class="form-control" id="place-name" value="{{ place }}">
+        <button class="btn btn-primary" id="rename-place-btn">Byt namn på platsen</button>
+    </div>
+    <div class="text-secondary small mt-1">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} på denna plats</div>
+</div>
+
+<div class="gallery-grid">
+    {% for photo in photos %}{{ photocard(photo) }}{% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const oldPlace = document.querySelector("[data-place]").dataset.place;
+document.getElementById("rename-place-btn").addEventListener("click", async (e) => {
+    const name = document.getElementById("place-name").value.trim();
+    if (!name) { showToast("Ange ett namn", true); return; }
+    if (name === oldPlace) { showToast("Samma namn"); return; }
+    const ok = await showConfirm(
+        `Byt plats "${oldPlace}" till "${name}" på alla foton med denna plats?`,
+        { okLabel: "Byt namn", okClass: "btn-warning" });
+    if (!ok) return;
+    e.target.disabled = true;
+    try {
+        await apiFetch("/api/places/rename", { method: "POST", body: { old: oldPlace, new: name } });
+        showToast("Platsen omdöpt");
+        setTimeout(() => { location.href = `/place?loc=${encodeURIComponent(name)}`; }, 700);
+    } catch (err) {
+        showToast("Kunde inte byta namn: " + err.message, true);
+        e.target.disabled = false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Taggar - Fotoscan{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Taggar</h1>
+
+<div class="input-group mb-3" style="max-width:420px">
+    <input type="text" class="form-control" id="new-tag" placeholder="Ny tagg..." autocomplete="off">
+    <button class="btn btn-primary" id="create-tag-btn">Skapa</button>
+</div>
+
+{% if not tags %}
+    <div class="alert alert-secondary">Inga taggar än. Skapa en ovan eller lägg taggar på foton.</div>
+{% endif %}
+
+<div class="gallery-grid">
+    {% for t in tags %}
+    <a class="card photo-card text-decoration-none" href="/tags/{{ t.id }}">
+        {% if t.sample %}
+        <img loading="lazy" class="card-img-top" src="/thumb/{{ t.sample }}" alt="{{ t.name }}">
+        {% else %}
+        <div class="card-img-top d-flex align-items-center justify-content-center text-secondary"
+             style="aspect-ratio:1;background:#000;font-size:2rem"><i class="bi bi-tag"></i></div>
+        {% endif %}
+        <div class="card-body p-2">
+            <div class="text-truncate"><i class="bi bi-tag"></i> {{ t.name }}</div>
+            <div class="text-secondary small">{{ t.count }} foto{{ 'n' if t.count != 1 else '' }}</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("create-tag-btn").addEventListener("click", async (e) => {
+    const name = document.getElementById("new-tag").value.trim();
+    if (!name) { showToast("Ange ett namn", true); return; }
+    e.target.disabled = true;
+    try {
+        const res = await apiFetch("/api/tags/create", { method: "POST", body: { name } });
+        showToast(res.existed ? "Taggen fanns redan" : "Tagg skapad");
+        location.href = `/tags/${res.id}`;
+    } catch (err) {
+        showToast("Kunde inte skapa: " + err.message, true);
+        e.target.disabled = false;
+    }
+});
+document.getElementById("new-tag").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); document.getElementById("create-tag-btn").click(); }
+});
+</script>
+{% endblock %}

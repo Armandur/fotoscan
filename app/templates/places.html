@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Platser - Fotoscan{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Platser</h1>
+
+<form class="input-group mb-3" style="max-width:420px" method="get" action="/places">
+    <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Sök plats...">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+</form>
+
+{% if not places %}
+    <div class="alert alert-secondary">Inga platser än. Ange plats på foton i detaljvyn.</div>
+{% endif %}
+
+<div class="gallery-grid">
+    {% for p in places %}
+    <a class="card photo-card text-decoration-none" href="/place?loc={{ p.name|urlencode }}">
+        {% if p.sample %}
+        <img loading="lazy" class="card-img-top" src="/thumb/{{ p.sample }}" alt="{{ p.name }}">
+        {% else %}
+        <div class="card-img-top d-flex align-items-center justify-content-center text-secondary"
+             style="aspect-ratio:1;background:#000;font-size:2rem"><i class="bi bi-geo-alt"></i></div>
+        {% endif %}
+        <div class="card-body p-2">
+            <div class="text-truncate" title="{{ p.name }}"><i class="bi bi-geo-alt"></i> {{ p.name }}</div>
+            <div class="text-secondary small">{{ p.count }} foto{{ 'n' if p.count != 1 else '' }}</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

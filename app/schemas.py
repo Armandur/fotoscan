@@ -10,6 +10,15 @@ class PersonRename(BaseModel):
     name: str
 
 
+class NameIn(BaseModel):
+    name: str
+
+
+class PlaceRename(BaseModel):
+    old: str
+    new: str
+
+
 class PersonMerge(BaseModel):
     into_id: int
 

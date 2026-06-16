@@ -16,9 +16,9 @@
   igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
   bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som
   batch-jobb. Bygger på steg 1:s `FaceRegion` + "Okänd-N"-platshållare.
-- [ ] Färgkorrigering vidare: live-preview för gamma/per-kanal (CSS klarar bara
-  ljus/kontrast/mättnad), ev. histogram, vitbalans, auto-färgstick (OpenCV/
-  scikit-image om Pillow inte räcker).
+- [ ] Färgkorrigering vidare: ev. histogram, manuell vitbalans-pipett, auto-
+  färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
+  reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
 - [ ] Fler massåtgärder: sätt datum/plats/tagg på flera markerade foton

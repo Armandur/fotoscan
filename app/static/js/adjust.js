@@ -5,35 +5,34 @@
     const photoId = detail.dataset.id;
     const img = document.getElementById("main-img");
     const sliders = [...card.querySelectorAll(".adj-slider")];
-    let previewing = false;
 
     const sliderFor = (field) => card.querySelector(`.adj-slider[data-adj="${field}"]`);
     const numFor = (field) => card.querySelector(`.adj-num[data-for="${field}"]`);
     const val = (field) => parseFloat(sliderFor(field).value) || 1.0;
+    const FIELDS = sliders.map(s => s.dataset.adj);
 
     function clampToSlider(field, v) {
         const s = sliderFor(field);
         return Math.max(parseFloat(s.min), Math.min(parseFloat(s.max), v));
     }
+
+    // Live-preview: nedskalad server-rendering med aktuella värden (debounce:ad),
+    // så alla reglage syns korrekt - även gamma och per-kanal (CSS klarar dem ej).
+    let previewTimer = null;
+    function schedulePreview() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(() => {
+            const p = new URLSearchParams();
+            FIELDS.forEach(f => p.set(f, val(f)));
+            img.src = `/api/photos/${photoId}/preview?${p}`;
+        }, 200);
+    }
+
     function setField(field, v, preview = true) {
         const c = clampToSlider(field, v);
         sliderFor(field).value = c;
         numFor(field).value = c.toFixed(2);
-        if (preview) { startPreview(); updatePreview(); }
-    }
-
-    // Live-preview via CSS-filter på en rå (ojusterad) bild. Gamma och
-    // per-kanal kan inte previewas i CSS - de syns efter "Tillämpa".
-    function startPreview() {
-        if (previewing) return;
-        previewing = true;
-        img.src = `/image/${photoId}?raw=1&t=${Date.now()}`;
-    }
-    function updatePreview() {
-        img.style.filter =
-            `brightness(${val("adj_brightness")}) ` +
-            `contrast(${val("adj_contrast")}) ` +
-            `saturate(${val("adj_saturation")})`;
+        if (preview) schedulePreview();
     }
 
     // Tvåvägs-synk slider <-> nummerfält.
@@ -41,11 +40,11 @@
         const field = s.dataset.adj;
         s.addEventListener("input", () => {
             numFor(field).value = parseFloat(s.value).toFixed(2);
-            startPreview(); updatePreview();
+            schedulePreview();
         });
         numFor(field).addEventListener("input", () => {
             const v = parseFloat(numFor(field).value);
-            if (!isNaN(v)) { sliderFor(field).value = clampToSlider(field, v); startPreview(); updatePreview(); }
+            if (!isNaN(v)) { sliderFor(field).value = clampToSlider(field, v); schedulePreview(); }
         });
     });
 
@@ -55,7 +54,7 @@
         try {
             const s = await apiFetch(`/api/photos/${photoId}/auto-suggest`);
             Object.entries(s).forEach(([field, v]) => setField(field, v, false));
-            startPreview(); updatePreview();
+            schedulePreview();
             showToast("Auto-förslag ifyllt - justera och klicka Tillämpa");
         } catch (err) {
             showToast("Auto misslyckades: " + err.message, true);
@@ -66,7 +65,7 @@
 
     document.getElementById("adj-reset").addEventListener("click", () => {
         sliders.forEach(s => setField(s.dataset.adj, 1.0, false));
-        startPreview(); updatePreview();
+        schedulePreview();
     });
 
     document.getElementById("adj-apply").addEventListener("click", async (e) => {
@@ -85,9 +84,7 @@
                     adj_blue: val("adj_blue"),
                 },
             });
-            previewing = false;
-            img.style.filter = "";
-            img.src = `/image/${photoId}?t=${Date.now()}`;
+            img.src = `/image/${photoId}?t=${Date.now()}`;  // full upplösning
             showToast("Justeringar tillämpade");
         } catch (err) {
             showToast("Kunde inte spara: " + err.message, true);

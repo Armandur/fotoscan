@@ -1,5 +1,6 @@
 import io
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,7 +16,7 @@ from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
-from app.services.adjust import has_adjustments, suggest_auto
+from app.services.adjust import apply_adjustments, has_adjustments, suggest_auto
 from app.services.dates import parse_date_text
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
@@ -342,6 +343,32 @@ def auto_suggest(photo_id: int, db: Session = Depends(get_db)):
     # Analysera basbilden (orienterad/roterad, utan tidigare färgjusteringar).
     img = load_oriented(Path(photo.path), photo.rotation or 0)
     return JSONResponse(suggest_auto(img))
+
+
+@router.get("/api/photos/{photo_id}/preview")
+def adjust_preview(
+    photo_id: int,
+    adj_brightness: float = 1.0, adj_contrast: float = 1.0, adj_gamma: float = 1.0,
+    adj_saturation: float = 1.0, adj_red: float = 1.0, adj_green: float = 1.0,
+    adj_blue: float = 1.0, db: Session = Depends(get_db),
+):
+    """Rendera en nedskalad förhandsvisning med givna (osparade) justeringar -
+    för live-preview av alla reglage (inkl. gamma/per-kanal som CSS ej klarar)."""
+    photo = db.get(Photo, photo_id)
+    if not photo or not Path(photo.path).exists():
+        raise HTTPException(404, "Bildfil saknas")
+    img = load_oriented(Path(photo.path), photo.rotation or 0)
+    img.thumbnail((1200, 1200))  # nedskalat för snabb rendering
+    ns = SimpleNamespace(
+        auto_tone=0, adj_brightness=adj_brightness, adj_contrast=adj_contrast,
+        adj_gamma=adj_gamma, adj_saturation=adj_saturation,
+        adj_red=adj_red, adj_green=adj_green, adj_blue=adj_blue,
+    )
+    out = apply_adjustments(img, ns)
+    buf = io.BytesIO()
+    out.save(buf, "JPEG", quality=85)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/jpeg")
 
 
 @router.post("/api/photos/{photo_id}/adjust")

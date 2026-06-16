@@ -88,9 +88,12 @@ def scan_directory(db: Session) -> dict:
         try:
             with Image.open(path) as img:
                 exif_raw, date_text, year = _read_exif_date(img)
+            rel_parent = path.relative_to(PHOTO_DIR).parent
+            folder = "" if str(rel_parent) == "." else rel_parent.as_posix()
             photo = Photo(
                 path=abspath,
                 filename=path.name,
+                folder=folder,
                 date_text=date_text,
                 date_year=year,
                 exif_datetime=exif_raw,

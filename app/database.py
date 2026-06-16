@@ -35,6 +35,8 @@ class Photo(Base):
     # Absolut sökväg på disk. Filen läses orörd, flyttas/döps aldrig om.
     path = Column(String, unique=True, nullable=False, index=True)
     filename = Column(String, nullable=False)
+    # Relativ undermapp i PHOTO_DIR (posix), "" för foton direkt i rotmappen.
+    folder = Column(String, default="", index=True)
 
     # Fritext för att stödja ungefärliga datum, t.ex. "ca 1975", "1970-talet".
     date_text = Column(String, default="")
@@ -94,4 +96,8 @@ def init_db() -> None:
         if not _column_exists(conn, "photos", "exif_datetime"):
             conn.exec_driver_sql(
                 "ALTER TABLE photos ADD COLUMN exif_datetime VARCHAR"
+            )
+        if not _column_exists(conn, "photos", "folder"):
+            conn.exec_driver_sql(
+                "ALTER TABLE photos ADD COLUMN folder VARCHAR DEFAULT ''"
             )

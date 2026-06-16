@@ -25,6 +25,14 @@
         </select>
     </div>
     <div class="col-6 col-md-auto">
+        <select class="form-select" name="folder" title="Filtrera på mapp">
+            <option value="*" {% if folder == '*' %}selected{% endif %}>Alla mappar</option>
+            {% for f in folders %}
+            <option value="{{ f }}" {% if folder == f %}selected{% endif %}>{{ f if f else '(rot)' }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-auto">
         <button class="btn btn-outline-secondary w-100" type="submit">
             <i class="bi bi-funnel"></i> Filtrera
         </button>
@@ -48,6 +56,11 @@
         <div class="card-body p-2">
             <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
             <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
+            {% if photo.folder %}
+            <div class="text-secondary small text-truncate" title="{{ photo.folder }}">
+                <i class="bi bi-folder"></i> {{ photo.folder }}
+            </div>
+            {% endif %}
         </div>
     </a>
     {% endfor %}
@@ -57,11 +70,11 @@
 <nav class="mt-4">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&page={{ page - 1 }}">Föregående</a>
+            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&folder={{ folder|urlencode }}&page={{ page - 1 }}">Föregående</a>
         </li>
         <li class="page-item disabled"><span class="page-link">Sida {{ page }} / {{ pages }}</span></li>
         <li class="page-item {% if page >= pages %}disabled{% endif %}">
-            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&page={{ page + 1 }}">Nästa</a>
+            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&folder={{ folder|urlencode }}&page={{ page + 1 }}">Nästa</a>
         </li>
     </ul>
 </nav>

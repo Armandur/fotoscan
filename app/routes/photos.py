@@ -28,6 +28,7 @@ def index(
     db: Session = Depends(get_db),
     q: str = "",
     filter: str = "all",
+    folder: str = "*",
     page: int = 1,
 ):
     query = db.query(Photo)
@@ -37,6 +38,7 @@ def index(
         query = query.filter(
             or_(
                 Photo.filename.ilike(like),
+                Photo.folder.ilike(like),
                 Photo.location.ilike(like),
                 Photo.notes.ilike(like),
                 Photo.date_text.ilike(like),
@@ -48,6 +50,10 @@ def index(
         query = query.filter(Photo.reviewed_at.is_(None))
     elif filter == "reviewed":
         query = query.filter(Photo.reviewed_at.isnot(None))
+
+    # folder == "*" betyder alla mappar; "" är rotmappen.
+    if folder != "*":
+        query = query.filter(Photo.folder == folder)
 
     total = query.count()
     page = max(1, page)
@@ -62,6 +68,13 @@ def index(
     total_all = db.query(Photo).count()
     reviewed = db.query(Photo).filter(Photo.reviewed_at.isnot(None)).count()
 
+    # Distinkta undermappar for mapp-valjaren (None hoppas over).
+    folders = [
+        row[0]
+        for row in db.query(Photo.folder).distinct().order_by(Photo.folder).all()
+        if row[0] is not None
+    ]
+
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -69,6 +82,8 @@ def index(
             "photos": photos,
             "q": q,
             "filter": filter,
+            "folder": folder,
+            "folders": folders,
             "page": page,
             "pages": pages,
             "total": total,

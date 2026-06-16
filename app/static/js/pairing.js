@@ -66,11 +66,13 @@
     const ownLabel = sourceLabel ? sourceLabel.textContent.trim() : "";
     const LIMIT = 60;
     let offset = 0, loading = false, done = false;
-    let conflictToggle = null;  // sätts i konfliktvyn (växla visad bild)
+    let conflictPeekOn = null, conflictPeekOff = null;  // sätts i konfliktvyn (håll för att jämföra)
+    let conflictPeeking = false;
 
     function resetSourceImg() {
         if (sourceImg && ownSrc) { sourceImg.src = ownSrc; sourceLabel.textContent = ownLabel; }
-        conflictToggle = null;
+        conflictPeekOn = conflictPeekOff = null;
+        conflictPeeking = false;
     }
 
     function openPairModal() {
@@ -160,21 +162,23 @@
         list.hidden = true;
         conflictsBox.hidden = false;
 
-        // Växla vilken bild som visas i vänsterkolumnen (utgång <-> vald).
+        // Håll för att visa det valda fotot i vänsterkolumnen (släpp = utgång).
         const candSrc = `/image/${cand.id}?t=${Date.now()}`;
         new Image().src = candSrc;
-        let showingOwn = true;
-        conflictToggle = () => {
-            showingOwn = !showingOwn;
-            sourceImg.src = showingOwn ? ownSrc : candSrc;
-            sourceLabel.textContent = showingOwn ? ownLabel : cand.filename;
-            const tgt = document.getElementById("pair-toggle-target");
-            if (tgt) tgt.textContent = showingOwn ? "valda fotot" : "utgångsfotot";
+        conflictPeekOn = () => {
+            if (conflictPeeking) return;
+            conflictPeeking = true;
+            sourceImg.src = candSrc; sourceLabel.textContent = cand.filename;
+        };
+        conflictPeekOff = () => {
+            if (!conflictPeeking) return;
+            conflictPeeking = false;
+            sourceImg.src = ownSrc; sourceLabel.textContent = ownLabel;
         };
 
         conflictsBox.innerHTML =
-            `<button type="button" class="btn btn-sm btn-outline-info mb-3" id="pair-toggle-img">` +
-            `<i class="bi bi-arrow-left-right"></i> Visa <span id="pair-toggle-target">valda fotot</span> <kbd class="kbd-hint">V</kbd></button>` +
+            `<button type="button" class="btn btn-sm btn-outline-info mb-3" id="pair-peek-btn">` +
+            `<i class="bi bi-eye"></i> Håll för att visa valda fotot <kbd class="kbd-hint">V</kbd></button>` +
             `<p class="text-warning">Metadatakonflikter - välj vilket värde som gäller:</p>` +
             conflicts.map(c => `
                 <div class="mb-3" data-field="${c.field}">
@@ -191,7 +195,13 @@
                     </div>
                 </div>`).join("") +
             `<button class="btn btn-primary" id="pair-confirm">Para ihop med valda värden</button>`;
-        document.getElementById("pair-toggle-img").addEventListener("click", () => conflictToggle && conflictToggle());
+        const peekBtn = document.getElementById("pair-peek-btn");
+        peekBtn.addEventListener("mousedown", (e) => { e.preventDefault(); conflictPeekOn(); });
+        peekBtn.addEventListener("mouseup", () => conflictPeekOff());
+        peekBtn.addEventListener("mouseleave", () => conflictPeekOff());
+        peekBtn.addEventListener("touchstart", (e) => { e.preventDefault(); conflictPeekOn(); }, { passive: false });
+        peekBtn.addEventListener("touchend", () => conflictPeekOff());
+
         document.getElementById("pair-confirm").addEventListener("click", () => {
             const resolutions = {};
             conflicts.forEach(c => {
@@ -202,14 +212,17 @@
         });
     }
 
-    // Kortkommando V växlar visad bild i konfliktvyn.
+    // Tangent V (håll) visar valda fotot i konfliktvyn.
     document.addEventListener("keydown", (e) => {
-        if ((e.key === "v" || e.key === "V") && !conflictsBox.hidden && conflictToggle) {
+        if ((e.key === "v" || e.key === "V") && !conflictsBox.hidden && conflictPeekOn) {
             const el = document.activeElement;
             if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
             e.preventDefault();
-            conflictToggle();
+            conflictPeekOn();
         }
+    });
+    document.addEventListener("keyup", (e) => {
+        if ((e.key === "v" || e.key === "V") && conflictPeekOff) conflictPeekOff();
     });
 
     let searchTimer = null;

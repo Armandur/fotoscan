@@ -24,10 +24,10 @@
   ljus/kontrast/mättnad), ev. histogram, vitbalans, auto-färgstick (OpenCV/
   scikit-image om Pillow inte räcker).
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
-- [ ] GPS-koordinater till EXIF/XMP vid export (när kartstöd finns).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
 - [ ] Galleri-navigering med tangentbord (pilar/Enter för att öppna).
-- [ ] Bulk-redigering: sätt datum/tagg på flera markerade foton.
+- [ ] Fler massåtgärder: sätt datum/plats/tagg på flera markerade foton
+  (massåtgärder för negativ/granskad finns redan).
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
 - [ ] Backup/databasexport.
 
@@ -39,6 +39,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Mappträdvy med rekursivt läge (visa undermappars foton).
+- [x] Urval + massåtgärder i galleriet (markera negativ/granskad, per urval eller
+  hela filtret).
 - [x] Kartstöd för plats: Leaflet/OSM-karta (självhostad) för fotografens
   position, adress-sök via Nominatim-proxy, osäkerhetsradie, export till EXIF GPS
   + GPSHPositioningError. (Kartinteraktionen ej obscura-testbar.)

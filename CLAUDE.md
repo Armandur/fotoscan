@@ -66,6 +66,12 @@ photos/                exempel/testbilder (gitignored)
   `/image` (och thumbnail), live-preview i UI via CSS-filter på `/image?raw=1`.
   Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
   OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
+- **Mappnavigering**: galleriet har en trädvy (`_build_folder_tree` av distinkta
+  `Photo.folder`-sökvägar) med expanderbara noder. `recursive`-toggle inkluderar
+  undermappar (`folder == X OR folder LIKE X/%`). `_filtered_query` delas av
+  galleri och batch-åtgärder.
+- **Massåtgärder**: urvalsläge i galleriet + `POST /api/photos/batch` (id-lista
+  eller hela filtret). Just nu: markera/avmarkera negativ och granskad.
 - **Position/karta** (`Photo.gps_lat/gps_lon/gps_radius_m`): fotografens position
   sätts via en Leaflet/OSM-karta (självhostad under `static/vendor/leaflet/`,
   `map.js`). Adress-sök går via backend-proxyn `/api/geocode` (Nominatim, med

@@ -15,89 +15,119 @@
 {% endblock %}
 
 {% block content %}
-<form class="row g-2 align-items-center mb-3" method="get" action="/">
-    <div class="col-12 col-md">
-        <input type="search" class="form-control" name="q" value="{{ q }}"
-               placeholder="Sök filnamn, plats, datum, anteckning, källa...">
-    </div>
-    <div class="col-6 col-md-auto">
-        <select class="form-select" name="filter">
-            <option value="all" {% if filter == 'all' %}selected{% endif %}>Alla</option>
-            <option value="unreviewed" {% if filter == 'unreviewed' %}selected{% endif %}>Ej granskade</option>
-            <option value="reviewed" {% if filter == 'reviewed' %}selected{% endif %}>Granskade</option>
-        </select>
-    </div>
-    <div class="col-6 col-md-auto">
-        <select class="form-select" name="folder" title="Filtrera på mapp">
-            <option value="*" {% if folder == '*' %}selected{% endif %}>Alla mappar</option>
-            {% for f in folders %}
-            <option value="{{ f }}" {% if folder == f %}selected{% endif %}>{{ f if f else '(rot)' }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-6 col-md-auto">
-        <button class="btn btn-outline-secondary w-100" type="submit">
-            <i class="bi bi-funnel"></i> Filtrera
-        </button>
-    </div>
-    <div class="col-12 col-md-auto">
-        <span class="text-secondary small">{{ total }} foton</span>
-    </div>
-</form>
+{% macro foldernode(node) %}
+<li>
+    {% set href = "?folder=" ~ (node.path|urlencode) ~ "&q=" ~ (q|urlencode) ~ "&filter=" ~ filter ~ ("&recursive=1" if recursive else "") %}
+    {% if node.children %}
+    <details {% if folder == node.path or folder.startswith(node.path ~ '/') %}open{% endif %}>
+        <summary><a href="{{ href }}" class="folder-link{% if folder == node.path %} active{% endif %}">{{ node.name }}</a></summary>
+        <ul>{% for c in node.children %}{{ foldernode(c) }}{% endfor %}</ul>
+    </details>
+    {% else %}
+    <a href="{{ href }}" class="folder-link leaf{% if folder == node.path %} active{% endif %}"><i class="bi bi-folder"></i> {{ node.name }}</a>
+    {% endif %}
+</li>
+{% endmacro %}
 
-{% if not photos %}
-    <div class="alert alert-secondary text-center my-5">
-        Inga foton hittades. Lägg bilder i din PHOTO_DIR och klicka "Scanna mapp".
-    </div>
-{% endif %}
-
-<div id="batch-bar" class="d-flex gap-2 align-items-center flex-wrap mb-3 p-2 rounded bg-body-tertiary border"
-     data-q="{{ q }}" data-filter="{{ filter }}" data-folder="{{ folder }}" data-total="{{ total }}" hidden>
-    <span id="batch-count" class="small fw-bold">0 valda</span>
-    <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
-    <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
-    <div class="form-check form-switch ms-2">
-        <input class="form-check-input" type="checkbox" id="batch-all-filter">
-        <label class="form-check-label small" for="batch-all-filter">Alla {{ total }} i filtret</label>
-    </div>
-    <span class="vr"></span>
-    <button class="btn btn-sm btn-outline-info" data-batch="neg-on">Markera negativ</button>
-    <button class="btn btn-sm btn-outline-secondary" data-batch="neg-off">Avmarkera negativ</button>
-    <button class="btn btn-sm btn-outline-success" data-batch="rev-on">Markera granskad</button>
-    <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
-</div>
-
-<div class="gallery-grid">
-    {% for photo in photos %}
-    <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
-       href="/photo/{{ photo.id }}" data-id="{{ photo.id }}">
-        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
-        <div class="card-body p-2">
-            <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
-            <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
-            {% if photo.folder %}
-            <div class="text-secondary small text-truncate" title="{{ photo.folder }}">
-                <i class="bi bi-folder"></i> {{ photo.folder }}
-            </div>
-            {% endif %}
+<div class="row g-3">
+  <aside class="col-12 col-md-3 col-lg-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong class="small"><i class="bi bi-diagram-3"></i> Mappar</strong>
+        <div class="form-check form-switch mb-0" title="Visa även foton i undermappar">
+            <input class="form-check-input" type="checkbox" id="recursive-toggle" {% if recursive %}checked{% endif %}>
+            <label class="form-check-label small" for="recursive-toggle">Undermappar</label>
         </div>
-    </a>
-    {% endfor %}
-</div>
-
-{% if pages > 1 %}
-<nav class="mt-4">
-    <ul class="pagination justify-content-center">
-        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&folder={{ folder|urlencode }}&page={{ page - 1 }}">Föregående</a>
-        </li>
-        <li class="page-item disabled"><span class="page-link">Sida {{ page }} / {{ pages }}</span></li>
-        <li class="page-item {% if page >= pages %}disabled{% endif %}">
-            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&folder={{ folder|urlencode }}&page={{ page + 1 }}">Nästa</a>
-        </li>
+    </div>
+    <ul class="folder-tree">
+        <li><a href="?folder=*&q={{ q|urlencode }}&filter={{ filter }}{% if recursive %}&recursive=1{% endif %}"
+               class="folder-link{% if folder == '*' %} active{% endif %}"><i class="bi bi-images"></i> Alla foton</a></li>
+        {% if has_root_photos %}
+        <li><a href="?folder=&q={{ q|urlencode }}&filter={{ filter }}{% if recursive %}&recursive=1{% endif %}"
+               class="folder-link leaf{% if folder == '' %} active{% endif %}"><i class="bi bi-folder"></i> (rot)</a></li>
+        {% endif %}
+        {% for node in folder_tree %}{{ foldernode(node) }}{% endfor %}
     </ul>
-</nav>
-{% endif %}
+  </aside>
+
+  <div class="col">
+    <form class="row g-2 align-items-center mb-3" method="get" action="/">
+        <input type="hidden" name="folder" value="{{ folder }}">
+        {% if recursive %}<input type="hidden" name="recursive" value="1">{% endif %}
+        <div class="col-12 col-md">
+            <input type="search" class="form-control" name="q" value="{{ q }}"
+                   placeholder="Sök filnamn, plats, datum, anteckning, källa...">
+        </div>
+        <div class="col-6 col-md-auto">
+            <select class="form-select" name="filter">
+                <option value="all" {% if filter == 'all' %}selected{% endif %}>Alla</option>
+                <option value="unreviewed" {% if filter == 'unreviewed' %}selected{% endif %}>Ej granskade</option>
+                <option value="reviewed" {% if filter == 'reviewed' %}selected{% endif %}>Granskade</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-auto">
+            <button class="btn btn-outline-secondary w-100" type="submit"><i class="bi bi-funnel"></i> Filtrera</button>
+        </div>
+        <div class="col-12 col-md-auto">
+            <span class="text-secondary small">{{ total }} foton{% if folder != '*' %} i {{ folder if folder else '(rot)' }}{% if recursive %} + undermappar{% endif %}{% endif %}</span>
+        </div>
+    </form>
+
+    {% if not photos %}
+    <div class="alert alert-secondary text-center my-5">
+        Inga foton i den här vyn. Lägg bilder i din PHOTO_DIR och klicka "Scanna mapp", eller välj en annan mapp.
+    </div>
+    {% endif %}
+
+    <div id="batch-bar" class="d-flex gap-2 align-items-center flex-wrap mb-3 p-2 rounded bg-body-tertiary border"
+         data-q="{{ q }}" data-filter="{{ filter }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-total="{{ total }}" hidden>
+        <span id="batch-count" class="small fw-bold">0 valda</span>
+        <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
+        <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
+        <div class="form-check form-switch ms-2">
+            <input class="form-check-input" type="checkbox" id="batch-all-filter">
+            <label class="form-check-label small" for="batch-all-filter">Alla {{ total }} i filtret</label>
+        </div>
+        <span class="vr"></span>
+        <button class="btn btn-sm btn-outline-info" data-batch="neg-on">Markera negativ</button>
+        <button class="btn btn-sm btn-outline-secondary" data-batch="neg-off">Avmarkera negativ</button>
+        <button class="btn btn-sm btn-outline-success" data-batch="rev-on">Markera granskad</button>
+        <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
+    </div>
+
+    <div class="gallery-grid">
+        {% for photo in photos %}
+        <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
+           href="/photo/{{ photo.id }}" data-id="{{ photo.id }}">
+            <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
+            <div class="card-body p-2">
+                <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
+                <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
+                {% if photo.folder %}
+                <div class="text-secondary small text-truncate" title="{{ photo.folder }}">
+                    <i class="bi bi-folder"></i> {{ photo.folder }}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if pages > 1 %}
+    {% set pagebase = "?q=" ~ (q|urlencode) ~ "&filter=" ~ filter ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ pagebase }}&page={{ page - 1 }}">Föregående</a>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Sida {{ page }} / {{ pages }}</span></li>
+            <li class="page-item {% if page >= pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ pagebase }}&page={{ page + 1 }}">Nästa</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -147,6 +177,18 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     const allFilter = document.getElementById("batch-all-filter");
     const selected = new Set();
     let selecting = false;
+
+    // Rekursiv-toggle: ladda om med/utan undermappar, behåll mapp/sök/filter
+    const recToggle = document.getElementById("recursive-toggle");
+    if (recToggle) {
+        recToggle.addEventListener("change", () => {
+            const params = new URLSearchParams({
+                q: bar.dataset.q, filter: bar.dataset.filter, folder: bar.dataset.folder,
+            });
+            if (recToggle.checked) params.set("recursive", "1");
+            location.search = params.toString();
+        });
+    }
 
     const count = () => {
         const n = allFilter.checked ? bar.dataset.total : selected.size;
@@ -199,7 +241,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
             const useFilter = allFilter.checked;
             let body;
             if (useFilter) {
-                body = { use_filter: true, q: bar.dataset.q, filter: bar.dataset.filter, folder: bar.dataset.folder, ...op };
+                body = { use_filter: true, q: bar.dataset.q, filter: bar.dataset.filter, folder: bar.dataset.folder, recursive: bar.dataset.recursive === "1", ...op };
             } else {
                 if (!selected.size) { showToast("Inget valt", true); return; }
                 body = { ids: [...selected], ...op };

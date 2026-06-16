@@ -62,6 +62,7 @@ class BatchUpdate(BaseModel):
     q: str = ""
     filter: str = "all"
     folder: str = "*"
+    recursive: bool = False
     # Åtgärder (None = lämna oförändrat).
     is_negative: bool | None = None
     reviewed: bool | None = None

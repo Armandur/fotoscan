@@ -238,6 +238,24 @@
     vertical-align: middle;
 }
 
+/* Mapp-träd */
+.folder-tree, .folder-tree ul { list-style: none; margin: 0; padding-left: 0; }
+.folder-tree ul { padding-left: .85rem; }
+.folder-tree li { line-height: 1.7; }
+.folder-tree summary { cursor: pointer; }
+.folder-tree summary .folder-link { display: inline; }
+.folder-link {
+    display: inline-block;
+    padding: 0 6px;
+    border-radius: 4px;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    font-size: .88rem;
+}
+.folder-link.leaf { padding-left: 0; }
+.folder-link:hover { background: var(--bs-tertiary-bg); }
+.folder-link.active { background: var(--bs-primary); color: #fff; }
+
 /* Lightbox */
 .lightbox {
     position: fixed;

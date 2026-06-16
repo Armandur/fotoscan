@@ -25,8 +25,11 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 PAGE_SIZE = 60
 
 
-def _filtered_query(db: Session, q: str, filter: str, folder: str):
-    """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar."""
+def _filtered_query(db: Session, q: str, filter: str, folder: str, recursive: bool = False):
+    """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar.
+
+    recursive=True inkluderar foton i undermappar till `folder`.
+    """
     query = db.query(Photo)
     if q:
         like = f"%{q}%"
@@ -46,8 +49,36 @@ def _filtered_query(db: Session, q: str, filter: str, folder: str):
         query = query.filter(Photo.reviewed_at.isnot(None))
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
-        query = query.filter(Photo.folder == folder)
+        if recursive:
+            # "" + rekursivt = allt. Annars mappen själv + dess undermappar.
+            if folder != "":
+                query = query.filter(
+                    or_(Photo.folder == folder, Photo.folder.like(f"{folder}/%"))
+                )
+        else:
+            query = query.filter(Photo.folder == folder)
     return query
+
+
+def _build_folder_tree(folders: list[str]) -> list[dict]:
+    """Bygg en nästlad trädstruktur av distinkta mappsökvägar (posix)."""
+    root: dict = {}
+    for f in folders:
+        if not f:
+            continue
+        level = root
+        path = ""
+        for part in f.split("/"):
+            path = part if not path else f"{path}/{part}"
+            node = level.setdefault(part, {"path": path, "children": {}})
+            level = node["children"]
+
+    def to_list(d: dict) -> list[dict]:
+        return [
+            {"name": name, "path": data["path"], "children": to_list(data["children"])}
+            for name, data in sorted(d.items(), key=lambda kv: kv[0].lower())
+        ]
+    return to_list(root)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -57,9 +88,10 @@ def index(
     q: str = "",
     filter: str = "all",
     folder: str = "*",
+    recursive: bool = False,
     page: int = 1,
 ):
-    query = _filtered_query(db, q, filter, folder)
+    query = _filtered_query(db, q, filter, folder, recursive)
 
     total = query.count()
     page = max(1, page)
@@ -74,12 +106,14 @@ def index(
     total_all = db.query(Photo).count()
     reviewed = db.query(Photo).filter(Photo.reviewed_at.isnot(None)).count()
 
-    # Distinkta undermappar for mapp-valjaren (None hoppas over).
+    # Distinkta undermappar -> nästlat träd. None hoppas över.
     folders = [
         row[0]
         for row in db.query(Photo.folder).distinct().order_by(Photo.folder).all()
         if row[0] is not None
     ]
+    folder_tree = _build_folder_tree(folders)
+    has_root_photos = "" in folders
 
     return templates.TemplateResponse(
         request,
@@ -89,7 +123,9 @@ def index(
             "q": q,
             "filter": filter,
             "folder": folder,
-            "folders": folders,
+            "recursive": recursive,
+            "folder_tree": folder_tree,
+            "has_root_photos": has_root_photos,
             "page": page,
             "pages": pages,
             "total": total,
@@ -102,7 +138,7 @@ def index(
 @router.post("/api/photos/batch")
 def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     if data.use_filter:
-        photos = _filtered_query(db, data.q, data.filter, data.folder).all()
+        photos = _filtered_query(db, data.q, data.filter, data.folder, data.recursive).all()
     elif data.ids:
         photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
     else:

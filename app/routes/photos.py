@@ -14,7 +14,7 @@ from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
-from app.services.adjust import has_adjustments
+from app.services.adjust import has_adjustments, suggest_auto
 from app.services.dates import parse_date_text
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
@@ -251,6 +251,18 @@ def rotate_photo(
     if Path(photo.path).exists():
         refresh_derived(photo)
     return JSONResponse({"ok": True, "rotation": photo.rotation})
+
+
+@router.get("/api/photos/{photo_id}/auto-suggest")
+def auto_suggest(photo_id: int, db: Session = Depends(get_db)):
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    if not Path(photo.path).exists():
+        raise HTTPException(404, "Bildfil saknas")
+    # Analysera basbilden (orienterad/roterad, utan tidigare färgjusteringar).
+    img = load_oriented(Path(photo.path), photo.rotation or 0)
+    return JSONResponse(suggest_auto(img))
 
 
 @router.post("/api/photos/{photo_id}/adjust")

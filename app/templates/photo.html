@@ -52,7 +52,6 @@
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-reset">Återställ</button>
                     <button type="button" class="btn btn-sm btn-primary" id="adj-apply">Tillämpa</button>
-                    <span class="text-secondary small" id="adj-auto-state"></span>
                 </div>
                 {% set sliders = [
                     ('adj_brightness', 'Ljusstyrka', 0.2, 2.0, photo.adj_brightness),
@@ -68,7 +67,9 @@
                     <label class="small text-secondary adj-label">{{ label }}</label>
                     <input type="range" class="form-range adj-slider" data-adj="{{ field }}"
                            min="{{ lo }}" max="{{ hi }}" step="0.01" value="{{ val or 1.0 }}">
-                    <span class="small adj-val" data-for="{{ field }}">{{ '%.2f'|format(val or 1.0) }}</span>
+                    <input type="number" class="form-control form-control-sm adj-num" data-for="{{ field }}"
+                           min="{{ lo }}" max="{{ hi }}" step="0.01" value="{{ '%.2f'|format(val or 1.0) }}"
+                           style="width:74px;flex:0 0 auto">
                 </div>
                 {% endfor %}
             </div>

@@ -5,23 +5,22 @@
     const photoId = detail.dataset.id;
     const img = document.getElementById("main-img");
     const sliders = [...card.querySelectorAll(".adj-slider")];
-    const autoBtn = document.getElementById("adj-auto");
-    const autoState = document.getElementById("adj-auto-state");
-
-    let autoTone = card.dataset.auto === "1";
     let previewing = false;
 
-    const val = (field) => parseFloat(
-        card.querySelector(`.adj-slider[data-adj="${field}"]`).value
-    );
+    const sliderFor = (field) => card.querySelector(`.adj-slider[data-adj="${field}"]`);
+    const numFor = (field) => card.querySelector(`.adj-num[data-for="${field}"]`);
+    const val = (field) => parseFloat(sliderFor(field).value) || 1.0;
 
-    function refreshAutoLabel() {
-        autoState.textContent = autoTone ? "Auto-ton: på" : "";
-        autoBtn.classList.toggle("active", autoTone);
-        autoBtn.classList.toggle("btn-info", autoTone);
-        autoBtn.classList.toggle("btn-outline-info", !autoTone);
+    function clampToSlider(field, v) {
+        const s = sliderFor(field);
+        return Math.max(parseFloat(s.min), Math.min(parseFloat(s.max), v));
     }
-    refreshAutoLabel();
+    function setField(field, v, preview = true) {
+        const c = clampToSlider(field, v);
+        sliderFor(field).value = c;
+        numFor(field).value = c.toFixed(2);
+        if (preview) { startPreview(); updatePreview(); }
+    }
 
     // Live-preview via CSS-filter på en rå (ojusterad) bild. Gamma och
     // per-kanal kan inte previewas i CSS - de syns efter "Tillämpa".
@@ -37,42 +36,46 @@
             `saturate(${val("adj_saturation")})`;
     }
 
+    // Tvåvägs-synk slider <-> nummerfält.
     sliders.forEach(s => {
-        const out = card.querySelector(`.adj-val[data-for="${s.dataset.adj}"]`);
+        const field = s.dataset.adj;
         s.addEventListener("input", () => {
-            out.textContent = parseFloat(s.value).toFixed(2);
-            startPreview();
-            updatePreview();
+            numFor(field).value = parseFloat(s.value).toFixed(2);
+            startPreview(); updatePreview();
+        });
+        numFor(field).addEventListener("input", () => {
+            const v = parseFloat(numFor(field).value);
+            if (!isNaN(v)) { sliderFor(field).value = clampToSlider(field, v); startPreview(); updatePreview(); }
         });
     });
 
-    autoBtn.addEventListener("click", () => {
-        autoTone = !autoTone;
-        refreshAutoLabel();
+    // Auto: hämta föreslagna värden och fyll slidrarna (användaren kan finjustera).
+    document.getElementById("adj-auto").addEventListener("click", async (e) => {
+        e.target.disabled = true;
+        try {
+            const s = await apiFetch(`/api/photos/${photoId}/auto-suggest`);
+            Object.entries(s).forEach(([field, v]) => setField(field, v, false));
+            startPreview(); updatePreview();
+            showToast("Auto-förslag ifyllt - justera och klicka Tillämpa");
+        } catch (err) {
+            showToast("Auto misslyckades: " + err.message, true);
+        } finally {
+            e.target.disabled = false;
+        }
     });
 
-    function resetSliders() {
-        sliders.forEach(s => {
-            s.value = 1.0;
-            card.querySelector(`.adj-val[data-for="${s.dataset.adj}"]`).textContent = "1.00";
-        });
-        autoTone = false;
-        refreshAutoLabel();
-    }
     document.getElementById("adj-reset").addEventListener("click", () => {
-        resetSliders();
-        startPreview();
-        updatePreview();
+        sliders.forEach(s => setField(s.dataset.adj, 1.0, false));
+        startPreview(); updatePreview();
     });
 
     document.getElementById("adj-apply").addEventListener("click", async (e) => {
-        const btn = e.currentTarget;
-        btn.disabled = true;
+        e.target.disabled = true;
         try {
             await apiFetch(`/api/photos/${photoId}/adjust`, {
                 method: "POST",
                 body: {
-                    auto_tone: autoTone,
+                    auto_tone: false,
                     adj_brightness: val("adj_brightness"),
                     adj_contrast: val("adj_contrast"),
                     adj_gamma: val("adj_gamma"),
@@ -82,7 +85,6 @@
                     adj_blue: val("adj_blue"),
                 },
             });
-            // Visa den äkta server-renderade bilden (inkl. gamma/per-kanal).
             previewing = false;
             img.style.filter = "";
             img.src = `/image/${photoId}?t=${Date.now()}`;
@@ -90,7 +92,7 @@
         } catch (err) {
             showToast("Kunde inte spara: " + err.message, true);
         } finally {
-            btn.disabled = false;
+            e.target.disabled = false;
         }
     });
 })();

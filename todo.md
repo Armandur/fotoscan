@@ -4,8 +4,14 @@
 - [ ] **Hierarkiska taggar.** Taggar-vyn finns (platt). Lägg till hierarki -
   XMP stödjer det via Lightroom `lr:hierarchicalSubject` (pipe-separerat, t.ex.
   "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
-- [ ] **Normalisera plats.** Platser-vyn finns (grupperar fritextfältet). Överväg
-  en egen plats-tabell kopplad till GPS-koordinater/karta.
+- [ ] **Normalisera plats.** Platser-vyn finns (grupperar fritextfältet). Gör
+  plats till en egen `Place`-tabell: en namngiven, återanvändbar etikett
+  ("Stigsjö kyrka") som är medvetet grov - den behöver inte vara exakt (täcker
+  både vid/i kyrkan, ingen "södra hörnet"-granularitet). Place kan ha en grov/
+  representativ GPS som default-förslag. Foton länkar till Place via FK.
+  VIKTIGT: fotots egen `gps_lat/lon` (exakt fotografposition) lever kvar
+  oberoende och är frikopplad från platsen - olika foton med samma plats kan ha
+  olika (eller ingen) exakt GPS. Place = grov hink, foto-GPS = exaktheten.
 - [ ] **År-/datum-vy (tidslinje).** Bläddra foton på en tidslinje baserat på
   fotodatum. Underlaget finns nu: `date_year` + `date_month` + `date_precision`
   (day/month/season/year) härleds ur `date_text` via `services/dates.py`.

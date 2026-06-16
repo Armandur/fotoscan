@@ -138,11 +138,11 @@
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                <a class="page-link" href="{{ pagebase }}&page={{ page - 1 }}">Föregående</a>
+                <a class="page-link" id="page-prev" href="{{ pagebase }}&page={{ page - 1 }}">Föregående <kbd class="kbd-hint">K</kbd></a>
             </li>
             <li class="page-item disabled"><span class="page-link">Sida {{ page }} / {{ pages }}</span></li>
             <li class="page-item {% if page >= pages %}disabled{% endif %}">
-                <a class="page-link" href="{{ pagebase }}&page={{ page + 1 }}">Nästa</a>
+                <a class="page-link" id="page-next" href="{{ pagebase }}&page={{ page + 1 }}">Nästa <kbd class="kbd-hint">J</kbd></a>
             </li>
         </ul>
     </nav>
@@ -156,6 +156,22 @@
 // Filter-segmenten skickar formuläret direkt vid klick.
 document.querySelectorAll('#filter-form .btn-check, #separate-toggle').forEach(el => {
     el.addEventListener("change", () => document.getElementById("filter-form").submit());
+});
+
+// Tangentnavigering mellan sidor: K/vänster = föregående, J/höger = nästa.
+document.addEventListener("keydown", (e) => {
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector(".gallery-grid.selecting")) return;  // ej i urvalsläge
+    let link = null;
+    if (e.key === "k" || e.key === "ArrowLeft") link = document.getElementById("page-prev");
+    else if (e.key === "j" || e.key === "ArrowRight") link = document.getElementById("page-next");
+    else return;
+    if (link && !link.parentElement.classList.contains("disabled")) {
+        e.preventDefault();
+        location.href = link.href;
+    }
 });
 
 document.getElementById("export-btn").addEventListener("click", async (e) => {

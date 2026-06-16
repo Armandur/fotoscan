@@ -81,6 +81,41 @@ def _filtered_query(
     return query
 
 
+def _sort_order(sort: str):
+    """Order-by-uttryck för galleriets sortering. Okänt datum hamnar sist."""
+    if sort == "date_desc":
+        return [Photo.date_year.is_(None), Photo.date_year.desc(),
+                Photo.date_month.is_(None), Photo.date_month.desc(), Photo.filename]
+    if sort == "name":
+        return [Photo.folder, Photo.filename]
+    if sort == "added":
+        return [Photo.id]
+    # default "date" - äldst först
+    return [Photo.date_year.is_(None), Photo.date_year,
+            Photo.date_month.is_(None), Photo.date_month, Photo.filename]
+
+
+def _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort) -> str:
+    """Urlencodad querystring (utan ledande &) med galleriets kontext, för
+    länkar (mappträd, kort, paginering). Tomma/default utelämnas."""
+    params = {}
+    if q:
+        params["q"] = q
+    if reviewed:
+        params["reviewed"] = reviewed
+    if ptype:
+        params["ptype"] = ptype
+    if paired:
+        params["paired"] = paired
+    if recursive:
+        params["recursive"] = "1"
+    if separate:
+        params["separate"] = "1"
+    if sort and sort != "date":
+        params["sort"] = sort
+    return urlencode(params)
+
+
 def _build_folder_tree(folders: list[str]) -> list[dict]:
     """Bygg en nästlad trädstruktur av distinkta mappsökvägar (posix)."""
     root: dict = {}
@@ -113,6 +148,7 @@ def index(
     folder: str = "*",
     recursive: bool = False,
     separate: bool = False,
+    sort: str = "date",
     page: int = 1,
 ):
     query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
@@ -120,7 +156,7 @@ def index(
     total = query.count()
     page = max(1, page)
     photos = (
-        query.order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
+        query.order_by(*_sort_order(sort))
         .offset((page - 1) * PAGE_SIZE)
         .limit(PAGE_SIZE)
         .all()
@@ -151,6 +187,8 @@ def index(
             "folder": folder,
             "recursive": recursive,
             "separate": separate,
+            "sort": sort,
+            "qbase": _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort),
             "folder_tree": folder_tree,
             "has_root_photos": has_root_photos,
             "page": page,
@@ -184,12 +222,12 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True, "count": len(photos)})
 
 
-def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate) -> list[int]:
+def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort) -> list[int]:
     """Foto-id i galleriets ordning för given filtrering (för prev/next-nav)."""
     rows = (
         _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
         .with_entities(Photo.id)
-        .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
+        .order_by(*_sort_order(sort))
         .all()
     )
     return [r[0] for r in rows]
@@ -200,6 +238,7 @@ def photo_detail(
     photo_id: int, request: Request,
     q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
     folder: str = "*", recursive: bool = False, separate: bool = False,
+    sort: str = "date",
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -208,9 +247,9 @@ def photo_detail(
 
     # Navigera inom samma filtrering man kom ifrån. Om fotot inte ingår i den
     # (t.ex. direktlänk eller dolt sekundär-negativ), falla tillbaka.
-    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate)
+    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort)
     if photo_id not in ids:
-        ids = _ordered_ids(db, "", "", "", "", "*", False, True)
+        ids = _ordered_ids(db, "", "", "", "", "*", False, True, sort)
 
     prev_id = next_id = None
     pos = total = len(ids)
@@ -236,6 +275,8 @@ def photo_detail(
         params["recursive"] = "1"
     if separate:
         params["separate"] = "1"
+    if sort and sort != "date":
+        params["sort"] = sort
     nav_qs = ("?" + urlencode(params)) if params else ""
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None

@@ -12,11 +12,6 @@
   VIKTIGT: fotots egen `gps_lat/lon` (exakt fotografposition) lever kvar
   oberoende och är frikopplad från platsen - olika foton med samma plats kan ha
   olika (eller ingen) exakt GPS. Place = grov hink, foto-GPS = exaktheten.
-- [ ] **År-/datum-vy (tidslinje).** Bläddra foton på en tidslinje baserat på
-  fotodatum. Underlaget finns nu: `date_year` + `date_month` + `date_precision`
-  (day/month/season/year) härleds ur `date_text` via `services/dates.py`.
-  Bygg själva vyn: gruppera per år (och månad där det finns), foton utan datum
-  i en egen "okänt datum"-grupp.
 - [ ] **Infinite-scroll i par-modalen.** Kandidatlistan vid hopparning är
   begränsad (limit 60) och man kan inte alltid söka på negativen vettigt. Lägg
   lazy-loading/infinite-scroll så man kan bläddra igenom alla kandidater.
@@ -37,7 +32,8 @@
   scikit-image om Pillow inte räcker).
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
-- [ ] Galleri-navigering med tangentbord (pilar/Enter för att öppna).
+- [ ] Galleri-navigering med tangentbord: J/K och vänster/höger-pil för att
+  bläddra sida (när det finns fler än en sida), ev. Enter för att öppna markerat.
 - [ ] Fler massåtgärder: sätt datum/plats/tagg på flera markerade foton
   (massåtgärder för negativ/granskad finns redan).
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
@@ -51,6 +47,8 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Tidslinjevy: foton grupperade per år/månad (med "okänd månad"/"okänt
+  datum"-grupper) + år-snabbnavigering.
 - [x] Taggar-vy: lista, detalj, skapa, byt namn (merge), ta bort.
 - [x] Platser-vy: lista (grupperar plats-fältet) med sök, detalj per plats,
   byt namn på plats (uppdaterar alla foton).

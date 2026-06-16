@@ -256,6 +256,9 @@
 .folder-link:hover { background: var(--bs-tertiary-bg); }
 .folder-link.active { background: var(--bs-primary); color: #fff; }
 
+/* Tidslinje: ankarhopp ska landa under den sticky navbaren */
+[id^="year-"] { scroll-margin-top: 4.5rem; }
+
 /* Lightbox */
 .lightbox {
     position: fixed;

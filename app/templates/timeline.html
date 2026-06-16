@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_cards.html" import photocard %}
+{% block title %}Tidslinje - Fotoscan{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Tidslinje</h1>
+
+{% if not groups and not undated %}
+    <div class="alert alert-secondary">Inga foton än.</div>
+{% endif %}
+
+{% if groups or undated %}
+<div class="timeline-nav mb-3 d-flex flex-wrap gap-1">
+    {% for g in groups %}
+    <a class="btn btn-sm btn-outline-secondary" href="#year-{{ g.year }}">{{ g.year }}</a>
+    {% endfor %}
+    {% if undated %}
+    <a class="btn btn-sm btn-outline-secondary" href="#year-okant">Okänt</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% for g in groups %}
+<section class="mb-4">
+    <h2 class="h5 border-bottom pb-1" id="year-{{ g.year }}">
+        {{ g.year }} <span class="text-secondary fs-6">{{ g.count }} foto{{ 'n' if g.count != 1 else '' }}</span>
+    </h2>
+    {% for mg in g.months %}
+    {% if g.months|length > 1 or mg.month %}
+    <h3 class="h6 text-secondary mt-3">{{ mg.label }}</h3>
+    {% endif %}
+    <div class="gallery-grid">
+        {% for photo in mg.photos %}{{ photocard(photo) }}{% endfor %}
+    </div>
+    {% endfor %}
+</section>
+{% endfor %}
+
+{% if undated %}
+<section class="mb-4">
+    <h2 class="h5 border-bottom pb-1" id="year-okant">
+        Okänt datum <span class="text-secondary fs-6">{{ undated|length }} foto{{ 'n' if undated|length != 1 else '' }}</span>
+    </h2>
+    <div class="gallery-grid">
+        {% for photo in undated %}{{ photocard(photo) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

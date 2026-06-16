@@ -29,6 +29,7 @@ app/
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          platsvy (lista/detalj per plats-fält) + byt namn på plats
+    timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/

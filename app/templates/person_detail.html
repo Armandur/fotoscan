@@ -37,7 +37,7 @@
     {% for photo in photos %}
     <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
        href="/photo/{{ photo.id }}">
-        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}" alt="{{ photo.filename }}">
+        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
         <div class="card-body p-2">
             <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
             <div class="text-secondary small text-truncate">{{ photo.filename }}</div>

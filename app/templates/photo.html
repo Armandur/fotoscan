@@ -20,7 +20,7 @@
     <div class="col-lg-7">
         <div class="img-wrap">
             <div class="img-stage" id="img-stage">
-                <img id="main-img" src="/image/{{ photo.id }}" alt="{{ photo.filename }}">
+                <img id="main-img" src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
                 <div class="face-layer" id="face-layer"></div>
             </div>
         </div>
@@ -38,7 +38,7 @@
                 <i class="bi bi-sliders"></i> Justera färg
             </button>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="lightbox-btn"
-                    data-src="/image/{{ photo.id }}">
+                    data-src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}">
                 <i class="bi bi-arrows-fullscreen"></i> Förstora
             </button>
         </div>

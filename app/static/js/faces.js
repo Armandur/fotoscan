@@ -110,6 +110,7 @@
         } catch (e) {}
     }
     loadFaces();
+    window.reloadFaces = loadFaces;  // anropas efter rotation
 
     // ---- Ritläge ----
     function setDrawMode(on) {

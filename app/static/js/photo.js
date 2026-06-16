@@ -75,12 +75,30 @@
     });
 
     // ---- Rotation ----
+    // Applicera CSS-transform direkt för omedelbar känsla, byt sedan till den
+    // korrekt renderade bilden i bakgrunden när servern är klar.
+    const faceLayer = document.getElementById("face-layer");
+    let cssRot = 0;
     async function rotate(dir) {
+        cssRot = (cssRot + (dir === "cw" ? 90 : -90) + 360) % 360;
+        img.style.transition = "transform .15s ease";
+        img.style.transform = `rotate(${cssRot}deg)`;
+        if (faceLayer) faceLayer.style.opacity = "0";  // rutorna stämmer ej under transformen
         try {
             const res = await apiFetch(`/api/photos/${photoId}/rotate?dir=${dir}`, {
                 method: "POST",
             });
-            img.src = `/image/${photoId}?t=${Date.now()}`;
+            // Förladda den korrekt renderade bilden och byt sömlöst.
+            const fresh = new Image();
+            fresh.onload = () => {
+                img.style.transition = "";
+                img.style.transform = "";
+                cssRot = 0;
+                img.src = fresh.src;
+                if (faceLayer) faceLayer.style.opacity = "";
+                if (window.reloadFaces) window.reloadFaces();
+            };
+            fresh.src = `/image/${photoId}?t=${Date.now()}`;
             showToast(`Roterad till ${res.rotation}°`);
         } catch (err) {
             showToast("Rotation misslyckades", true);

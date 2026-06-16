@@ -229,25 +229,38 @@
 </div>
 
 <div class="modal fade" id="pair-modal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Para ihop med negativ</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="d-flex gap-2 mb-3 align-items-center">
-                    <input id="pair-search" class="form-control" placeholder="Sök filnamn, mapp eller datum...">
-                    <div class="form-check form-switch text-nowrap">
-                        <input class="form-check-input" type="checkbox" id="pair-show-matched">
-                        <label class="form-check-label" for="pair-show-matched">Visa matchade</label>
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <div class="text-secondary small mb-1">Utgångsfoto</div>
+                        <div class="img-wrap" style="max-height:60vh">
+                            <img src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
+                                 alt="{{ photo.filename }}" style="max-height:60vh;max-width:100%;object-fit:contain">
+                        </div>
+                        <div class="small text-truncate mt-1">{{ photo.filename }}</div>
+                        {% if photo.is_negative %}<span class="badge text-bg-secondary">negativ</span>{% endif %}
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="d-flex gap-2 mb-3 align-items-center">
+                            <input id="pair-search" class="form-control" placeholder="Sök filnamn, mapp eller datum...">
+                            <div class="form-check form-switch text-nowrap">
+                                <input class="form-check-input" type="checkbox" id="pair-show-matched">
+                                <label class="form-check-label" for="pair-show-matched">Visa matchade</label>
+                            </div>
+                        </div>
+                        <div id="pair-candidates" class="gallery-grid" style="max-height:62vh;overflow-y:auto"></div>
+                        <div id="pair-loading" class="text-secondary small text-center py-2" hidden>
+                            <span class="spinner-border spinner-border-sm"></span> Laddar fler...
+                        </div>
+                        <div id="pair-conflicts" hidden></div>
                     </div>
                 </div>
-                <div id="pair-candidates" class="gallery-grid" style="max-height:55vh;overflow-y:auto"></div>
-                <div id="pair-loading" class="text-secondary small text-center py-2" hidden>
-                    <span class="spinner-border spinner-border-sm"></span> Laddar fler...
-                </div>
-                <div id="pair-conflicts" hidden></div>
             </div>
         </div>
     </div>

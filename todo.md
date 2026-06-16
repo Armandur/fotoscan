@@ -12,9 +12,6 @@
   VIKTIGT: fotots egen `gps_lat/lon` (exakt fotografposition) lever kvar
   oberoende och är frikopplad från platsen - olika foton med samma plats kan ha
   olika (eller ingen) exakt GPS. Place = grov hink, foto-GPS = exaktheten.
-- [ ] **Större par-modal med utgångsfoto.** Par-modalen (para ihop med negativ)
-  bör vara större (modal-xl/fullscreen) och visa fotot man utgår ifrån bredvid
-  kandidatlistan, så man kan jämföra medan man väljer.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -47,6 +44,7 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Större par-modal (modal-xl) som visar utgångsfotot bredvid kandidaterna.
 - [x] Infinite-scroll i par-modalen (paginerade kandidater, offset/limit).
 - [x] Tidslinjevy: foton grupperade per år/månad (med "okänd månad"/"okänt
   datum"-grupper) + år-snabbnavigering.

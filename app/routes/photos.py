@@ -27,10 +27,14 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 PAGE_SIZE = 60
 
 
-def _filtered_query(db: Session, q: str, filter: str, folder: str, recursive: bool = False):
+def _filtered_query(
+    db: Session, q: str, reviewed: str, ptype: str, paired: str,
+    folder: str, recursive: bool = False,
+):
     """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar.
 
-    recursive=True inkluderar foton i undermappar till `folder`.
+    reviewed: ""|"yes"|"no", ptype: ""|"negative"|"photo", paired: ""|"yes"|"no".
+    Dimensionerna AND:as. recursive=True inkluderar undermappar till `folder`.
     """
     query = db.query(Photo)
     if q:
@@ -45,15 +49,17 @@ def _filtered_query(db: Session, q: str, filter: str, folder: str, recursive: bo
                 Photo.source.ilike(like),
             )
         )
-    if filter == "unreviewed":
-        query = query.filter(Photo.reviewed_at.is_(None))
-    elif filter == "reviewed":
+    if reviewed == "yes":
         query = query.filter(Photo.reviewed_at.isnot(None))
-    elif filter == "negative":
+    elif reviewed == "no":
+        query = query.filter(Photo.reviewed_at.is_(None))
+    if ptype == "negative":
         query = query.filter(Photo.is_negative == 1)
-    elif filter == "negative_unmatched":
-        query = query.filter(Photo.is_negative == 1, Photo.paired_with_id.is_(None))
-    elif filter == "unmatched":
+    elif ptype == "photo":
+        query = query.filter(Photo.is_negative == 0)
+    if paired == "yes":
+        query = query.filter(Photo.paired_with_id.isnot(None))
+    elif paired == "no":
         query = query.filter(Photo.paired_with_id.is_(None))
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
@@ -94,12 +100,14 @@ def index(
     request: Request,
     db: Session = Depends(get_db),
     q: str = "",
-    filter: str = "all",
+    reviewed: str = "",
+    ptype: str = "",
+    paired: str = "",
     folder: str = "*",
     recursive: bool = False,
     page: int = 1,
 ):
-    query = _filtered_query(db, q, filter, folder, recursive)
+    query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive)
 
     total = query.count()
     page = max(1, page)
@@ -129,7 +137,9 @@ def index(
         {
             "photos": photos,
             "q": q,
-            "filter": filter,
+            "reviewed": reviewed,
+            "ptype": ptype,
+            "paired": paired,
             "folder": folder,
             "recursive": recursive,
             "folder_tree": folder_tree,
@@ -146,7 +156,10 @@ def index(
 @router.post("/api/photos/batch")
 def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     if data.use_filter:
-        photos = _filtered_query(db, data.q, data.filter, data.folder, data.recursive).all()
+        photos = _filtered_query(
+            db, data.q, data.reviewed, data.ptype, data.paired,
+            data.folder, data.recursive,
+        ).all()
     elif data.ids:
         photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
     else:
@@ -162,10 +175,10 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True, "count": len(photos)})
 
 
-def _ordered_ids(db: Session, q: str, filter: str, folder: str, recursive: bool) -> list[int]:
+def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive) -> list[int]:
     """Foto-id i galleriets ordning för given filtrering (för prev/next-nav)."""
     rows = (
-        _filtered_query(db, q, filter, folder, recursive)
+        _filtered_query(db, q, reviewed, ptype, paired, folder, recursive)
         .with_entities(Photo.id)
         .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
         .all()
@@ -176,7 +189,8 @@ def _ordered_ids(db: Session, q: str, filter: str, folder: str, recursive: bool)
 @router.get("/photo/{photo_id}", response_class=HTMLResponse)
 def photo_detail(
     photo_id: int, request: Request,
-    q: str = "", filter: str = "all", folder: str = "*", recursive: bool = False,
+    q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
+    folder: str = "*", recursive: bool = False,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -185,9 +199,9 @@ def photo_detail(
 
     # Navigera inom samma filtrering man kom ifrån. Om fotot inte ingår i den
     # (t.ex. direktlänk), falla tillbaka till hela samlingen.
-    ids = _ordered_ids(db, q, filter, folder, recursive)
+    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive)
     if photo_id not in ids:
-        ids = _ordered_ids(db, "", "all", "*", False)
+        ids = _ordered_ids(db, "", "", "", "", "*", False)
 
     prev_id = next_id = None
     pos = total = len(ids)
@@ -201,8 +215,12 @@ def photo_detail(
     params = {}
     if q:
         params["q"] = q
-    if filter and filter != "all":
-        params["filter"] = filter
+    if reviewed:
+        params["reviewed"] = reviewed
+    if ptype:
+        params["ptype"] = ptype
+    if paired:
+        params["paired"] = paired
     if folder and folder != "*":
         params["folder"] = folder
     if recursive:

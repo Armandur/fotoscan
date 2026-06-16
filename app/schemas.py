@@ -68,7 +68,9 @@ class BatchUpdate(BaseModel):
     # Applicera på alla foton i nuvarande filter i stället för en id-lista.
     use_filter: bool = False
     q: str = ""
-    filter: str = "all"
+    reviewed: str = ""
+    ptype: str = ""
+    paired: str = ""
     folder: str = "*"
     recursive: bool = False
     # Åtgärder (None = lämna oförändrat).

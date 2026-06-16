@@ -26,11 +26,13 @@
     const list = document.getElementById("pair-candidates");
     const conflictsBox = document.getElementById("pair-conflicts");
 
-    pairBtn.addEventListener("click", () => {
+    function openPairModal() {
         conflictsBox.hidden = true;
         modal.show();
         loadCandidates();
-    });
+    }
+    pairBtn.addEventListener("click", openPairModal);
+    window.openPairModal = openPairModal;  // för kortkommando M
 
     async function loadCandidates() {
         const params = new URLSearchParams({

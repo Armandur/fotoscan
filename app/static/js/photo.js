@@ -221,6 +221,7 @@
         if (e.key === "r") { e.preventDefault(); rotate("cw"); return; }
         if (e.key === "R") { e.preventDefault(); rotate("ccw"); return; }
         if (e.key === "f") { e.preventDefault(); window.toggleFaceDraw && window.toggleFaceDraw(); return; }
+        if (e.key === "m") { e.preventDefault(); window.openPairModal && window.openPairModal(); return; }
         if (e.key === "g") { e.preventDefault(); location.href = "/"; return; }
 
         const lower = e.key.toLowerCase();

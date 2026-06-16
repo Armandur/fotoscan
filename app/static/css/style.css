@@ -150,6 +150,11 @@
     padding: 0 6px;
 }
 
+/* Färgjustering */
+.adj-label { width: 80px; flex: 0 0 auto; }
+.adj-val { width: 38px; text-align: right; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.adj-slider { flex: 1; }
+
 /* Autocomplete-dropdown (Bootstrap saknar inbyggd combobox) */
 .autocomplete-wrap { position: relative; }
 .ac-box {

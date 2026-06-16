@@ -5,18 +5,9 @@
   igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
   bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som
   batch-jobb. Bygger på steg 1:s `FaceRegion` + "Okänd-N"-platshållare.
-- [ ] **Foto-/färgkorrigering.** Två lägen: (a) "Auto" likt IrfanView
-  (ett klick), och (b) detaljerad med ljusstyrka, kontrast, gamma samt
-  per-kanal-justering (RGB) för färgfoton.
-  Bibliotek: **Pillow räcker troligen** (redan beroende) - `ImageEnhance`
-  (Brightness/Contrast/Color/Sharpness), `ImageOps.autocontrast`/`equalize`
-  för Auto, och `Image.point()` (ev. med numpy) för gamma och per-kanal-kurvor.
-  OpenCV/scikit-image bara om vi vill ha mer avancerat (t.ex. histogram-
-  utjämning per kanal, vitbalans, automatisk färgstick-korrigering).
-  Princip (samma som rotation): spara justeringarna i DB, **rendera on-the-fly**
-  i `/image` och `/thumb`, och **skriv först vid export** - originalfilen ändras
-  aldrig. Värd att samla bild-transformeringen (rotation + färg) i en gemensam
-  pipeline i `scanner.load_oriented`/exportern.
+- [ ] Färgkorrigering vidare: live-preview för gamma/per-kanal (CSS klarar bara
+  ljus/kontrast/mättnad), ev. histogram, vitbalans, auto-färgstick (OpenCV/
+  scikit-image om Pillow inte räcker).
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] GPS-koordinater till EXIF/XMP vid export (när kartstöd finns).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
@@ -34,6 +25,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Färg-/tonkorrigering: auto-ton + ljusstyrka/kontrast/gamma/mättnad/per-
+  kanal (Pillow). Sparas i DB, renderas on-the-fly med live-preview, bakas in
+  vid export. Originalet orört.
 - [x] Ansiktstaggning steg 1 (manuell): rita ruta -> personsök med ansikts-
   thumbnails, tomt namn -> Okänd-N, regioner följer rotation, export som MWG-rs.
 - [x] Export: kopia med inbäddad XMP (personer/taggar/plats/beskrivning/källa/

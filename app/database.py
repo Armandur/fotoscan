@@ -57,6 +57,17 @@ class Photo(Base):
     # visning samt vid framtida export - originalfilen rörs aldrig.
     rotation = Column(Integer, default=0)
 
+    # Färg-/tonjusteringar (multiplikatorer, 1.0 = oförändrat). Renderas
+    # on-the-fly och bakas in först vid export - originalet rörs aldrig.
+    auto_tone = Column(Integer, default=0)
+    adj_brightness = Column(Float, default=1.0)
+    adj_contrast = Column(Float, default=1.0)
+    adj_gamma = Column(Float, default=1.0)
+    adj_saturation = Column(Float, default=1.0)
+    adj_red = Column(Float, default=1.0)
+    adj_green = Column(Float, default=1.0)
+    adj_blue = Column(Float, default=1.0)
+
     # Sätt när metadata bekräftats/redigerats av användaren.
     reviewed_at = Column(DateTime, nullable=True)
 
@@ -129,3 +140,15 @@ def init_db() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE photos ADD COLUMN folder VARCHAR DEFAULT ''"
             )
+        if not _column_exists(conn, "photos", "auto_tone"):
+            conn.exec_driver_sql(
+                "ALTER TABLE photos ADD COLUMN auto_tone INTEGER DEFAULT 0"
+            )
+        for _col in (
+            "adj_brightness", "adj_contrast", "adj_gamma", "adj_saturation",
+            "adj_red", "adj_green", "adj_blue",
+        ):
+            if not _column_exists(conn, "photos", _col):
+                conn.exec_driver_sql(
+                    f"ALTER TABLE photos ADD COLUMN {_col} FLOAT DEFAULT 1.0"
+                )

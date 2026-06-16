@@ -33,10 +33,45 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" id="face-tag-btn" title="Markera ansikte och knyt till person (F)">
                 <i class="bi bi-person-bounding-box"></i> Tagga ansikte
             </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#adjust-panel" title="Justera ljus och färg">
+                <i class="bi bi-sliders"></i> Justera färg
+            </button>
             <a class="btn btn-outline-secondary btn-sm" href="/image/{{ photo.id }}" target="_blank">
                 <i class="bi bi-arrows-fullscreen"></i> Öppna full
             </a>
         </div>
+
+        <div class="collapse" id="adjust-panel">
+            <div class="card card-body py-2 mb-2" id="adjust-card"
+                 data-auto="{{ 1 if photo.auto_tone else 0 }}">
+                <div class="d-flex gap-2 mb-2 align-items-center flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-info" id="adj-auto">
+                        <i class="bi bi-magic"></i> Auto
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-reset">Återställ</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="adj-apply">Tillämpa</button>
+                    <span class="text-secondary small" id="adj-auto-state"></span>
+                </div>
+                {% set sliders = [
+                    ('adj_brightness', 'Ljusstyrka', 0.2, 2.0, photo.adj_brightness),
+                    ('adj_contrast', 'Kontrast', 0.2, 2.0, photo.adj_contrast),
+                    ('adj_gamma', 'Gamma', 0.3, 3.0, photo.adj_gamma),
+                    ('adj_saturation', 'Mättnad', 0.0, 2.0, photo.adj_saturation),
+                    ('adj_red', 'Röd', 0.5, 1.5, photo.adj_red),
+                    ('adj_green', 'Grön', 0.5, 1.5, photo.adj_green),
+                    ('adj_blue', 'Blå', 0.5, 1.5, photo.adj_blue),
+                ] %}
+                {% for field, label, lo, hi, val in sliders %}
+                <div class="adj-row d-flex align-items-center gap-2 mb-1">
+                    <label class="small text-secondary adj-label">{{ label }}</label>
+                    <input type="range" class="form-range adj-slider" data-adj="{{ field }}"
+                           min="{{ lo }}" max="{{ hi }}" step="0.01" value="{{ val or 1.0 }}">
+                    <span class="small adj-val" data-for="{{ field }}">{{ '%.2f'|format(val or 1.0) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
         <p class="text-secondary small text-break">{{ photo.path }}</p>
     </div>
 
@@ -152,4 +187,5 @@
 {% block scripts %}
 <script src="/static/js/photo.js"></script>
 <script src="/static/js/faces.js"></script>
+<script src="/static/js/adjust.js"></script>
 {% endblock %}

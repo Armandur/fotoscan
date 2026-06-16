@@ -26,10 +26,11 @@ app/
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
   services/
-    scanner.py         scan_directory, load_oriented, make_thumbnail, _read_exif_date
+    scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
+    adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
   templates/           base/index/photo.html
-  static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js
+  static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js, adjust.js
 data/                  fotoscan.db + thumbnails/ (gitignored)
 photos/                exempel/testbilder (gitignored)
 ```
@@ -55,6 +56,12 @@ photos/                exempel/testbilder (gitignored)
   personsök med ansikts-thumbnails (`/api/persons` + `/api/faces/{id}/thumb`).
   Tomt namn -> "Okänd-N" (platshållare). Vid rotation transformeras regionerna i
   `rotate_photo`. Export skriver MWG-rs Regions (center-koordinater) via exiftool.
+- **Färg-/tonjustering** (`Photo.adj_*` + `auto_tone`, `services/adjust.py`):
+  multiplikatorer (1.0 = oförändrat) för ljusstyrka/kontrast/gamma/mättnad +
+  per-kanal RGB, samt auto-ton (`ImageOps.autocontrast`). Renderas on-the-fly i
+  `/image` (och thumbnail), live-preview i UI via CSS-filter på `/image?raw=1`.
+  Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
+  OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
 - **Export** (`services/exporter.py`): kopierar originalet till `EXPORT_DIR` och
   bäddar in metadata i kopian via `exiftool` (XMP primärt, EXIF-datum + GPS som
   komplement). Originalen rörs aldrig. Kräver `exiftool` installerat (finns i

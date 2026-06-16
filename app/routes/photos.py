@@ -13,8 +13,9 @@ from app.config import BASE_DIR, THUMB_DIR
 from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
-from app.schemas import PhotoUpdate
-from app.services.scanner import load_oriented, make_thumbnail
+from app.schemas import PhotoAdjust, PhotoUpdate
+from app.services.adjust import apply_adjustments, has_adjustments
+from app.services.scanner import load_oriented, render_photo, write_thumbnail
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -140,15 +141,20 @@ def thumb(photo_id: int):
 
 
 @router.get("/image/{photo_id}")
-def image(photo_id: int, db: Session = Depends(get_db)):
+def image(photo_id: int, raw: bool = False, db: Session = Depends(get_db)):
     photo = db.get(Photo, photo_id)
     if not photo or not Path(photo.path).exists():
         raise HTTPException(404, "Bildfil saknas")
-    # Utan rotation: servera originalfilen direkt. Med rotation: rotera on-the-fly
-    # så att originalet på disk förblir orört.
-    if not photo.rotation:
+    # raw=1: orienterad/roterad men UTAN färgjusteringar (för live-preview).
+    # Annars renderas rotation + justeringar on-the-fly. Originalet rörs aldrig.
+    if raw:
+        if not photo.rotation:
+            return FileResponse(photo.path)
+        img = load_oriented(Path(photo.path), photo.rotation)
+    elif not photo.rotation and not has_adjustments(photo):
         return FileResponse(photo.path)
-    img = load_oriented(Path(photo.path), photo.rotation)
+    else:
+        img = render_photo(photo)
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=90)
     buf.seek(0)
@@ -173,8 +179,29 @@ def rotate_photo(
             f.x, f.y, f.w, f.h = f.y, 1 - f.x - f.w, f.h, f.w
     db.commit()
     if Path(photo.path).exists():
-        make_thumbnail(Path(photo.path), photo.id, photo.rotation)
+        write_thumbnail(photo)
     return JSONResponse({"ok": True, "rotation": photo.rotation})
+
+
+@router.post("/api/photos/{photo_id}/adjust")
+def adjust_photo(
+    photo_id: int, data: PhotoAdjust, db: Session = Depends(get_db)
+):
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    photo.auto_tone = 1 if data.auto_tone else 0
+    photo.adj_brightness = data.adj_brightness
+    photo.adj_contrast = data.adj_contrast
+    photo.adj_gamma = data.adj_gamma
+    photo.adj_saturation = data.adj_saturation
+    photo.adj_red = data.adj_red
+    photo.adj_green = data.adj_green
+    photo.adj_blue = data.adj_blue
+    db.commit()
+    if Path(photo.path).exists():
+        write_thumbnail(photo)
+    return JSONResponse({"ok": True})
 
 
 def _get_or_create_tag(db: Session, name: str, kind: str) -> Tag:

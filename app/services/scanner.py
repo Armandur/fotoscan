@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.config import PHOTO_DIR, THUMB_DIR, THUMB_SIZE, SUPPORTED_EXTENSIONS
 from app.database import Photo
+from app.services.adjust import apply_adjustments
 
 _DATETIME_ORIGINAL = 0x9003  # DateTimeOriginal, ligger i Exif-sub-IFD
 _DATETIME = 0x0132           # DateTime (ModifyDate) i IFD0, fallback
@@ -57,11 +58,17 @@ def load_oriented(src: Path, rotation: int = 0) -> Image.Image:
     return img
 
 
-def make_thumbnail(src: Path, photo_id: int, rotation: int = 0) -> None:
-    dest = THUMB_DIR / f"{photo_id}.jpg"
-    img = load_oriented(src, rotation)
+def render_photo(photo) -> Image.Image:
+    """Originalbilden med EXIF-orientering, rotation och färgjusteringar
+    applicerade. Originalfilen på disk rörs aldrig."""
+    img = load_oriented(Path(photo.path), photo.rotation or 0)
+    return apply_adjustments(img, photo)
+
+
+def write_thumbnail(photo) -> None:
+    img = render_photo(photo)
     img.thumbnail(THUMB_SIZE)
-    img.save(dest, "JPEG", quality=85)
+    img.save(THUMB_DIR / f"{photo.id}.jpg", "JPEG", quality=85)
 
 
 def scan_directory(db: Session) -> dict:
@@ -100,7 +107,7 @@ def scan_directory(db: Session) -> dict:
             )
             db.add(photo)
             db.flush()  # ger photo.id för thumbnailen
-            make_thumbnail(path, photo.id)
+            write_thumbnail(photo)
             db.commit()
             added += 1
         except Exception:

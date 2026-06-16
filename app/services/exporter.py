@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.config import EXPORT_DIR
 from app.database import Photo
-from app.services.scanner import load_oriented
+from app.services.adjust import has_adjustments
+from app.services.scanner import load_oriented, render_photo
 
 # Vår rotation (grader medurs) -> EXIF Orientation-värde. Antar att originalet
 # saknar egen Orientation (vanligt for scans/negativ), vilket är vårt huvudfall.
@@ -25,7 +26,7 @@ def _keyword_tags(photo: Photo) -> list[str]:
     return [t.name for t in photo.tags if t.kind == "tag"]
 
 
-def _metadata_args(photo: Photo) -> list[str]:
+def _metadata_args(photo: Photo, skip_orientation: bool = False) -> list[str]:
     """Bygg exiftool-argument som bäddar in metadatan som XMP (+ EXIF-datum).
 
     XMP är primärt: UTF-8 (å/ä/ö), partiella datum och fält for personer/taggar.
@@ -55,7 +56,7 @@ def _metadata_args(photo: Photo) -> list[str]:
     for name in _person_tags(photo):
         args.append(f"-XMP-iptcExt:PersonInImage={name}")
 
-    if photo.rotation:
+    if photo.rotation and not skip_orientation:
         args.append(f"-Orientation#={_ORIENTATION.get(photo.rotation, 1)}")
 
     return args
@@ -98,12 +99,22 @@ def export_photo(photo: Photo, dest_dir: Path = EXPORT_DIR) -> Path:
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / src.name
-    shutil.copy2(src, dest)
 
-    meta = _metadata_args(photo)
+    # Med färgjusteringar måste pixlarna kodas om (justeringarna bakas in, och
+    # rotationen blir då redan applicerad -> ingen Orientation-tag). Utan
+    # justeringar behålls originalet bit-för-bit och rotationen sätts som tagg.
+    baked = has_adjustments(photo)
+    if baked:
+        img = render_photo(photo)
+        img.save(dest, "JPEG", quality=95)
+        dims = img.size
+    else:
+        shutil.copy2(src, dest)
+        dims = load_oriented(src, photo.rotation).size if photo.faces else (0, 0)
+
+    meta = _metadata_args(photo, skip_orientation=baked)
     if photo.faces:
-        w, h = load_oriented(src, photo.rotation).size
-        meta += _region_args(photo, w, h)
+        meta += _region_args(photo, dims[0], dims[1])
 
     args = ["exiftool", "-overwrite_original", *meta, str(dest)]
     if meta:  # bara om det finns metadata att skriva

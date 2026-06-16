@@ -1,9 +1,6 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Välj tumnagel för en person.** Idag visas en godtycklig/första bild som
-  tumnagel för en person (i personvyn). Lägg till att man kan välja vilken
-  specifik bild som ska representera personen.
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
@@ -41,6 +38,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Välj tumnagel för en person.** `Tag.thumb_face_id` pekar ut en vald
+  ansiktsregion; annars auto (senaste ansiktet). Väljare i personvyn (ansikts-
+  strip + Auto), endpoint `POST /api/persons/{id}/thumb`.
 - [x] **Bläddringskontext från ursprungsvyn.** Öppnas en bild från person-/tagg-/
   plats-/tidslinjevyn går prev/next genom just den listan (`services/context.py`,
   `?ctx=...&ctx_id=...`), inte hela galleriet. Bakåtknappen leder till

@@ -122,6 +122,10 @@ class Tag(Base):
     parent_id = Column(
         Integer, ForeignKey("tags.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Vald representativ ansiktsregion för en person (None = auto, senaste ansiktet).
+    thumb_face_id = Column(
+        Integer, ForeignKey("face_regions.id", ondelete="SET NULL"), nullable=True
+    )
 
     photos = relationship("Photo", secondary=photo_tags, back_populates="tags")
     parent = relationship("Tag", remote_side=[id], back_populates="children")
@@ -153,7 +157,8 @@ class FaceRegion(Base):
     created_at = Column(DateTime, default=_now)
 
     photo = relationship("Photo", back_populates="faces")
-    tag = relationship("Tag")
+    # foreign_keys behövs: Tag.thumb_face_id ger en andra FK-väg mellan tabellerna.
+    tag = relationship("Tag", foreign_keys=[tag_id])
 
 
 def _column_exists(conn, table: str, column: str) -> bool:
@@ -210,3 +215,7 @@ def init_db() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")
         if not _column_exists(conn, "tags", "parent_id"):
             conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN parent_id INTEGER")
+        if not _column_exists(conn, "tags", "thumb_face_id"):
+            conn.exec_driver_sql(
+                "ALTER TABLE tags ADD COLUMN thumb_face_id INTEGER"
+            )

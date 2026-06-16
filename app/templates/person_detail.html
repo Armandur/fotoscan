@@ -35,6 +35,25 @@
     </div>
 </div>
 
+{% if regions %}
+<div class="mb-3">
+    <div class="small text-secondary mb-1">Tumnagel (klicka för att välja):</div>
+    <div class="d-flex gap-2 flex-wrap align-items-center" id="thumb-picker">
+        <button type="button" class="btn btn-sm thumb-pick d-flex flex-column align-items-center justify-content-center text-secondary {{ 'btn-primary text-white' if not person.thumb_face_id else 'btn-outline-secondary' }}"
+                data-face="" title="Auto (senaste ansiktet)" style="width:48px;height:48px">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
+        {% for r in regions %}
+        <button type="button" class="btn p-0 thumb-pick border {{ 'border-primary border-3' if r.id == person.thumb_face_id else 'border-secondary' }}"
+                data-face="{{ r.id }}" title="Använd som tumnagel" style="line-height:0">
+            <img src="/api/faces/{{ r.id }}/thumb" alt=""
+                 style="width:48px;height:48px;object-fit:cover;border-radius:4px">
+        </button>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 {{ filterbar("/persons/" ~ person.id, reviewed, ptype, paired, separate, sort) }}
 
 <div class="gallery-grid">
@@ -45,6 +64,25 @@
 {% block scripts %}
 <script>
 const personId = document.querySelector("[data-person-id]").dataset.personId;
+
+// Tumnagel-väljare: klicka på ett ansikte (eller Auto) för att representera personen
+const thumbPicker = document.getElementById("thumb-picker");
+if (thumbPicker) {
+    thumbPicker.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".thumb-pick");
+        if (!btn) return;
+        const faceId = btn.dataset.face ? parseInt(btn.dataset.face, 10) : null;
+        try {
+            await apiFetch(`/api/persons/${personId}/thumb`, {
+                method: "POST", body: { face_id: faceId },
+            });
+            showToast(faceId ? "Tumnagel vald" : "Tumnagel återställd");
+            location.reload();
+        } catch (err) {
+            showToast("Kunde inte sätta tumnagel: " + err.message, true);
+        }
+    });
+}
 
 // Merge via söklista med thumbnails
 const mergeSearch = document.getElementById("merge-search");

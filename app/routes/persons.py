@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
-from app.schemas import PersonMerge, PersonRename
+from app.schemas import PersonMerge, PersonRename, PersonThumb
 from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions, sort_order
 
@@ -50,6 +50,27 @@ def _sample_region_id(db: Session, tag: Tag) -> int | None:
     return region.id if region else None
 
 
+def _avatar_region_id(db: Session, tag: Tag) -> int | None:
+    """Personens representativa ansiktsregion: vald (thumb_face_id) om den finns
+    kvar och fortfarande tillhör personen, annars senaste ansiktet (fallback)."""
+    if tag.thumb_face_id:
+        chosen = db.get(FaceRegion, tag.thumb_face_id)
+        if chosen and chosen.tag_id == tag.id:
+            return chosen.id
+    return _sample_region_id(db, tag)
+
+
+def _person_regions(db: Session, tag: Tag) -> list[dict]:
+    """Alla ansiktsregioner för personen (för tumnagel-väljaren)."""
+    regions = (
+        db.query(FaceRegion)
+        .filter(FaceRegion.tag_id == tag.id)
+        .order_by(FaceRegion.id.desc())
+        .all()
+    )
+    return [{"id": r.id, "photo_id": r.photo_id} for r in regions]
+
+
 @router.get("/persons", response_class=HTMLResponse)
 def persons_page(request: Request, db: Session = Depends(get_db)):
     persons = db.query(Tag).filter(Tag.kind == "person").order_by(Tag.name).all()
@@ -60,7 +81,7 @@ def persons_page(request: Request, db: Session = Depends(get_db)):
             "id": tag.id,
             "name": tag.name,
             "count": len(ids),
-            "region_id": _sample_region_id(db, tag),
+            "region_id": _avatar_region_id(db, tag),
             "sample_photo": min(ids) if ids else None,
         })
     return templates.TemplateResponse(request, "persons.html", {"persons": rows})
@@ -87,7 +108,9 @@ def person_detail(
     )
     return templates.TemplateResponse(
         request, "person_detail.html",
-        {"person": tag, "photos": photos, "region_id": _sample_region_id(db, tag),
+        {"person": tag, "photos": photos,
+         "region_id": _avatar_region_id(db, tag),
+         "regions": _person_regions(db, tag),
          "reviewed": reviewed, "ptype": ptype, "paired": paired,
          "separate": separate, "sort": sort, "card_qs": card_qs},
     )
@@ -120,6 +143,22 @@ def rename_person(
     return JSONResponse(
         {"ok": True, "id": target_id, "name": new_name, "merged": True}
     )
+
+
+@router.post("/api/persons/{tag_id}/thumb")
+def set_person_thumb(
+    tag_id: int, data: PersonThumb, db: Session = Depends(get_db)
+):
+    tag = db.get(Tag, tag_id)
+    if not tag or tag.kind != "person":
+        raise HTTPException(404, "Person hittades inte")
+    if data.face_id is not None:
+        region = db.get(FaceRegion, data.face_id)
+        if not region or region.tag_id != tag.id:
+            raise HTTPException(400, "Ansiktet tillhör inte personen")
+    tag.thumb_face_id = data.face_id
+    db.commit()
+    return JSONResponse({"ok": True})
 
 
 @router.delete("/api/persons/{tag_id}")

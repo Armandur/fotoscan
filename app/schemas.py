@@ -28,6 +28,11 @@ class PersonMerge(BaseModel):
     into_id: int
 
 
+class PersonThumb(BaseModel):
+    # None = återställ till auto (senaste ansiktet).
+    face_id: int | None = None
+
+
 class FaceBox(BaseModel):
     x: float
     y: float

@@ -85,6 +85,10 @@ photos/                exempel/testbilder (gitignored)
   personsök med ansikts-thumbnails (`/api/persons` + `/api/faces/{id}/thumb`).
   Tomt namn -> "Okänd-N" (platshållare). Vid rotation transformeras regionerna i
   `rotate_photo`. Export skriver MWG-rs Regions (center-koordinater) via exiftool.
+  En persons tumnagel kan väljas (`Tag.thumb_face_id` -> en `FaceRegion`); annars
+  auto = senaste ansiktet (`_avatar_region_id`, validerar att valet finns kvar).
+  OBS: `thumb_face_id` ger en andra FK-väg tags<->face_regions, så
+  `FaceRegion.tag` måste ange `foreign_keys=[tag_id]`.
 - **Färg-/tonjustering** (`Photo.adj_*` + `auto_tone`, `services/adjust.py`):
   multiplikatorer (1.0 = oförändrat) för ljusstyrka/kontrast/gamma/mättnad +
   per-kanal RGB, samt auto-ton (`ImageOps.autocontrast`). Renderas on-the-fly i

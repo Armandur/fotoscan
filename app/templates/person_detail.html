@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from "_cards.html" import photocard %}
+{% from "_filterbar.html" import filterbar %}
 {% block title %}{{ person.name }} - Fotoscan{% endblock %}
 
 {% block headeractions %}
@@ -33,31 +35,10 @@
     </div>
 </div>
 
+{{ filterbar("/persons/" ~ person.id, reviewed, ptype, paired, separate, sort) }}
+
 <div class="gallery-grid">
-    {% for photo in photos %}
-    <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
-       href="/photo/{{ photo.id }}">
-        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
-        <div class="card-body p-2">
-            <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
-            <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
-            {% if photo.location %}
-            <div class="small text-truncate"><i class="bi bi-geo-alt"></i> {{ photo.location }}</div>
-            {% endif %}
-            {% set persons = photo.tags | selectattr('kind', 'equalto', 'person') | map(attribute='name') | join(', ') %}
-            {% if persons %}
-            <div class="small text-truncate" title="{{ persons }}"><i class="bi bi-people"></i> {{ persons }}</div>
-            {% endif %}
-            {% set kws = photo.tags | selectattr('kind', 'equalto', 'tag') | map(attribute='name') | join(', ') %}
-            {% if kws %}
-            <div class="small text-secondary text-truncate" title="{{ kws }}"><i class="bi bi-tags"></i> {{ kws }}</div>
-            {% endif %}
-            {% if photo.notes %}
-            <div class="small text-secondary text-truncate" title="{{ photo.notes }}">{{ photo.notes }}</div>
-            {% endif %}
-        </div>
-    </a>
-    {% endfor %}
+    {% for photo in photos %}{{ photocard(photo) }}{% endfor %}
 </div>
 {% endblock %}
 

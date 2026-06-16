@@ -7,6 +7,7 @@ from app.config import BASE_DIR
 from app.database import Photo, Place
 from app.deps import get_db
 from app.schemas import NameIn
+from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -49,18 +50,22 @@ def places_page(request: Request, q: str = "", db: Session = Depends(get_db)):
 
 
 @router.get("/place/{place_id}", response_class=HTMLResponse)
-def place_detail(place_id: int, request: Request, db: Session = Depends(get_db)):
+def place_detail(
+    place_id: int, request: Request,
+    reviewed: str = "", ptype: str = "", paired: str = "",
+    separate: bool = False, sort: str = "date",
+    db: Session = Depends(get_db),
+):
     place = db.get(Place, place_id)
     if not place:
         raise HTTPException(404, "Platsen hittades inte")
-    photos = (
-        db.query(Photo)
-        .filter(Photo.place_id == place.id)
-        .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
-        .all()
-    )
+    query = db.query(Photo).filter(Photo.place_id == place.id)
+    query = apply_dimensions(query, reviewed, ptype, paired, separate)
+    photos = query.order_by(*sort_order(sort)).all()
     return templates.TemplateResponse(
-        request, "place_detail.html", {"place": place, "photos": photos}
+        request, "place_detail.html",
+        {"place": place, "photos": photos, "reviewed": reviewed, "ptype": ptype,
+         "paired": paired, "separate": separate, "sort": sort},
     )
 
 

@@ -1,0 +1,43 @@
+{% macro _seg(name, current, options) %}
+<div class="btn-group btn-group-sm" role="group">
+    {% for value, label in options %}
+    <input type="radio" class="btn-check" name="{{ name }}" id="fb-{{ name }}-{{ loop.index }}"
+           value="{{ value }}" autocomplete="off" {% if current == value %}checked{% endif %}>
+    <label class="btn btn-outline-secondary" for="fb-{{ name }}-{{ loop.index }}">{{ label }}</label>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro filterbar(action, reviewed="", ptype="", paired="", separate=False, sort="date") %}
+<form class="mb-3" method="get" action="{{ action }}" id="filter-form">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+        <span class="d-inline-flex align-items-center gap-1">
+            <span class="small text-secondary">Granskat</span>
+            {{ _seg("reviewed", reviewed, [("", "Alla"), ("no", "Ej granskade"), ("yes", "Granskade")]) }}
+        </span>
+        <span class="d-inline-flex align-items-center gap-1">
+            <span class="small text-secondary">Typ</span>
+            {{ _seg("ptype", ptype, [("", "Alla"), ("negative", "Negativ"), ("photo", "Foto")]) }}
+        </span>
+        <span class="d-inline-flex align-items-center gap-1">
+            <span class="small text-secondary">Hopparat</span>
+            {{ _seg("paired", paired, [("", "Alla"), ("yes", "Ja"), ("no", "Nej")]) }}
+        </span>
+        <select class="form-select form-select-sm" name="sort" id="sort-select" style="width:auto" title="Sortering">
+            <option value="date" {% if sort == 'date' %}selected{% endif %}>Datum ↑ (äldst)</option>
+            <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>Datum ↓ (nyast)</option>
+            <option value="name" {% if sort == 'name' %}selected{% endif %}>Filnamn</option>
+            <option value="added" {% if sort == 'added' %}selected{% endif %}>Tillagd</option>
+        </select>
+        <div class="form-check form-switch" title="Visa negativ och foto var för sig">
+            <input class="form-check-input" type="checkbox" name="separate" value="1" id="separate-toggle" {% if separate %}checked{% endif %}>
+            <label class="form-check-label small" for="separate-toggle">Visa hopparade separat</label>
+        </div>
+    </div>
+</form>
+<script>
+document.querySelectorAll('#filter-form .btn-check, #separate-toggle, #sort-select').forEach(el => {
+    el.addEventListener("change", () => document.getElementById("filter-form").submit());
+});
+</script>
+{% endmacro %}

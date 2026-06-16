@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_cards.html" import photocard %}
+{% from "_filterbar.html" import filterbar %}
 {% block title %}{{ tag.name }} - Taggar{% endblock %}
 
 {% block headeractions %}
@@ -20,6 +21,8 @@
         <span class="text-secondary small">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} med taggen</span>
     </div>
 </div>
+
+{{ filterbar("/tags/" ~ tag.id, reviewed, ptype, paired, separate, sort) }}
 
 <div class="gallery-grid">
     {% for photo in photos %}{{ photocard(photo) }}{% endfor %}

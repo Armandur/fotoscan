@@ -7,6 +7,7 @@ from app.config import BASE_DIR
 from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
 from app.schemas import PersonMerge, PersonRename
+from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -64,22 +65,26 @@ def persons_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/persons/{tag_id}", response_class=HTMLResponse)
-def person_detail(tag_id: int, request: Request, db: Session = Depends(get_db)):
+def person_detail(
+    tag_id: int, request: Request,
+    reviewed: str = "", ptype: str = "", paired: str = "",
+    separate: bool = False, sort: str = "date",
+    db: Session = Depends(get_db),
+):
     tag = db.get(Tag, tag_id)
     if not tag or tag.kind != "person":
         raise HTTPException(404, "Person hittades inte")
     ids = _person_photo_ids(db, tag)
     photos = []
     if ids:
-        photos = (
-            db.query(Photo)
-            .filter(Photo.id.in_(ids))
-            .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
-            .all()
-        )
+        query = db.query(Photo).filter(Photo.id.in_(ids))
+        query = apply_dimensions(query, reviewed, ptype, paired, separate)
+        photos = query.order_by(*sort_order(sort)).all()
     return templates.TemplateResponse(
         request, "person_detail.html",
-        {"person": tag, "photos": photos, "region_id": _sample_region_id(db, tag)},
+        {"person": tag, "photos": photos, "region_id": _sample_region_id(db, tag),
+         "reviewed": reviewed, "ptype": ptype, "paired": paired,
+         "separate": separate, "sort": sort},
     )
 
 

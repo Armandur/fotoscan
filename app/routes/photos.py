@@ -17,6 +17,7 @@ from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import has_adjustments, suggest_auto
 from app.services.dates import parse_date_text
+from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
@@ -39,11 +40,6 @@ def _filtered_query(
     separate=False döljer sekundären i hopparade par (visar bara primären).
     """
     query = db.query(Photo)
-    # Gruppera hopparade: dölj sekundären (negativet) om vi inte separerar.
-    if not separate:
-        query = query.filter(
-            or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1)
-        )
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -56,18 +52,7 @@ def _filtered_query(
                 Photo.source.ilike(like),
             )
         )
-    if reviewed == "yes":
-        query = query.filter(Photo.reviewed_at.isnot(None))
-    elif reviewed == "no":
-        query = query.filter(Photo.reviewed_at.is_(None))
-    if ptype == "negative":
-        query = query.filter(Photo.is_negative == 1)
-    elif ptype == "photo":
-        query = query.filter(Photo.is_negative == 0)
-    if paired == "yes":
-        query = query.filter(Photo.paired_with_id.isnot(None))
-    elif paired == "no":
-        query = query.filter(Photo.paired_with_id.is_(None))
+    query = apply_dimensions(query, reviewed, ptype, paired, separate)
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
         if recursive:
@@ -79,20 +64,6 @@ def _filtered_query(
         else:
             query = query.filter(Photo.folder == folder)
     return query
-
-
-def _sort_order(sort: str):
-    """Order-by-uttryck för galleriets sortering. Okänt datum hamnar sist."""
-    if sort == "date_desc":
-        return [Photo.date_year.is_(None), Photo.date_year.desc(),
-                Photo.date_month.is_(None), Photo.date_month.desc(), Photo.filename]
-    if sort == "name":
-        return [Photo.folder, Photo.filename]
-    if sort == "added":
-        return [Photo.id]
-    # default "date" - äldst först
-    return [Photo.date_year.is_(None), Photo.date_year,
-            Photo.date_month.is_(None), Photo.date_month, Photo.filename]
 
 
 def _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort) -> str:

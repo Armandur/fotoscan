@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR
 from app.database import Photo
 from app.deps import get_db
+from app.services.filtering import apply_dimensions
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -17,10 +18,15 @@ _MONTHS = [
 
 
 @router.get("/timeline", response_class=HTMLResponse)
-def timeline(request: Request, db: Session = Depends(get_db)):
+def timeline(
+    request: Request,
+    reviewed: str = "", ptype: str = "", paired: str = "",
+    separate: bool = False, sort: str = "date",
+    db: Session = Depends(get_db),
+):
+    query = apply_dimensions(db.query(Photo), reviewed, ptype, paired, separate)
     photos = (
-        db.query(Photo)
-        .order_by(
+        query.order_by(
             Photo.date_year.is_(None), Photo.date_year,
             Photo.date_month.is_(None), Photo.date_month, Photo.filename,
         )
@@ -35,12 +41,13 @@ def timeline(request: Request, db: Session = Depends(get_db)):
             continue
         year_map.setdefault(p.date_year, {}).setdefault(p.date_month, []).append(p)
 
+    desc = sort == "date_desc"
     groups = []
-    for year in sorted(year_map):
+    for year in sorted(year_map, reverse=desc):
         months = year_map[year]
         month_groups = []
         total = 0
-        for m in sorted(months, key=lambda x: (x is None, x or 0)):
+        for m in sorted(months, key=lambda x: (x is None, x or 0), reverse=desc):
             items = months[m]
             total += len(items)
             month_groups.append({
@@ -52,5 +59,6 @@ def timeline(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse(
         request, "timeline.html",
-        {"groups": groups, "undated": undated},
+        {"groups": groups, "undated": undated, "reviewed": reviewed,
+         "ptype": ptype, "paired": paired, "separate": separate, "sort": sort},
     )

@@ -7,6 +7,7 @@ from app.config import BASE_DIR
 from app.database import Photo, Tag
 from app.deps import get_db
 from app.schemas import NameIn
+from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -38,16 +39,22 @@ def tags_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/tags/{tag_id}", response_class=HTMLResponse)
-def tag_detail(tag_id: int, request: Request, db: Session = Depends(get_db)):
+def tag_detail(
+    tag_id: int, request: Request,
+    reviewed: str = "", ptype: str = "", paired: str = "",
+    separate: bool = False, sort: str = "date",
+    db: Session = Depends(get_db),
+):
     tag = db.get(Tag, tag_id)
     if not tag or tag.kind != "tag":
         raise HTTPException(404, "Taggen hittades inte")
-    photos = sorted(
-        tag.photos,
-        key=lambda p: (p.date_year is None, p.date_year or 0, p.filename),
-    )
+    query = db.query(Photo).filter(Photo.tags.any(Tag.id == tag.id))
+    query = apply_dimensions(query, reviewed, ptype, paired, separate)
+    photos = query.order_by(*sort_order(sort)).all()
     return templates.TemplateResponse(
-        request, "tag_detail.html", {"tag": tag, "photos": photos}
+        request, "tag_detail.html",
+        {"tag": tag, "photos": photos, "reviewed": reviewed, "ptype": ptype,
+         "paired": paired, "separate": separate, "sort": sort},
     )
 
 

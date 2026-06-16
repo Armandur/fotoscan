@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% from "_cards.html" import photocard %}
+{% from "_filterbar.html" import filterbar %}
 {% block title %}Tidslinje - Fotoscan{% endblock %}
 
 {% block content %}
 <h1 class="h4 mb-3">Tidslinje</h1>
+{{ filterbar("/timeline", reviewed, ptype, paired, separate, sort) }}
 
 {% if not groups and not undated %}
     <div class="alert alert-secondary">Inga foton än.</div>

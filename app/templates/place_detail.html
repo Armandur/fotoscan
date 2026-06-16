@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_cards.html" import photocard %}
+{% from "_filterbar.html" import filterbar %}
 {% block title %}{{ place.name }} - Platser{% endblock %}
 
 {% block headeractions %}
@@ -20,6 +21,8 @@
         <span class="text-secondary small">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} på denna plats</span>
     </div>
 </div>
+
+{{ filterbar("/place/" ~ place.id, reviewed, ptype, paired, separate, sort) }}
 
 <div class="gallery-grid">
     {% for photo in photos %}{{ photocard(photo) }}{% endfor %}

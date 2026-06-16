@@ -18,7 +18,7 @@ from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import has_adjustments, suggest_auto
 from app.services.dates import parse_date_text
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
-from app.routes.places import get_or_create_place
+from app.routes.places import get_or_create_place, place_avg_gps
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
 )
@@ -252,12 +252,20 @@ def photo_detail(
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None
 
+    # Representativ GPS från platsen, som kart-förslag när fotot saknar egen.
+    place_gps = None
+    if photo.place_id and (photo.gps_lat is None or photo.gps_lon is None):
+        avg = place_avg_gps(db, photo.place_id, exclude_photo_id=photo.id)
+        if avg:
+            place_gps = {"lat": round(avg[0], 6), "lon": round(avg[1], 6)}
+
     return templates.TemplateResponse(
         request,
         "photo.html",
         {
             "photo": photo,
             "paired": paired,
+            "place_gps": place_gps,
             "prev_id": prev_id,
             "next_id": next_id,
             "pos": pos,

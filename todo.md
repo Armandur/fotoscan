@@ -4,9 +4,6 @@
 - [ ] **Hierarkiska taggar.** Taggar-vyn finns (platt). Lägg till hierarki -
   XMP stödjer det via Lightroom `lr:hierarchicalSubject` (pipe-separerat, t.ex.
   "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
-- [ ] **Plats: representativ GPS.** Place-tabellen finns nu. Lägg till en grov/
-  representativ GPS på platsen (t.ex. snitt av fotonas GPS, eller satt på karta)
-  som default-förslag i fotots kart-modal när fotot saknar egen GPS.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -37,6 +34,8 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Representativ GPS per plats (snitt av fotonas GPS) - centrerar kart-modalen
+  när fotot saknar egen position; visas på platsdetaljen.
 - [x] Normalisera plats: egen Place-tabell + Photo.place_id (location som cache),
   platsvy mot tabellen (byt namn/merge/ta bort), 12 platser migrerade. Foto-GPS
   frikopplad.

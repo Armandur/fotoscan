@@ -13,6 +13,22 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
 
+def place_avg_gps(db: Session, place_id: int, exclude_photo_id: int | None = None):
+    """Representativ GPS för en plats = snittet av platsens fotons egna GPS.
+    Returnerar (lat, lon, antal) eller None."""
+    q = db.query(Photo.gps_lat, Photo.gps_lon).filter(
+        Photo.place_id == place_id,
+        Photo.gps_lat.isnot(None), Photo.gps_lon.isnot(None),
+    )
+    if exclude_photo_id is not None:
+        q = q.filter(Photo.id != exclude_photo_id)
+    rows = q.all()
+    if not rows:
+        return None
+    n = len(rows)
+    return (sum(r[0] for r in rows) / n, sum(r[1] for r in rows) / n, n)
+
+
 def get_or_create_place(db: Session, name: str) -> Place:
     name = name.strip()
     place = db.query(Place).filter(Place.name == name).first()
@@ -62,9 +78,12 @@ def place_detail(
     query = db.query(Photo).filter(Photo.place_id == place.id)
     query = apply_dimensions(query, reviewed, ptype, paired, separate)
     photos = query.order_by(*sort_order(sort)).all()
+    avg = place_avg_gps(db, place.id)
+    place_gps = {"lat": round(avg[0], 6), "lon": round(avg[1], 6), "n": avg[2]} if avg else None
     return templates.TemplateResponse(
         request, "place_detail.html",
-        {"place": place, "photos": photos, "reviewed": reviewed, "ptype": ptype,
+        {"place": place, "photos": photos, "place_gps": place_gps,
+         "reviewed": reviewed, "ptype": ptype,
          "paired": paired, "separate": separate, "sort": sort},
     )
 

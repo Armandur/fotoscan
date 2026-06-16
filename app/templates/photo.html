@@ -288,7 +288,8 @@
                     <button class="btn btn-outline-secondary" id="map-search-btn" type="button">Sök</button>
                 </div>
                 <div id="map-search-results" class="list-group mb-2"></div>
-                <div id="map" style="height:50vh;border-radius:var(--bs-border-radius)"></div>
+                <div id="map" style="height:50vh;border-radius:var(--bs-border-radius)"
+                     {% if place_gps %}data-place-lat="{{ place_gps.lat }}" data-place-lon="{{ place_gps.lon }}"{% endif %}></div>
                 <div class="d-flex gap-2 align-items-center mt-2 flex-wrap">
                     <label class="small text-nowrap mb-0">Osäkerhetsradie (m)</label>
                     <input type="number" id="map-radius" class="form-control form-control-sm"

@@ -91,6 +91,11 @@
             setPoint(parseFloat(lat), parseFloat(lon));
             map.setView([parseFloat(lat), parseFloat(lon)], 14);
         } else {
+            // Inget eget GPS - centrera på platsens representativa position om den finns.
+            const mapEl = document.getElementById("map");
+            if (mapEl.dataset.placeLat && mapEl.dataset.placeLon) {
+                map.setView([parseFloat(mapEl.dataset.placeLat), parseFloat(mapEl.dataset.placeLon)], 12);
+            }
             updateCoords();
         }
     });

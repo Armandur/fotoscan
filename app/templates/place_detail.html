@@ -14,11 +14,19 @@
         <input type="text" class="form-control" id="place-name" value="{{ place.name }}">
         <button class="btn btn-primary" id="rename-place-btn">Spara namn</button>
     </div>
-    <div class="d-flex gap-2 align-items-center mt-2">
+    <div class="d-flex gap-2 align-items-center mt-2 flex-wrap">
         <button class="btn btn-outline-danger btn-sm" id="delete-place-btn">
             <i class="bi bi-trash"></i> Ta bort plats
         </button>
         <span class="text-secondary small">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} på denna plats</span>
+        {% if place_gps %}
+        <span class="text-secondary small">
+            <i class="bi bi-geo-alt"></i> Representativ GPS:
+            <a href="https://www.openstreetmap.org/?mlat={{ place_gps.lat }}&mlon={{ place_gps.lon }}#map=14/{{ place_gps.lat }}/{{ place_gps.lon }}"
+               target="_blank">{{ place_gps.lat }}, {{ place_gps.lon }}</a>
+            (snitt av {{ place_gps.n }} foto med GPS)
+        </span>
+        {% endif %}
     </div>
 </div>
 

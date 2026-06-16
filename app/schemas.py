@@ -6,6 +6,14 @@ class TagItem(BaseModel):
     kind: str = "tag"
 
 
+class FaceRegionIn(BaseModel):
+    person: str
+    x: float
+    y: float
+    w: float
+    h: float
+
+
 class PhotoUpdate(BaseModel):
     date_text: str = ""
     date_year: int | None = None

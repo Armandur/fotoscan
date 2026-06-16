@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, ForeignKey, Table, create_engine,
+    Column, Integer, Float, String, Text, DateTime, ForeignKey, Table,
+    create_engine,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
@@ -65,6 +66,10 @@ class Photo(Base):
     tags = relationship(
         "Tag", secondary=photo_tags, back_populates="photos", lazy="selectin"
     )
+    faces = relationship(
+        "FaceRegion", back_populates="photo",
+        cascade="all, delete-orphan", lazy="selectin",
+    )
 
 
 class Tag(Base):
@@ -75,6 +80,29 @@ class Tag(Base):
     kind = Column(String, nullable=False, default="tag")  # "person" | "tag"
 
     photos = relationship("Photo", secondary=photo_tags, back_populates="tags")
+
+
+class FaceRegion(Base):
+    __tablename__ = "face_regions"
+
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(
+        Integer, ForeignKey("photos.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    tag_id = Column(
+        Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=False
+    )
+    # Normaliserade koordinater (0-1) relativt den VISADE bilden (efter
+    # EXIF-orientering + användarens rotation). x/y = övre vänstra hörnet.
+    x = Column(Float, nullable=False)
+    y = Column(Float, nullable=False)
+    w = Column(Float, nullable=False)
+    h = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+    photo = relationship("Photo", back_populates="faces")
+    tag = relationship("Tag")
 
 
 def _column_exists(conn, table: str, column: str) -> bool:

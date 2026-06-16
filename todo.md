@@ -1,19 +1,10 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Ansiktstaggning (regioner knutna till personer).**
-  Steg 1 - manuellt: ny tabell `face_regions` (photo_id, person-tag, x/y/w/h
-  normaliserat 0-1). I detaljvyn: dra en ruta över ansiktet, välj/skriv person
-  (återanvänd person-autocomplete), visa befintliga rutor som overlay med namn.
-  Rent koordinatbaserat - ingen bildmanipulation, originalet orört.
-  Export: skriv som **MWG-rs Regions** (Region Name = person, Type = Face) via
-  exiftool -> läses av Lightroom/digiKam/Apple Foton/Picasa. Knyter an till
-  IPTC Image Regions / PersonInImage vi redan exporterar.
-  Att lösa: koordinaterna måste hantera rotation (ritas på den visade/roterade
-  bilden, exporteras relativt exportfilens orientering).
-  Steg 2 - AI: automatisk ansiktsdetektering + igenkänning (face_recognition/
-  dlib eller InsightFace) som ger förslag att bekräfta. CPU-only på VM:en (ingen
-  GPU) men görbart för <1000 foton som batch-jobb.
+- [ ] **Ansiktstaggning steg 2 - AI.** Automatisk ansiktsdetektering +
+  igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
+  bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som
+  batch-jobb. Bygger på steg 1:s `FaceRegion` + "Okänd-N"-platshållare.
 - [ ] **Foto-/färgkorrigering.** Två lägen: (a) "Auto" likt IrfanView
   (ett klick), och (b) detaljerad med ljusstyrka, kontrast, gamma samt
   per-kanal-justering (RGB) för färgfoton.
@@ -43,6 +34,8 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Ansiktstaggning steg 1 (manuell): rita ruta -> personsök med ansikts-
+  thumbnails, tomt namn -> Okänd-N, regioner följer rotation, export som MWG-rs.
 - [x] Export: kopia med inbäddad XMP (personer/taggar/plats/beskrivning/källa/
   datum) + EXIF:DateTimeOriginal, via exiftool. Originalen orörda. Per foto och
   "exportera granskade". Rotation skrivs som EXIF Orientation.

@@ -164,6 +164,13 @@ def rotate_photo(
         raise HTTPException(404, "Foto hittades inte")
     step = 90 if dir == "cw" else -90
     photo.rotation = ((photo.rotation or 0) + step) % 360
+    # Transformera ansiktsregionerna så de följer med bilden (normaliserade
+    # koordinater relativt den visade bilden). x/y = övre vänstra hörnet.
+    for f in photo.faces:
+        if dir == "cw":
+            f.x, f.y, f.w, f.h = 1 - f.y - f.h, f.x, f.h, f.w
+        else:
+            f.x, f.y, f.w, f.h = f.y, 1 - f.x - f.w, f.h, f.w
     db.commit()
     if Path(photo.path).exists():
         make_thumbnail(Path(photo.path), photo.id, photo.rotation)

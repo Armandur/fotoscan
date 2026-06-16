@@ -24,11 +24,12 @@ app/
     scan.py            POST /api/scan
     tags.py            GET /api/tags (autocomplete)
     export.py          POST /api/photos/{id}/export, POST /api/export
+    faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
   services/
     scanner.py         scan_directory, load_oriented, make_thumbnail, _read_exif_date
-    exporter.py        export_photo, export_many (exiftool-subprocess)
+    exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
   templates/           base/index/photo.html
-  static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js
+  static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js
 data/                  fotoscan.db + thumbnails/ (gitignored)
 photos/                exempel/testbilder (gitignored)
 ```
@@ -49,6 +50,11 @@ photos/                exempel/testbilder (gitignored)
 - **Inbäddat EXIF-datum** (`Photo.exif_datetime`): råa `DateTimeOriginal` läses
   en gång vid scan ur Exif-sub-IFD:n (0x8769, inte topp-IFD:n!) och skrivs
   aldrig över. Visas read-only i detaljvyn med en "Använd"-knapp.
+- **Ansiktstaggning** (`Photo.faces` -> `FaceRegion`): normaliserade koordinater
+  (0-1, övre vänstra hörnet) relativt den VISADE bilden. Rita ruta i detaljvyn ->
+  personsök med ansikts-thumbnails (`/api/persons` + `/api/faces/{id}/thumb`).
+  Tomt namn -> "Okänd-N" (platshållare). Vid rotation transformeras regionerna i
+  `rotate_photo`. Export skriver MWG-rs Regions (center-koordinater) via exiftool.
 - **Export** (`services/exporter.py`): kopierar originalet till `EXPORT_DIR` och
   bäddar in metadata i kopian via `exiftool` (XMP primärt, EXIF-datum + GPS som
   komplement). Originalen rörs aldrig. Kräver `exiftool` installerat (finns i
@@ -67,6 +73,10 @@ photos/                exempel/testbilder (gitignored)
 - **Använd inte `form.elements.X` i JS** - obscuras headless-motor exponerar inte
   `form.elements`. Använd `form.querySelector('[name="X"]')` (helpern `field()` i
   photo.js). Fungerar i riktiga webbläsare oavsett.
+- **`querySelector` på ett ej inkopplat element returnerar null i obscura** (t.ex.
+  efter `el.innerHTML = ...` innan `appendChild`). Bygg DOM med `createElement` +
+  `addEventListener`, eller appenda först. Gäller bara obscura, inte riktiga
+  webbläsare - men createElement-vägen är robust överallt (se `faces.js:makeBox`).
 
 ## Vanliga förändringar
 - Nytt metadatafält: kolumn i `database.py` (+ ALTER-guard i `init_db`),

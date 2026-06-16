@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import EXPORT_DIR
 from app.database import Photo
+from app.services.scanner import load_oriented
 
 # Vår rotation (grader medurs) -> EXIF Orientation-värde. Antar att originalet
 # saknar egen Orientation (vanligt for scans/negativ), vilket är vårt huvudfall.
@@ -60,6 +61,32 @@ def _metadata_args(photo: Photo) -> list[str]:
     return args
 
 
+def _region_args(photo: Photo, width: int, height: int) -> list[str]:
+    """MWG-rs ansiktsregioner (XMP). Läses av Lightroom/digiKam/Apple Foton.
+
+    Våra koordinater är normaliserade (övre vänstra hörnet) relativt den visade
+    bilden. MWG anger area med CENTRUM-koordinater, därav +w/2 och +h/2.
+    """
+    if not photo.faces:
+        return []
+    args = [
+        f"-RegionAppliedToDimensionsW={width}",
+        f"-RegionAppliedToDimensionsH={height}",
+        "-RegionAppliedToDimensionsUnit=pixel",
+    ]
+    for f in photo.faces:
+        args += [
+            f"-RegionName={f.tag.name}",
+            "-RegionType=Face",
+            f"-RegionAreaX={f.x + f.w / 2:.5f}",
+            f"-RegionAreaY={f.y + f.h / 2:.5f}",
+            f"-RegionAreaW={f.w:.5f}",
+            f"-RegionAreaH={f.h:.5f}",
+            "-RegionAreaUnit=normalized",
+        ]
+    return args
+
+
 def export_photo(photo: Photo, dest_dir: Path = EXPORT_DIR) -> Path:
     """Kopiera originalet till EXPORT_DIR och bädda in metadatan i kopian.
 
@@ -73,8 +100,13 @@ def export_photo(photo: Photo, dest_dir: Path = EXPORT_DIR) -> Path:
     dest = dest_dir / src.name
     shutil.copy2(src, dest)
 
-    args = ["exiftool", "-overwrite_original", *_metadata_args(photo), str(dest)]
-    if len(args) > 3:  # bara om det finns metadata att skriva
+    meta = _metadata_args(photo)
+    if photo.faces:
+        w, h = load_oriented(src, photo.rotation).size
+        meta += _region_args(photo, w, h)
+
+    args = ["exiftool", "-overwrite_original", *meta, str(dest)]
+    if meta:  # bara om det finns metadata att skriva
         subprocess.run(args, check=True, capture_output=True, text=True)
     return dest
 

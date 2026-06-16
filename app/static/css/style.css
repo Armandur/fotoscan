@@ -39,6 +39,117 @@
     object-fit: contain;
 }
 
+/* Bildscen + ansiktsregioner */
+.img-stage {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+.img-stage img {
+    display: block;
+    max-width: 100%;
+    max-height: 75vh;
+}
+.face-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;  /* släpper igenom klick utom på rutorna */
+}
+.face-layer.drawing {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+.face-box {
+    position: absolute;
+    border: 2px solid var(--bs-info);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+    pointer-events: auto;
+}
+.face-box.drawing-box {
+    border-style: dashed;
+    pointer-events: none;
+}
+.face-label {
+    position: absolute;
+    left: -2px;
+    bottom: 100%;
+    background: var(--bs-info);
+    color: #000;
+    font-size: .72rem;
+    line-height: 1.2;
+    padding: 1px 5px;
+    white-space: nowrap;
+    border-radius: 3px 3px 0 0;
+}
+.face-del {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: var(--bs-danger);
+    color: #fff;
+    font-size: .8rem;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+}
+.face-box:hover .face-del { display: block; }
+.face-name {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 2px;
+    width: 220px;
+    z-index: 30;
+}
+.face-ac {
+    display: none;
+    margin-top: 2px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .4);
+}
+.face-ac.show { display: block; }
+.face-ac-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    line-height: 1.2;
+}
+.face-ac-item:hover,
+.face-ac-item.active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+.face-ac-thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex: 0 0 auto;
+    background: var(--bs-secondary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bs-secondary);
+}
+.face-ac-name { flex: 1; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.face-ac-count {
+    font-size: .7rem;
+    opacity: .7;
+    background: rgba(0, 0, 0, .25);
+    border-radius: 10px;
+    padding: 0 6px;
+}
+
 /* Autocomplete-dropdown (Bootstrap saknar inbyggd combobox) */
 .autocomplete-wrap { position: relative; }
 .ac-box {

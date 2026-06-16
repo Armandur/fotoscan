@@ -1,6 +1,10 @@
 {% macro photocard(photo) %}
 <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
    href="/photo/{{ photo.id }}">
+    <div class="card-badges">
+        {% if photo.is_negative %}<span class="badge text-bg-dark border border-secondary">Negativ</span>{% endif %}
+        {% if photo.paired_with_id %}<span class="badge text-bg-info" title="Hopparad"><i class="bi bi-link-45deg"></i></span>{% endif %}
+    </div>
     <img loading="lazy" class="card-img-top"
          src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
          alt="{{ photo.filename }}">

@@ -16,6 +16,17 @@
 .photo-card.reviewed {
     border-left: 3px solid var(--bs-success);
 }
+.card-badges {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    display: flex;
+    gap: 3px;
+    z-index: 1;
+    pointer-events: none;
+}
+.card-badges .badge { font-size: .62rem; opacity: .92; }
+
 .gallery-grid.selecting .photo-card { cursor: pointer; }
 .gallery-grid.selecting .photo-card:hover { border-color: var(--bs-info); }
 .photo-card.selected {

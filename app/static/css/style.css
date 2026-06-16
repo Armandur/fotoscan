@@ -1,0 +1,67 @@
+/* Kompletterar Bootstrap 5.3 (dark). Bara det Bootstrap inte tacker. */
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: .75rem;
+}
+.photo-card {
+    overflow: hidden;
+    transition: border-color .15s, transform .1s;
+}
+.photo-card:hover {
+    border-color: var(--bs-primary);
+    transform: translateY(-2px);
+}
+.photo-card.reviewed {
+    border-left: 3px solid var(--bs-success);
+}
+.photo-card .card-img-top {
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #000;
+}
+
+/* Detaljvyns bild */
+.img-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    max-height: 75vh;
+    overflow: hidden;
+}
+.img-wrap img {
+    max-width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+}
+
+/* Autocomplete-dropdown (Bootstrap saknar inbyggd combobox) */
+.autocomplete-wrap { position: relative; }
+.ac-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1080;
+    margin-top: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .4);
+}
+.ac-item {
+    padding: .45rem .75rem;
+    cursor: pointer;
+    font-size: .9rem;
+}
+.ac-item:hover,
+.ac-item.active {
+    background: var(--bs-primary);
+    color: #fff;
+}

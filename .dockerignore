@@ -1,0 +1,10 @@
+.git/
+.venv/
+data/
+photos/
+export/
+tmp/
+dev.log
+__pycache__/
+*.pyc
+.env

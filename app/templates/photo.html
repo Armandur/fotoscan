@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ photo.filename }} - Fotoscan{% endblock %}
+
+{% block headeractions %}
+    <span class="text-secondary small d-none d-sm-inline">{{ pos }} / {{ total }}</span>
+    <div class="btn-group btn-group-sm">
+        {% if prev_id %}<a class="btn btn-outline-secondary" href="/photo/{{ prev_id }}"><i class="bi bi-arrow-left"></i></a>
+        {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-left"></i></button>{% endif %}
+        {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}"><i class="bi bi-arrow-right"></i></a>
+        {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>{% endif %}
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="/"><i class="bi bi-grid-3x3-gap"></i> Galleri</a>
+    <button class="btn btn-outline-secondary btn-sm" id="help-btn" title="Kortkommandon"><i class="bi bi-question-lg"></i></button>
+{% endblock %}
+
+{% block content %}
+<div class="detail row g-4" data-id="{{ photo.id }}"
+     data-prev="{{ prev_id or '' }}" data-next="{{ next_id or '' }}">
+    <div class="col-lg-7">
+        <div class="img-wrap">
+            <img id="main-img" src="/image/{{ photo.id }}" alt="{{ photo.filename }}">
+        </div>
+        <div class="d-flex gap-2 my-2 flex-wrap">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-ccw" title="Rotera moturs (Shift+R)">
+                <i class="bi bi-arrow-counterclockwise"></i> Vänster
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-cw" title="Rotera medurs (R)">
+                Höger <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <a class="btn btn-outline-secondary btn-sm" href="/image/{{ photo.id }}" target="_blank">
+                <i class="bi bi-arrows-fullscreen"></i> Öppna full
+            </a>
+        </div>
+        <p class="text-secondary small text-break">{{ photo.path }}</p>
+    </div>
+
+    <div class="col-lg-5">
+        <form id="meta-form">
+            <div class="mb-3">
+                <label class="form-label">Filnamn</label>
+                <input type="text" class="form-control" value="{{ photo.filename }}" disabled>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-8">
+                    <label class="form-label">Fotodatum (fritext)</label>
+                    <input type="text" class="form-control" name="date_text" value="{{ photo.date_text }}"
+                           placeholder="ex. ca 1975, sommaren 1962">
+                </div>
+                <div class="col-4">
+                    <label class="form-label">År</label>
+                    <input type="number" class="form-control" name="date_year" value="{{ photo.date_year or '' }}"
+                           placeholder="1975">
+                </div>
+            </div>
+
+            {% if photo.exif_datetime %}
+            <div class="alert alert-secondary py-2 px-3 d-flex align-items-center justify-content-between mb-3"
+                 id="exif-date-box" data-exif="{{ photo.exif_datetime }}">
+                <span class="small">
+                    <i class="bi bi-camera"></i> Inbäddat i filen:
+                    <strong>{{ photo.exif_datetime }}</strong>
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="use-exif-date">Använd</button>
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label">Plats</label>
+                <input type="text" class="form-control" name="location" value="{{ photo.location }}"
+                       placeholder="ex. Storgatan, Luleå">
+            </div>
+
+            <div class="mb-3 autocomplete-wrap">
+                <label class="form-label">Personer <span class="text-secondary">(kommaseparerat)</span></label>
+                <input type="text" class="form-control" name="people" autocomplete="off"
+                       value="{{ photo.tags | selectattr('kind', 'equalto', 'person') | map(attribute='name') | join(', ') }}"
+                       placeholder="Farfar Erik, Mormor Astrid">
+            </div>
+
+            <div class="mb-3 autocomplete-wrap">
+                <label class="form-label">Taggar <span class="text-secondary">(kommaseparerat)</span></label>
+                <input type="text" class="form-control" name="tags" autocomplete="off"
+                       value="{{ photo.tags | selectattr('kind', 'equalto', 'tag') | map(attribute='name') | join(', ') }}"
+                       placeholder="bil, bröllop, semester">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Källa</label>
+                <input type="text" class="form-control" name="source" value="{{ photo.source }}"
+                       placeholder="vem fotot kommer från">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Anteckningar</label>
+                <textarea class="form-control" name="notes" rows="5"
+                          placeholder="berättelser, sammanhang...">{{ photo.notes }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button type="submit" class="btn btn-primary" id="save-btn">Spara <kbd>Ctrl+S</kbd></button>
+                <button type="button" class="btn btn-success" id="save-reviewed-btn">Spara + granskad</button>
+                <button type="button" class="btn btn-outline-info" id="export-btn"
+                        title="Exportera kopia med inbäddad metadata (XMP + EXIF)">
+                    <i class="bi bi-box-arrow-up"></i> Exportera
+                </button>
+                <span class="badge {% if photo.reviewed_at %}text-bg-success{% else %}text-bg-secondary{% endif %}"
+                      id="reviewed-state">
+                    {% if photo.reviewed_at %}Granskad{% else %}Ej granskad{% endif %}
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="help-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kortkommandon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm align-middle mb-2">
+                    <tbody>
+                        <tr><td><kbd>J</kbd> / <kbd>&rarr;</kbd></td><td>Nästa foto</td></tr>
+                        <tr><td><kbd>K</kbd> / <kbd>&larr;</kbd></td><td>Föregående foto</td></tr>
+                        <tr><td><kbd>R</kbd> / <kbd>Shift+R</kbd></td><td>Rotera medurs / moturs</td></tr>
+                        <tr><td><kbd>Ctrl+S</kbd></td><td>Spara</td></tr>
+                        <tr><td><kbd>Ctrl+Enter</kbd></td><td>Spara och markera granskad</td></tr>
+                        <tr><td><kbd>D</kbd> <kbd>L</kbd> <kbd>P</kbd> <kbd>T</kbd> <kbd>N</kbd></td>
+                            <td>Hoppa till datum/plats/personer/taggar/anteckningar</td></tr>
+                        <tr><td><kbd>G</kbd></td><td>Tillbaka till galleri</td></tr>
+                        <tr><td><kbd>Esc</kbd></td><td>Lämna fält / stäng</td></tr>
+                        <tr><td><kbd>?</kbd></td><td>Visa denna hjälp</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-secondary small mb-0">Navigerings- och fält-genvägar fungerar när inget textfält är aktivt. <kbd>Esc</kbd> lämnar ett textfält.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/photo.js"></script>
+{% endblock %}

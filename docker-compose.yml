@@ -1,0 +1,16 @@
+# Single-container-drift på Unraid (TERVO2). Image hämtas från GHCR.
+services:
+  fotoscan:
+    image: ghcr.io/armandur/fotoscan:latest
+    container_name: fotoscan
+    ports:
+      - "8810:8810"
+    volumes:
+      # Databas + thumbnails (persistent)
+      - ./data:/data
+      # Exporterade kopior med inbäddad metadata
+      - ./export:/export
+      # Fotomappen som ska scannas - read-only så originalen aldrig kan ändras.
+      # Justera värdsökvägen till din riktiga fotomapp på Unraid.
+      - /mnt/user/foton:/photos:ro
+    restart: unless-stopped

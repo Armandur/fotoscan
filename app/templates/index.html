@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Fotoscan - galleri{% endblock %}
+
+{% block headeractions %}
+    <span class="text-secondary small d-none d-sm-inline">{{ reviewed }}/{{ total_all }} granskade</span>
+    <button id="export-btn" class="btn btn-outline-info btn-sm" title="Exportera granskade foton med inbäddad metadata">
+        <i class="bi bi-box-arrow-up"></i> Exportera granskade
+    </button>
+    <button id="scan-btn" class="btn btn-primary btn-sm">
+        <i class="bi bi-arrow-repeat"></i> Scanna mapp
+    </button>
+{% endblock %}
+
+{% block content %}
+<form class="row g-2 align-items-center mb-3" method="get" action="/">
+    <div class="col-12 col-md">
+        <input type="search" class="form-control" name="q" value="{{ q }}"
+               placeholder="Sök filnamn, plats, datum, anteckning, källa...">
+    </div>
+    <div class="col-6 col-md-auto">
+        <select class="form-select" name="filter">
+            <option value="all" {% if filter == 'all' %}selected{% endif %}>Alla</option>
+            <option value="unreviewed" {% if filter == 'unreviewed' %}selected{% endif %}>Ej granskade</option>
+            <option value="reviewed" {% if filter == 'reviewed' %}selected{% endif %}>Granskade</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-auto">
+        <button class="btn btn-outline-secondary w-100" type="submit">
+            <i class="bi bi-funnel"></i> Filtrera
+        </button>
+    </div>
+    <div class="col-12 col-md-auto">
+        <span class="text-secondary small">{{ total }} foton</span>
+    </div>
+</form>
+
+{% if not photos %}
+    <div class="alert alert-secondary text-center my-5">
+        Inga foton hittades. Lägg bilder i din PHOTO_DIR och klicka "Scanna mapp".
+    </div>
+{% endif %}
+
+<div class="gallery-grid">
+    {% for photo in photos %}
+    <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
+       href="/photo/{{ photo.id }}">
+        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}" alt="{{ photo.filename }}">
+        <div class="card-body p-2">
+            <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
+            <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&page={{ page - 1 }}">Föregående</a>
+        </li>
+        <li class="page-item disabled"><span class="page-link">Sida {{ page }} / {{ pages }}</span></li>
+        <li class="page-item {% if page >= pages %}disabled{% endif %}">
+            <a class="page-link" href="?q={{ q }}&filter={{ filter }}&page={{ page + 1 }}">Nästa</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("export-btn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Exporterar...';
+    try {
+        const res = await apiFetch("/api/export", { method: "POST" });
+        showToast(`${res.exported} exporterade, ${res.errors} fel → ${res.dir}`);
+    } catch (err) {
+        showToast("Export misslyckades: " + err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+});
+
+document.getElementById("scan-btn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Scannar...';
+    try {
+        const res = await apiFetch("/api/scan", { method: "POST" });
+        if (res.missing_dir) {
+            showToast("Mappen finns inte: " + res.photo_dir, true);
+        } else {
+            showToast(`${res.added} nya, ${res.skipped} fanns redan, ${res.errors} fel`);
+            if (res.added > 0) setTimeout(() => location.reload(), 1200);
+        }
+    } catch (err) {
+        showToast("Scanning misslyckades", true);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Scanna mapp';
+    }
+});
+</script>
+{% endblock %}

@@ -59,12 +59,23 @@
     const conflictsBox = document.getElementById("pair-conflicts");
 
     const loadingEl = document.getElementById("pair-loading");
+    const sourceImg = document.getElementById("pair-source-img");
+    const sourceLabel = document.getElementById("pair-source-label");
+    const ownSrc = sourceImg ? sourceImg.dataset.own : null;
+    const ownLabel = sourceLabel ? sourceLabel.textContent.trim() : "";
     const LIMIT = 60;
     let offset = 0, loading = false, done = false;
+    let conflictToggle = null;  // sätts i konfliktvyn (växla visad bild)
+
+    function resetSourceImg() {
+        if (sourceImg && ownSrc) { sourceImg.src = ownSrc; sourceLabel.textContent = ownLabel; }
+        conflictToggle = null;
+    }
 
     function openPairModal() {
         conflictsBox.hidden = true;
         list.hidden = false;
+        resetSourceImg();
         modal.show();
         resetAndLoad();
     }
@@ -83,7 +94,7 @@
             `<div class="text-secondary small text-truncate">${escapeHtml(c.filename)}</div>` +
             `<div class="text-secondary small text-truncate"><i class="bi bi-folder"></i> ${escapeHtml(c.folder) || "(rot)"}</div>` +
             `</div>`;
-        card.addEventListener("click", () => attemptPair(c.id));
+        card.addEventListener("click", () => attemptPair(c));
         return card;
     }
 
@@ -116,6 +127,9 @@
 
     function resetAndLoad() {
         offset = 0; done = false; list.innerHTML = "";
+        conflictsBox.hidden = true;
+        list.hidden = false;
+        resetSourceImg();
         loadMore();
     }
 
@@ -123,14 +137,14 @@
         if (list.scrollTop + list.clientHeight >= list.scrollHeight - 250) loadMore();
     });
 
-    async function attemptPair(otherId, resolutions) {
+    async function attemptPair(cand, resolutions) {
         try {
             const res = await apiFetch(`/api/photos/${photoId}/pair`, {
                 method: "POST",
-                body: { other_id: otherId, resolutions: resolutions || {} },
+                body: { other_id: cand.id, resolutions: resolutions || {} },
             });
             if (res.needs_resolution) {
-                renderConflicts(otherId, res.conflicts);
+                renderConflicts(cand, res.conflicts);
                 return;
             }
             showToast("Hopparade och sammanslagen metadata");
@@ -140,10 +154,25 @@
         }
     }
 
-    function renderConflicts(otherId, conflicts) {
+    function renderConflicts(cand, conflicts) {
         list.hidden = true;
         conflictsBox.hidden = false;
+
+        // Växla vilken bild som visas i vänsterkolumnen (utgång <-> vald).
+        const candSrc = `/image/${cand.id}?t=${Date.now()}`;
+        new Image().src = candSrc;
+        let showingOwn = true;
+        conflictToggle = () => {
+            showingOwn = !showingOwn;
+            sourceImg.src = showingOwn ? ownSrc : candSrc;
+            sourceLabel.textContent = showingOwn ? ownLabel : cand.filename;
+            const tgt = document.getElementById("pair-toggle-target");
+            if (tgt) tgt.textContent = showingOwn ? "valda fotot" : "utgångsfotot";
+        };
+
         conflictsBox.innerHTML =
+            `<button type="button" class="btn btn-sm btn-outline-info mb-3" id="pair-toggle-img">` +
+            `<i class="bi bi-arrow-left-right"></i> Visa <span id="pair-toggle-target">valda fotot</span> <kbd class="kbd-hint">V</kbd></button>` +
             `<p class="text-warning">Metadatakonflikter - välj vilket värde som gäller:</p>` +
             conflicts.map(c => `
                 <div class="mb-3" data-field="${c.field}">
@@ -160,15 +189,26 @@
                     </div>
                 </div>`).join("") +
             `<button class="btn btn-primary" id="pair-confirm">Para ihop med valda värden</button>`;
+        document.getElementById("pair-toggle-img").addEventListener("click", () => conflictToggle && conflictToggle());
         document.getElementById("pair-confirm").addEventListener("click", () => {
             const resolutions = {};
             conflicts.forEach(c => {
                 const sel = conflictsBox.querySelector(`input[name="cf-${c.field}"]:checked`);
                 resolutions[c.field] = sel ? sel.value : "a";
             });
-            attemptPair(otherId, resolutions);
+            attemptPair(cand, resolutions);
         });
     }
+
+    // Kortkommando V växlar visad bild i konfliktvyn.
+    document.addEventListener("keydown", (e) => {
+        if ((e.key === "v" || e.key === "V") && !conflictsBox.hidden && conflictToggle) {
+            const el = document.activeElement;
+            if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+            e.preventDefault();
+            conflictToggle();
+        }
+    });
 
     let searchTimer = null;
     search.addEventListener("input", () => {

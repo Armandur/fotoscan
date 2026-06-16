@@ -240,10 +240,12 @@
                     <div class="col-lg-4">
                         <div class="text-secondary small mb-1">Utgångsfoto</div>
                         <div class="img-wrap" style="max-height:60vh">
-                            <img src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
+                            <img id="pair-source-img"
+                                 src="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
+                                 data-own="/image/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}"
                                  alt="{{ photo.filename }}" style="max-height:60vh;max-width:100%;object-fit:contain">
                         </div>
-                        <div class="small text-truncate mt-1">{{ photo.filename }}</div>
+                        <div class="small text-truncate mt-1" id="pair-source-label">{{ photo.filename }}</div>
                         {% if photo.is_negative %}<span class="badge text-bg-secondary">negativ</span>{% endif %}
                     </div>
                     <div class="col-lg-8">

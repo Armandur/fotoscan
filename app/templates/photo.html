@@ -74,6 +74,23 @@
         </div>
 
         <p class="text-secondary small text-break">{{ photo.path }}</p>
+
+        <div id="pair-block" data-id="{{ photo.id }}">
+            {% if paired %}
+            <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-0">
+                <span class="text-truncate">
+                    <i class="bi bi-link-45deg"></i> Hopparad med
+                    <a href="/photo/{{ paired.id }}">{{ paired.filename }}</a>
+                    {% if paired.is_negative %}<span class="badge text-bg-secondary">negativ</span>{% endif %}
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" id="unpair-btn">Koppla isär</button>
+            </div>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" id="pair-btn">
+                <i class="bi bi-link-45deg"></i> Para ihop med negativ/foto
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="col-lg-5">
@@ -139,6 +156,12 @@
                           placeholder="berättelser, sammanhang...">{{ photo.notes }}</textarea>
             </div>
 
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="is_negative"
+                       id="is-negative" {% if photo.is_negative %}checked{% endif %}>
+                <label class="form-check-label" for="is-negative">Skannat negativ</label>
+            </div>
+
             <div class="d-flex gap-2 align-items-center flex-wrap">
                 <button type="submit" class="btn btn-primary" id="save-btn">Spara <kbd>Ctrl+S</kbd></button>
                 <button type="button" class="btn btn-success" id="save-reviewed-btn">Spara + granskad</button>
@@ -183,10 +206,33 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="pair-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Para ihop med negativ/foto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex gap-2 mb-3 align-items-center">
+                    <input id="pair-search" class="form-control" placeholder="Sök filnamn, mapp eller datum...">
+                    <div class="form-check form-switch text-nowrap">
+                        <input class="form-check-input" type="checkbox" id="pair-show-matched">
+                        <label class="form-check-label" for="pair-show-matched">Visa matchade</label>
+                    </div>
+                </div>
+                <div id="pair-candidates" class="gallery-grid"></div>
+                <div id="pair-conflicts" hidden></div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/photo.js"></script>
 <script src="/static/js/faces.js"></script>
 <script src="/static/js/adjust.js"></script>
+<script src="/static/js/pairing.js"></script>
 {% endblock %}

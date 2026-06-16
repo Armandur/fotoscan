@@ -48,6 +48,13 @@ class Photo(Base):
     # faktiskt innehåller även efter att date_text redigerats.
     exif_datetime = Column(String, nullable=True)
 
+    # Markerar att bilden är ett skannat negativ (används vid hopparning).
+    is_negative = Column(Integer, default=0)
+    # Symmetrisk 1:1-länk till motsvarande foto/negativ (samma motiv).
+    paired_with_id = Column(
+        Integer, ForeignKey("photos.id", ondelete="SET NULL"), nullable=True
+    )
+
     location = Column(String, default="")
     notes = Column(Text, default="")
     # Källa: vem fotot kommer från (t.ex. mormors album).
@@ -153,3 +160,11 @@ def init_db() -> None:
                 conn.exec_driver_sql(
                     f"ALTER TABLE photos ADD COLUMN {_col} FLOAT DEFAULT 1.0"
                 )
+        if not _column_exists(conn, "photos", "is_negative"):
+            conn.exec_driver_sql(
+                "ALTER TABLE photos ADD COLUMN is_negative INTEGER DEFAULT 0"
+            )
+        if not _column_exists(conn, "photos", "paired_with_id"):
+            conn.exec_driver_sql(
+                "ALTER TABLE photos ADD COLUMN paired_with_id INTEGER"
+            )

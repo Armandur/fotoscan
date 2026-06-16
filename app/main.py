@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR
 from app.database import init_db
-from app.routes import export, faces, persons, photos, scan, tags
+from app.routes import export, faces, pairing, persons, photos, scan, tags
 
 
 @asynccontextmanager
@@ -28,3 +28,4 @@ app.include_router(tags.router)
 app.include_router(export.router)
 app.include_router(faces.router)
 app.include_router(persons.router)
+app.include_router(pairing.router)

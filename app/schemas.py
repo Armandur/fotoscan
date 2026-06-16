@@ -46,6 +46,13 @@ class PhotoUpdate(BaseModel):
     location: str = ""
     notes: str = ""
     source: str = ""
+    is_negative: bool = False
     # Hela uppsättningen taggar/personer för fotot (ersätter befintliga).
     tags: list[TagItem] = Field(default_factory=list)
     mark_reviewed: bool = False
+
+
+class PairRequest(BaseModel):
+    other_id: int
+    # Vid konflikt: {fältnamn: "a" | "b"} - vilket fotos värde som vinner.
+    resolutions: dict[str, str] = Field(default_factory=dict)

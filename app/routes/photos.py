@@ -121,11 +121,14 @@ def photo_detail(photo_id: int, request: Request, db: Session = Depends(get_db))
         prev_id = ids[i - 1] if i > 0 else None
         next_id = ids[i + 1] if i < len(ids) - 1 else None
 
+    paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None
+
     return templates.TemplateResponse(
         request,
         "photo.html",
         {
             "photo": photo,
+            "paired": paired,
             "prev_id": prev_id,
             "next_id": next_id,
             "pos": pos,
@@ -239,6 +242,7 @@ def update_photo(
     photo.location = data.location.strip()
     photo.notes = data.notes.strip()
     photo.source = data.source.strip()
+    photo.is_negative = 1 if data.is_negative else 0
 
     photo.tags = [
         _get_or_create_tag(db, t.name, t.kind)

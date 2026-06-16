@@ -24,6 +24,7 @@
             location: field("location").value,
             notes: field("notes").value,
             source: field("source").value,
+            is_negative: field("is_negative").checked,
             tags,
             mark_reviewed: markReviewed,
         };

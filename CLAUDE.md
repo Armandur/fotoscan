@@ -25,6 +25,8 @@ app/
     tags.py            GET /api/tags (autocomplete)
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
+    persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
+    pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
   services/
     scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
@@ -62,6 +64,11 @@ photos/                exempel/testbilder (gitignored)
   `/image` (och thumbnail), live-preview i UI via CSS-filter på `/image?raw=1`.
   Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
   OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
+- **Hopparning** (`Photo.is_negative`, `Photo.paired_with_id`): symmetrisk 1:1-
+  länk mellan ett negativ och dess skannade foto. Vid hopparning slås metadatan
+  samman (fält som bara en har auto-fylls; konflikter löses i en diff-vy;
+  taggar/personer union) och appliceras på båda. Sökkandidater exkluderar redan
+  hopparade som default (toggle visar dem). Se `routes/pairing.py`.
 - **Export** (`services/exporter.py`): kopierar originalet till `EXPORT_DIR` och
   bäddar in metadata i kopian via `exiftool` (XMP primärt, EXIF-datum + GPS som
   komplement). Originalen rörs aldrig. Kräver `exiftool` installerat (finns i

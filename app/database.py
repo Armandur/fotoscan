@@ -6,7 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-from app.config import DB_PATH, DATA_DIR, THUMB_DIR
+from app.config import DB_PATH, DATA_DIR, THUMB_DIR, RENDER_DIR
 
 Base = declarative_base()
 
@@ -124,6 +124,7 @@ def _column_exists(conn, table: str, column: str) -> bool:
 def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     THUMB_DIR.mkdir(parents=True, exist_ok=True)
+    RENDER_DIR.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(engine)
 
     # ALTER TABLE-guards för kolumner tillagda efter första release.

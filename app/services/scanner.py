@@ -3,9 +3,11 @@ from pathlib import Path
 from PIL import Image, ImageOps
 from sqlalchemy.orm import Session
 
-from app.config import PHOTO_DIR, THUMB_DIR, THUMB_SIZE, SUPPORTED_EXTENSIONS
+from app.config import (
+    PHOTO_DIR, THUMB_DIR, THUMB_SIZE, RENDER_DIR, SUPPORTED_EXTENSIONS,
+)
 from app.database import Photo
-from app.services.adjust import apply_adjustments
+from app.services.adjust import apply_adjustments, has_adjustments
 
 _DATETIME_ORIGINAL = 0x9003  # DateTimeOriginal, ligger i Exif-sub-IFD
 _DATETIME = 0x0132           # DateTime (ModifyDate) i IFD0, fallback
@@ -69,6 +71,33 @@ def write_thumbnail(photo) -> None:
     img = render_photo(photo)
     img.thumbnail(THUMB_SIZE)
     img.save(THUMB_DIR / f"{photo.id}.jpg", "JPEG", quality=85)
+
+
+def render_cache_path(photo_id: int) -> Path:
+    return RENDER_DIR / f"{photo_id}.jpg"
+
+
+def invalidate_render(photo_id: int) -> None:
+    p = render_cache_path(photo_id)
+    if p.exists():
+        p.unlink()
+
+
+def write_render(photo) -> Path:
+    """Rendera och cacha fullbilden (rotation + färg inbakat) till disk."""
+    dest = render_cache_path(photo.id)
+    render_photo(photo).save(dest, "JPEG", quality=90)
+    return dest
+
+
+def refresh_derived(photo) -> None:
+    """Uppdatera thumbnail och render-cache efter rotation/justering.
+    Tar bort render-cachen om fotot inte längre har några transformeringar."""
+    write_thumbnail(photo)
+    if (photo.rotation or 0) or has_adjustments(photo):
+        write_render(photo)
+    else:
+        invalidate_render(photo.id)
 
 
 def scan_directory(db: Session) -> dict:

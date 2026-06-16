@@ -10,6 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PHOTO_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "photos")).resolve()
 DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data")).resolve()
 THUMB_DIR = DATA_DIR / "thumbnails"
+# Cache för fullstora renderade bilder (rotation + färgjustering inbakat).
+RENDER_DIR = DATA_DIR / "rendered"
 DB_PATH = DATA_DIR / "fotoscan.db"
 
 # Dit exporterade kopior (med inbäddad metadata) skrivs. Originalen rörs aldrig.

@@ -14,8 +14,10 @@ from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
 from app.schemas import PhotoAdjust, PhotoUpdate
-from app.services.adjust import apply_adjustments, has_adjustments
-from app.services.scanner import load_oriented, render_photo, write_thumbnail
+from app.services.adjust import has_adjustments
+from app.services.scanner import (
+    load_oriented, render_cache_path, refresh_derived, write_render,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -145,20 +147,26 @@ def image(photo_id: int, raw: bool = False, db: Session = Depends(get_db)):
     photo = db.get(Photo, photo_id)
     if not photo or not Path(photo.path).exists():
         raise HTTPException(404, "Bildfil saknas")
-    # raw=1: orienterad/roterad men UTAN färgjusteringar (för live-preview).
-    # Annars renderas rotation + justeringar on-the-fly. Originalet rörs aldrig.
+    # raw=1: orienterad/roterad men UTAN färgjusteringar (för live-preview),
+    # renderas on-the-fly och cachas inte.
     if raw:
         if not photo.rotation:
             return FileResponse(photo.path)
         img = load_oriented(Path(photo.path), photo.rotation)
-    elif not photo.rotation and not has_adjustments(photo):
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=90)
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="image/jpeg")
+
+    # Inga transformeringar: servera originalet direkt.
+    if not photo.rotation and not has_adjustments(photo):
         return FileResponse(photo.path)
-    else:
-        img = render_photo(photo)
-    buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=90)
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="image/jpeg")
+
+    # Annars: servera den cachade renderingen (skapa den vid första visning).
+    cache = render_cache_path(photo.id)
+    if not cache.exists():
+        write_render(photo)
+    return FileResponse(cache)
 
 
 @router.post("/api/photos/{photo_id}/rotate")
@@ -179,7 +187,7 @@ def rotate_photo(
             f.x, f.y, f.w, f.h = f.y, 1 - f.x - f.w, f.h, f.w
     db.commit()
     if Path(photo.path).exists():
-        write_thumbnail(photo)
+        refresh_derived(photo)
     return JSONResponse({"ok": True, "rotation": photo.rotation})
 
 
@@ -200,7 +208,7 @@ def adjust_photo(
     photo.adj_blue = data.adj_blue
     db.commit()
     if Path(photo.path).exists():
-        write_thumbnail(photo)
+        refresh_derived(photo)
     return JSONResponse({"ok": True})
 
 

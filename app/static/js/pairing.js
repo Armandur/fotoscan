@@ -3,7 +3,7 @@
     if (!block) return;
     const photoId = block.dataset.id;
 
-    // Koppla isär
+    // Koppla isär + "håll för att jämföra" (visa det hopparade fotot)
     const unpairBtn = document.getElementById("unpair-btn");
     if (unpairBtn) {
         unpairBtn.addEventListener("click", async () => {
@@ -15,6 +15,38 @@
                 showToast("Kunde inte koppla isär: " + err.message, true);
             }
         });
+
+        // Håll-för-att-jämföra: visa hopparade fotot medan knapp/tangent hålls in.
+        const img = document.getElementById("main-img");
+        const peekBtn = document.getElementById("peek-btn");
+        const pairedId = block.dataset.pairedId;
+        const pairedV = block.dataset.pairedV || "0";
+        if (img && peekBtn && pairedId) {
+            const ownSrc = img.src;
+            const pairedSrc = `/image/${pairedId}?v=${pairedV}`;
+            new Image().src = pairedSrc;  // förladda för direkt växling
+            let peeking = false;
+            const peekOn = () => { if (!peeking) { peeking = true; img.src = pairedSrc; peekBtn.classList.add("active"); } };
+            const peekOff = () => { if (peeking) { peeking = false; img.src = ownSrc; peekBtn.classList.remove("active"); } };
+
+            peekBtn.addEventListener("mousedown", (e) => { e.preventDefault(); peekOn(); });
+            peekBtn.addEventListener("mouseup", peekOff);
+            peekBtn.addEventListener("mouseleave", peekOff);
+            peekBtn.addEventListener("touchstart", (e) => { e.preventDefault(); peekOn(); }, { passive: false });
+            peekBtn.addEventListener("touchend", peekOff);
+
+            document.addEventListener("keydown", (e) => {
+                if (e.key !== "v" && e.key !== "V") return;
+                const el = document.activeElement;
+                if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+                if (document.body.classList.contains("modal-open")) return;
+                e.preventDefault();
+                peekOn();
+            });
+            document.addEventListener("keyup", (e) => {
+                if (e.key === "v" || e.key === "V") peekOff();
+            });
+        }
         return;  // redan parad - ingen sökmodal behövs
     }
 

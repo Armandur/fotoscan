@@ -76,15 +76,22 @@
 
         <p class="text-secondary small text-break">{{ photo.path }}</p>
 
-        <div id="pair-block" data-id="{{ photo.id }}">
+        <div id="pair-block" data-id="{{ photo.id }}"
+             {% if paired %}data-paired-id="{{ paired.id }}" data-paired-v="{{ (paired.updated_at.timestamp()|int) if paired.updated_at else 0 }}"{% endif %}>
             {% if paired %}
-            <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-0">
+            <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center gap-2 mb-0 flex-wrap">
                 <span class="text-truncate">
                     <i class="bi bi-link-45deg"></i> Hopparad med
                     <a href="/photo/{{ paired.id }}">{{ paired.filename }}</a>
                     {% if paired.is_negative %}<span class="badge text-bg-secondary">negativ</span>{% endif %}
                 </span>
-                <button class="btn btn-sm btn-outline-secondary" id="unpair-btn">Koppla isär</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-info" id="peek-btn"
+                            title="Håll inne för att visa det hopparade fotot">
+                        <i class="bi bi-eye"></i> Håll för att jämföra <kbd class="kbd-hint">V</kbd>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="unpair-btn">Koppla isär</button>
+                </div>
             </div>
             {% else %}
             <button class="btn btn-outline-secondary btn-sm" id="pair-btn">
@@ -204,6 +211,7 @@
                         <tr><td><kbd>R</kbd> / <kbd>⇧</kbd><kbd>R</kbd></td><td>Rotera medurs / moturs</td></tr>
                         <tr><td><kbd>F</kbd></td><td>Tagga ansikte (rita ruta)</td></tr>
                         <tr><td><kbd>M</kbd></td><td>Para ihop med negativ</td></tr>
+                        <tr><td><kbd>V</kbd> (håll)</td><td>Visa hopparat foto (jämför)</td></tr>
                         <tr><td><kbd>Ctrl+S</kbd></td><td>Spara</td></tr>
                         <tr><td><kbd>Ctrl+Enter</kbd></td><td>Spara och markera granskad</td></tr>
                         <tr><td><kbd>D</kbd> <kbd>L</kbd> <kbd>P</kbd> <kbd>T</kbd> <kbd>N</kbd></td>

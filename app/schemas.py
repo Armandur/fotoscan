@@ -73,6 +73,7 @@ class BatchUpdate(BaseModel):
     paired: str = ""
     folder: str = "*"
     recursive: bool = False
+    separate: bool = False
     # Åtgärder (None = lämna oförändrat).
     is_negative: bool | None = None
     reviewed: bool | None = None

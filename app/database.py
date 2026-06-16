@@ -57,6 +57,9 @@ class Photo(Base):
     paired_with_id = Column(
         Integer, ForeignKey("photos.id", ondelete="SET NULL"), nullable=True
     )
+    # 1 = primär i hopparningen (fotot), 0 = sekundär (negativet). Primären
+    # representerar paret i grupperad gallerivy.
+    is_pair_primary = Column(Integer, default=0)
 
     location = Column(String, default="")
     # Fotografens position (där bilden togs). Valfri osäkerhetsradie i meter.
@@ -177,6 +180,7 @@ def init_db() -> None:
             )
         for _c, _t in (("gps_lat", "FLOAT"), ("gps_lon", "FLOAT"),
                        ("gps_radius_m", "INTEGER"), ("date_month", "INTEGER"),
-                       ("date_precision", "VARCHAR")):
+                       ("date_precision", "VARCHAR"),
+                       ("is_pair_primary", "INTEGER")):
             if not _column_exists(conn, "photos", _c):
                 conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")

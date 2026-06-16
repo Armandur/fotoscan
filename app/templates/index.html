@@ -17,7 +17,7 @@
 {% block content %}
 {% macro foldernode(node) %}
 <li>
-    {% set href = "?folder=" ~ (node.path|urlencode) ~ "&q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ ("&recursive=1" if recursive else "") %}
+    {% set href = "?folder=" ~ (node.path|urlencode) ~ "&q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ ("&recursive=1" if recursive else "") ~ ("&separate=1" if separate else "") %}
     {% if node.children %}
     <details {% if folder == node.path or folder.startswith(node.path ~ '/') %}open{% endif %}>
         <summary><a href="{{ href }}" class="folder-link{% if folder == node.path %} active{% endif %}">{{ node.name }}</a></summary>
@@ -39,10 +39,10 @@
         </div>
     </div>
     <ul class="folder-tree">
-        <li><a href="?folder=*&q={{ q|urlencode }}&reviewed={{ reviewed }}&ptype={{ ptype }}&paired={{ paired }}{% if recursive %}&recursive=1{% endif %}"
+        <li><a href="?folder=*&q={{ q|urlencode }}&reviewed={{ reviewed }}&ptype={{ ptype }}&paired={{ paired }}{% if recursive %}&recursive=1{% endif %}{% if separate %}&separate=1{% endif %}"
                class="folder-link{% if folder == '*' %} active{% endif %}"><i class="bi bi-images"></i> Alla foton</a></li>
         {% if has_root_photos %}
-        <li><a href="?folder=&q={{ q|urlencode }}&reviewed={{ reviewed }}&ptype={{ ptype }}&paired={{ paired }}{% if recursive %}&recursive=1{% endif %}"
+        <li><a href="?folder=&q={{ q|urlencode }}&reviewed={{ reviewed }}&ptype={{ ptype }}&paired={{ paired }}{% if recursive %}&recursive=1{% endif %}{% if separate %}&separate=1{% endif %}"
                class="folder-link leaf{% if folder == '' %} active{% endif %}"><i class="bi bi-folder"></i> (rot)</a></li>
         {% endif %}
         {% for node in folder_tree %}{{ foldernode(node) }}{% endfor %}
@@ -67,6 +67,10 @@
                    placeholder="Sök filnamn, plats, datum, anteckning, källa...">
             <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-funnel"></i> Filtrera</button>
             <span class="text-secondary small">{{ total }} foton{% if folder != '*' %} i {{ folder if folder else '(rot)' }}{% if recursive %} + undermappar{% endif %}{% endif %}</span>
+            <div class="form-check form-switch ms-auto" title="Visa negativ och foto var för sig i stället för grupperat">
+                <input class="form-check-input" type="checkbox" name="separate" value="1" id="separate-toggle" {% if separate %}checked{% endif %}>
+                <label class="form-check-label small" for="separate-toggle">Visa hopparade separat</label>
+            </div>
         </div>
         <div class="d-flex flex-wrap gap-3 align-items-center">
             <span class="d-inline-flex align-items-center gap-1">
@@ -91,7 +95,7 @@
     {% endif %}
 
     <div id="batch-bar" class="d-flex gap-2 align-items-center flex-wrap mb-3 p-2 rounded bg-body-tertiary border"
-         data-q="{{ q }}" data-reviewed="{{ reviewed }}" data-ptype="{{ ptype }}" data-paired="{{ paired }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-total="{{ total }}" hidden>
+         data-q="{{ q }}" data-reviewed="{{ reviewed }}" data-ptype="{{ ptype }}" data-paired="{{ paired }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-separate="{{ 1 if separate else 0 }}" data-total="{{ total }}" hidden>
         <span id="batch-count" class="small fw-bold">0 valda</span>
         <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
         <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
@@ -106,7 +110,7 @@
         <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
     </div>
 
-    {% set photo_qs = "?q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") %}
+    {% set photo_qs = "?q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") ~ ("&separate=1" if separate else "") %}
     <div class="gallery-grid">
         {% for photo in photos %}
         <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
@@ -130,7 +134,7 @@
     </div>
 
     {% if pages > 1 %}
-    {% set pagebase = "?q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") %}
+    {% set pagebase = "?q=" ~ (q|urlencode) ~ "&reviewed=" ~ reviewed ~ "&ptype=" ~ ptype ~ "&paired=" ~ paired ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") ~ ("&separate=1" if separate else "") %}
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if page <= 1 %}disabled{% endif %}">
@@ -150,7 +154,7 @@
 {% block scripts %}
 <script>
 // Filter-segmenten skickar formuläret direkt vid klick.
-document.querySelectorAll('#filter-form .btn-check').forEach(el => {
+document.querySelectorAll('#filter-form .btn-check, #separate-toggle').forEach(el => {
     el.addEventListener("change", () => document.getElementById("filter-form").submit());
 });
 
@@ -208,6 +212,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
                 q: bar.dataset.q, reviewed: bar.dataset.reviewed, ptype: bar.dataset.ptype, paired: bar.dataset.paired, folder: bar.dataset.folder,
             });
             if (recToggle.checked) params.set("recursive", "1");
+            if (bar.dataset.separate === "1") params.set("separate", "1");
             location.search = params.toString();
         });
     }
@@ -263,7 +268,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
             const useFilter = allFilter.checked;
             let body;
             if (useFilter) {
-                body = { use_filter: true, q: bar.dataset.q, reviewed: bar.dataset.reviewed, ptype: bar.dataset.ptype, paired: bar.dataset.paired, folder: bar.dataset.folder, recursive: bar.dataset.recursive === "1", ...op };
+                body = { use_filter: true, q: bar.dataset.q, reviewed: bar.dataset.reviewed, ptype: bar.dataset.ptype, paired: bar.dataset.paired, folder: bar.dataset.folder, recursive: bar.dataset.recursive === "1", separate: bar.dataset.separate === "1", ...op };
             } else {
                 if (!selected.size) { showToast("Inget valt", true); return; }
                 body = { ids: [...selected], ...op };

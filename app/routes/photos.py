@@ -29,14 +29,20 @@ PAGE_SIZE = 60
 
 def _filtered_query(
     db: Session, q: str, reviewed: str, ptype: str, paired: str,
-    folder: str, recursive: bool = False,
+    folder: str, recursive: bool = False, separate: bool = False,
 ):
     """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar.
 
     reviewed: ""|"yes"|"no", ptype: ""|"negative"|"photo", paired: ""|"yes"|"no".
     Dimensionerna AND:as. recursive=True inkluderar undermappar till `folder`.
+    separate=False döljer sekundären i hopparade par (visar bara primären).
     """
     query = db.query(Photo)
+    # Gruppera hopparade: dölj sekundären (negativet) om vi inte separerar.
+    if not separate:
+        query = query.filter(
+            or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1)
+        )
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -105,9 +111,10 @@ def index(
     paired: str = "",
     folder: str = "*",
     recursive: bool = False,
+    separate: bool = False,
     page: int = 1,
 ):
-    query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive)
+    query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
 
     total = query.count()
     page = max(1, page)
@@ -142,6 +149,7 @@ def index(
             "paired": paired,
             "folder": folder,
             "recursive": recursive,
+            "separate": separate,
             "folder_tree": folder_tree,
             "has_root_photos": has_root_photos,
             "page": page,
@@ -158,7 +166,7 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     if data.use_filter:
         photos = _filtered_query(
             db, data.q, data.reviewed, data.ptype, data.paired,
-            data.folder, data.recursive,
+            data.folder, data.recursive, data.separate,
         ).all()
     elif data.ids:
         photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
@@ -175,10 +183,10 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True, "count": len(photos)})
 
 
-def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive) -> list[int]:
+def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate) -> list[int]:
     """Foto-id i galleriets ordning för given filtrering (för prev/next-nav)."""
     rows = (
-        _filtered_query(db, q, reviewed, ptype, paired, folder, recursive)
+        _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
         .with_entities(Photo.id)
         .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
         .all()
@@ -190,7 +198,7 @@ def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive) -> list[int]
 def photo_detail(
     photo_id: int, request: Request,
     q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
-    folder: str = "*", recursive: bool = False,
+    folder: str = "*", recursive: bool = False, separate: bool = False,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -198,10 +206,10 @@ def photo_detail(
         raise HTTPException(404, "Foto hittades inte")
 
     # Navigera inom samma filtrering man kom ifrån. Om fotot inte ingår i den
-    # (t.ex. direktlänk), falla tillbaka till hela samlingen.
-    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive)
+    # (t.ex. direktlänk eller dolt sekundär-negativ), falla tillbaka.
+    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate)
     if photo_id not in ids:
-        ids = _ordered_ids(db, "", "", "", "", "*", False)
+        ids = _ordered_ids(db, "", "", "", "", "*", False, True)
 
     prev_id = next_id = None
     pos = total = len(ids)
@@ -225,6 +233,8 @@ def photo_detail(
         params["folder"] = folder
     if recursive:
         params["recursive"] = "1"
+    if separate:
+        params["separate"] = "1"
     nav_qs = ("?" + urlencode(params)) if params else ""
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None

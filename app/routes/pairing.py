@@ -110,9 +110,16 @@ def pair_photos(
     a.tags = list(union)
     b.tags = list(union)
 
-    # Symmetrisk länk.
+    # Symmetrisk länk. Primär = icke-negativ (annars lägst id) - representerar
+    # paret i grupperad gallerivy.
     a.paired_with_id = b.id
     b.paired_with_id = a.id
+    if bool(a.is_negative) != bool(b.is_negative):
+        primary = a if not a.is_negative else b
+    else:
+        primary = a if a.id <= b.id else b
+    a.is_pair_primary = 1 if primary is a else 0
+    b.is_pair_primary = 1 if primary is b else 0
     db.commit()
     return JSONResponse({"ok": True, "paired_with": b.id})
 
@@ -126,6 +133,8 @@ def unpair_photo(photo_id: int, db: Session = Depends(get_db)):
         b = db.get(Photo, a.paired_with_id)
         if b and b.paired_with_id == a.id:
             b.paired_with_id = None
+            b.is_pair_primary = 0
     a.paired_with_id = None
+    a.is_pair_primary = 0
     db.commit()
     return JSONResponse({"ok": True})

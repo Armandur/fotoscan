@@ -44,6 +44,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Hopparning som kombination: delad metadata (speglas vid sparning),
+  grupperad gallerivy (primär=fotot) med "visa separat"-toggle, primär-roll i DB.
+- [x] Modulär filterrad (Granskat/Typ/Hopparat som kombineras).
 - [x] Kartlager-växling i GPS-kartan (OSM / Satellit (Esri) / Topografisk).
 - [x] Större par-modal (modal-xl) som visar utgångsfotot bredvid kandidaterna.
 - [x] Infinite-scroll i par-modalen (paginerade kandidater, offset/limit).

@@ -83,6 +83,12 @@ photos/                exempel/testbilder (gitignored)
   `map.js`). Adress-sök går via backend-proxyn `/api/geocode` (Nominatim, med
   korrekt User-Agent). Exporteras som EXIF GPS + `GPSHPositioningError` (radie).
   OBS: Leaflet kan inte browser-testas i obscura (kastar headless).
+- **Hopparning som kombination**: ett par (foto + negativ) delar metadata.
+  `Photo.is_pair_primary` (1=fotot/primär, 0=negativet) avgör vem som
+  representerar paret. Delad metadata (`_SHARED_META` + taggar) speglas till
+  partnern vid sparning (`_sync_pair_metadata`). Galleriet grupperar: sekundären
+  döljs om inte `separate`-toggeln är på (`_filtered_query`). Per-bild-fält
+  (is_negative, rotation, justeringar) delas inte.
 - **Hopparning** (`Photo.is_negative`, `Photo.paired_with_id`): symmetrisk 1:1-
   länk mellan ett negativ och dess skannade foto. Vid hopparning slås metadatan
   samman (fält som bara en har auto-fylls; konflikter löses i en diff-vy;

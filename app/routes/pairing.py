@@ -36,7 +36,7 @@ def _photo_brief(p: Photo) -> dict:
 @router.get("/api/photos/{photo_id}/pair-candidates")
 def pair_candidates(
     photo_id: int, q: str = "", show_matched: bool = False,
-    offset: int = 0, limit: int = 60,
+    all_types: bool = False, offset: int = 0, limit: int = 60,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -47,6 +47,9 @@ def pair_candidates(
     # Redan hopparade visas inte som default (toggle kan visa dem).
     if not show_matched:
         query = query.filter(Photo.paired_with_id.is_(None))
+    # Default: visa motsatt typ (foto <-> negativ). Toggle visar alla typer.
+    if not all_types:
+        query = query.filter(Photo.is_negative == (0 if photo.is_negative else 1))
     if q:
         like = f"%{q}%"
         query = query.filter(or_(

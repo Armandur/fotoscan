@@ -55,6 +55,7 @@
     const modal = bootstrap.Modal.getOrCreateInstance("#pair-modal");
     const search = document.getElementById("pair-search");
     const showMatched = document.getElementById("pair-show-matched");
+    const allTypes = document.getElementById("pair-all-types");
     const list = document.getElementById("pair-candidates");
     const conflictsBox = document.getElementById("pair-conflicts");
 
@@ -105,6 +106,7 @@
         const params = new URLSearchParams({
             q: search.value.trim(),
             show_matched: showMatched.checked ? "true" : "false",
+            all_types: allTypes.checked ? "true" : "false",
             offset: offset, limit: LIMIT,
         });
         try {
@@ -216,4 +218,5 @@
         searchTimer = setTimeout(resetAndLoad, 250);
     });
     showMatched.addEventListener("change", resetAndLoad);
+    allTypes.addEventListener("change", resetAndLoad);
 })();

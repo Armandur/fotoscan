@@ -55,6 +55,18 @@ class PhotoUpdate(BaseModel):
     mark_reviewed: bool = False
 
 
+class BatchUpdate(BaseModel):
+    ids: list[int] = Field(default_factory=list)
+    # Applicera på alla foton i nuvarande filter i stället för en id-lista.
+    use_filter: bool = False
+    q: str = ""
+    filter: str = "all"
+    folder: str = "*"
+    # Åtgärder (None = lämna oförändrat).
+    is_negative: bool | None = None
+    reviewed: bool | None = None
+
+
 class PairRequest(BaseModel):
     other_id: int
     # Vid konflikt: {fältnamn: "a" | "b"} - vilket fotos värde som vinner.

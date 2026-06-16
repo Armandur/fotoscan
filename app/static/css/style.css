@@ -16,6 +16,28 @@
 .photo-card.reviewed {
     border-left: 3px solid var(--bs-success);
 }
+.gallery-grid.selecting .photo-card { cursor: pointer; }
+.gallery-grid.selecting .photo-card:hover { border-color: var(--bs-info); }
+.photo-card.selected {
+    outline: 3px solid var(--bs-info);
+    outline-offset: -3px;
+}
+.photo-card.selected::after {
+    content: "\2713";
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    background: var(--bs-info);
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 2;
+}
 @keyframes skeleton-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }

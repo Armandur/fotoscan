@@ -13,7 +13,7 @@ from app.config import BASE_DIR, THUMB_DIR
 from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
-from app.schemas import PhotoAdjust, PhotoUpdate
+from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import has_adjustments
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
@@ -25,17 +25,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 PAGE_SIZE = 60
 
 
-@router.get("/", response_class=HTMLResponse)
-def index(
-    request: Request,
-    db: Session = Depends(get_db),
-    q: str = "",
-    filter: str = "all",
-    folder: str = "*",
-    page: int = 1,
-):
+def _filtered_query(db: Session, q: str, filter: str, folder: str):
+    """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar."""
     query = db.query(Photo)
-
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -48,15 +40,26 @@ def index(
                 Photo.source.ilike(like),
             )
         )
-
     if filter == "unreviewed":
         query = query.filter(Photo.reviewed_at.is_(None))
     elif filter == "reviewed":
         query = query.filter(Photo.reviewed_at.isnot(None))
-
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
         query = query.filter(Photo.folder == folder)
+    return query
+
+
+@router.get("/", response_class=HTMLResponse)
+def index(
+    request: Request,
+    db: Session = Depends(get_db),
+    q: str = "",
+    filter: str = "all",
+    folder: str = "*",
+    page: int = 1,
+):
+    query = _filtered_query(db, q, filter, folder)
 
     total = query.count()
     page = max(1, page)
@@ -94,6 +97,25 @@ def index(
             "reviewed": reviewed,
         },
     )
+
+
+@router.post("/api/photos/batch")
+def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
+    if data.use_filter:
+        photos = _filtered_query(db, data.q, data.filter, data.folder).all()
+    elif data.ids:
+        photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
+    else:
+        return JSONResponse({"ok": True, "count": 0})
+
+    now = _now()
+    for p in photos:
+        if data.is_negative is not None:
+            p.is_negative = 1 if data.is_negative else 0
+        if data.reviewed is not None:
+            p.reviewed_at = now if data.reviewed else None
+    db.commit()
+    return JSONResponse({"ok": True, "count": len(photos)})
 
 
 def _ordered_ids(db: Session) -> list[int]:

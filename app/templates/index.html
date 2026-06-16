@@ -3,6 +3,9 @@
 
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ reviewed }}/{{ total_all }} granskade</span>
+    <button id="select-btn" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-check2-square"></i> Välj
+    </button>
     <button id="export-btn" class="btn btn-outline-info btn-sm" title="Exportera granskade foton med inbäddad metadata">
         <i class="bi bi-box-arrow-up"></i> Exportera granskade
     </button>
@@ -48,10 +51,26 @@
     </div>
 {% endif %}
 
+<div id="batch-bar" class="d-flex gap-2 align-items-center flex-wrap mb-3 p-2 rounded bg-body-tertiary border"
+     data-q="{{ q }}" data-filter="{{ filter }}" data-folder="{{ folder }}" data-total="{{ total }}" hidden>
+    <span id="batch-count" class="small fw-bold">0 valda</span>
+    <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
+    <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
+    <div class="form-check form-switch ms-2">
+        <input class="form-check-input" type="checkbox" id="batch-all-filter">
+        <label class="form-check-label small" for="batch-all-filter">Alla {{ total }} i filtret</label>
+    </div>
+    <span class="vr"></span>
+    <button class="btn btn-sm btn-outline-info" data-batch="neg-on">Markera negativ</button>
+    <button class="btn btn-sm btn-outline-secondary" data-batch="neg-off">Avmarkera negativ</button>
+    <button class="btn btn-sm btn-outline-success" data-batch="rev-on">Markera granskad</button>
+    <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
+</div>
+
 <div class="gallery-grid">
     {% for photo in photos %}
     <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
-       href="/photo/{{ photo.id }}">
+       href="/photo/{{ photo.id }}" data-id="{{ photo.id }}">
         <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
         <div class="card-body p-2">
             <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
@@ -118,5 +137,84 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Scanna mapp';
     }
 });
+
+// ---- Urval + massåtgärder ----
+(() => {
+    const selectBtn = document.getElementById("select-btn");
+    const bar = document.getElementById("batch-bar");
+    const grid = document.querySelector(".gallery-grid");
+    if (!selectBtn || !grid) return;
+    const allFilter = document.getElementById("batch-all-filter");
+    const selected = new Set();
+    let selecting = false;
+
+    const count = () => {
+        const n = allFilter.checked ? bar.dataset.total : selected.size;
+        document.getElementById("batch-count").textContent = `${n} valda`;
+    };
+    const clearSel = () => {
+        selected.clear();
+        grid.querySelectorAll(".photo-card.selected").forEach(c => c.classList.remove("selected"));
+        allFilter.checked = false;
+        count();
+    };
+
+    selectBtn.addEventListener("click", () => {
+        selecting = !selecting;
+        bar.hidden = !selecting;
+        grid.classList.toggle("selecting", selecting);
+        selectBtn.classList.toggle("active", selecting);
+        if (!selecting) clearSel();
+    });
+
+    grid.addEventListener("click", (e) => {
+        if (!selecting) return;
+        const card = e.target.closest(".photo-card");
+        if (!card) return;
+        e.preventDefault();
+        const id = parseInt(card.dataset.id, 10);
+        if (selected.has(id)) { selected.delete(id); card.classList.remove("selected"); }
+        else { selected.add(id); card.classList.add("selected"); }
+        allFilter.checked = false;
+        count();
+    });
+
+    document.getElementById("batch-page").addEventListener("click", () => {
+        grid.querySelectorAll(".photo-card").forEach(c => {
+            selected.add(parseInt(c.dataset.id, 10));
+            c.classList.add("selected");
+        });
+        count();
+    });
+    document.getElementById("batch-clear").addEventListener("click", clearSel);
+    allFilter.addEventListener("change", count);
+
+    const OPS = {
+        "neg-on": { is_negative: true }, "neg-off": { is_negative: false },
+        "rev-on": { reviewed: true }, "rev-off": { reviewed: false },
+    };
+    bar.querySelectorAll("[data-batch]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const op = OPS[btn.dataset.batch];
+            const useFilter = allFilter.checked;
+            let body;
+            if (useFilter) {
+                body = { use_filter: true, q: bar.dataset.q, filter: bar.dataset.filter, folder: bar.dataset.folder, ...op };
+            } else {
+                if (!selected.size) { showToast("Inget valt", true); return; }
+                body = { ids: [...selected], ...op };
+            }
+            const n = useFilter ? bar.dataset.total : selected.size;
+            if (!(await showConfirm(`Tillämpa på ${n} foton?`))) return;
+            try {
+                const res = await apiFetch("/api/photos/batch", { method: "POST", body });
+                showToast(`${res.count} foton uppdaterade`);
+                setTimeout(() => location.reload(), 600);
+            } catch (err) {
+                showToast("Misslyckades: " + err.message, true);
+            }
+        });
+    });
+})();
 </script>
 {% endblock %}

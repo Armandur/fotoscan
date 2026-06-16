@@ -6,6 +6,12 @@
   "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
 - [ ] **Normalisera plats.** Platser-vyn finns (grupperar fritextfältet). Överväg
   en egen plats-tabell kopplad till GPS-koordinater/karta.
+- [ ] **År-/datum-vy (tidslinje).** Bläddra foton på en tidslinje baserat på
+  fotodatum. Måste hantera ofullständiga datum: bara år, eller år + månad (inte
+  alla foton har exakt datum). Idag finns `date_year` (sorterbart år) + `date_text`
+  (fritext). Överväg att lägga till sorterbart månad/precision-fält, eller parsa
+  date_text. Gruppera per år (och månad där det finns); foton utan datum i en
+  egen "okänt datum"-grupp.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.

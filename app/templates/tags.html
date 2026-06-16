@@ -2,52 +2,158 @@
 {% block title %}Taggar - Fotoscan{% endblock %}
 
 {% block content %}
-<h1 class="h4 mb-3">Taggar</h1>
-
-<div class="input-group mb-3" style="max-width:420px">
-    <input type="text" class="form-control" id="new-tag" placeholder="Ny tagg..." autocomplete="off">
-    <button class="btn btn-primary" id="create-tag-btn">Skapa</button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Taggar</h1>
 </div>
 
-{% if not tags %}
-    <div class="alert alert-secondary">Inga taggar än. Skapa en ovan eller lägg taggar på foton.</div>
-{% endif %}
-
-<div class="gallery-grid">
-    {% for t in tags %}
-    <a class="card photo-card text-decoration-none" href="/tags/{{ t.id }}">
-        {% if t.sample %}
-        <img loading="lazy" class="card-img-top" src="/thumb/{{ t.sample }}" alt="{{ t.name }}">
-        {% else %}
-        <div class="card-img-top d-flex align-items-center justify-content-center text-secondary"
-             style="aspect-ratio:1;background:#000;font-size:2rem"><i class="bi bi-tag"></i></div>
-        {% endif %}
-        <div class="card-body p-2">
-            <div class="text-truncate"><i class="bi bi-tag"></i> {{ t.name }}</div>
-            <div class="text-secondary small">{{ t.count }} foto{{ 'n' if t.count != 1 else '' }}</div>
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title h6 mb-3">Skapa ny tagg</h5>
+        <div class="row g-2">
+            <div class="col-sm-6">
+                <input type="text" class="form-control" id="new-tag-name" placeholder="Namn..." autocomplete="off">
+            </div>
+            <div class="col-sm-4">
+                <select class="form-select" id="new-tag-parent">
+                    <option value="">(Ingen förälder)</option>
+                    {% for t in all_tags %}
+                    <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-2">
+                <button class="btn btn-primary w-100" id="create-tag-btn">Skapa</button>
+            </div>
         </div>
-    </a>
-    {% endfor %}
+    </div>
 </div>
+
+{% if not tree %}
+    <div class="alert alert-secondary">Inga taggar än. Skapa en ovan eller lägg taggar på foton.</div>
+{% else %}
+    <div class="list-group tag-tree">
+        {% macro render_node(node, level=0) %}
+        <div class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" 
+             style="padding-left: {{ level * 1.5 + 0.75 }}rem !important">
+            <i class="bi bi-tag text-secondary"></i>
+            <a href="/tags/{{ node.id }}" class="text-decoration-none flex-grow-1 text-light">
+                {{ node.name }}
+                <span class="badge rounded-pill bg-secondary ms-1 small opacity-75">{{ node.count }}</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm parent-selector" 
+                        style="width: 180px" 
+                        data-tag-id="{{ node.id }}" 
+                        data-current-parent="{{ node.parent_id or '' }}">
+                    <option value="">(Ingen)</option>
+                    {% for t in all_tags %}
+                        {% if t.id != node.id and t.id not in node.descendant_ids %}
+                        <option value="{{ t.id }}" {{ 'selected' if t.id == node.parent_id else '' }}>{{ t.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <button class="btn btn-outline-danger btn-sm border-0 delete-tag-btn" data-tag-id="{{ node.id }}" title="Ta bort">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% for child in node.children %}
+            {{ render_node(child, level + 1) }}
+        {% endfor %}
+        {% endmacro %}
+
+        {% for node in tree %}
+            {{ render_node(node) }}
+        {% endfor %}
+    </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Skapa tagg
 document.getElementById("create-tag-btn").addEventListener("click", async (e) => {
-    const name = document.getElementById("new-tag").value.trim();
+    const name = document.getElementById("new-tag-name").value.trim();
+    const parent_id = document.getElementById("new-tag-parent").value || null;
     if (!name) { showToast("Ange ett namn", true); return; }
+    
     e.target.disabled = true;
     try {
-        const res = await apiFetch("/api/tags/create", { method: "POST", body: { name } });
+        const res = await apiFetch("/api/tags/create", { 
+            method: "POST", 
+            body: { name, parent_id: parent_id ? parseInt(parent_id) : null } 
+        });
         showToast(res.existed ? "Taggen fanns redan" : "Tagg skapad");
-        location.href = `/tags/${res.id}`;
+        location.reload();
     } catch (err) {
         showToast("Kunde inte skapa: " + err.message, true);
         e.target.disabled = false;
     }
 });
-document.getElementById("new-tag").addEventListener("keydown", (e) => {
+
+// Hantera föräldraändring
+document.querySelectorAll(".parent-selector").forEach(sel => {
+    sel.addEventListener("change", async (e) => {
+        const tagId = e.target.dataset.tagId;
+        const oldParentId = e.target.dataset.currentParent;
+        const newParentId = e.target.value || null;
+        
+        try {
+            await apiFetch(`/api/tags/${tagId}/parent`, {
+                method: "POST",
+                body: { parent_id: newParentId ? parseInt(newParentId) : null }
+            });
+            showToast("Förälder uppdaterad");
+            location.reload();
+        } catch (err) {
+            showToast("Kunde inte ändra förälder: " + err.message, true);
+            e.target.value = oldParentId; // Återställ
+        }
+    });
+});
+
+// Ta bort tagg
+document.querySelectorAll(".delete-tag-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const tagId = btn.dataset.tagId;
+        const name = btn.closest(".list-group-item").querySelector("a").textContent.trim().split('\n')[0];
+        
+        const ok = await showConfirm(`Vill du ta bort taggen "${name}"? Barn-taggar kommer att flyttas upp en nivå.`);
+        if (!ok) return;
+        
+        btn.disabled = true;
+        try {
+            await apiFetch(`/api/tags/${tagId}`, { method: "DELETE" });
+            showToast("Tagg borttagen");
+            location.reload();
+        } catch (err) {
+            showToast("Kunde inte ta bort: " + err.message, true);
+            btn.disabled = false;
+        }
+    });
+});
+
+// Enter i namn-fältet
+document.getElementById("new-tag-name")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); document.getElementById("create-tag-btn").click(); }
 });
 </script>
+<style>
+.tag-tree .list-group-item {
+    border-left: none;
+    border-right: none;
+    border-radius: 0 !important;
+    background: transparent;
+}
+.tag-tree .list-group-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+.tag-tree .parent-selector {
+    background-color: #2b3035;
+    border-color: #495057;
+    color: #dee2e6;
+}
+</style>
 {% endblock %}

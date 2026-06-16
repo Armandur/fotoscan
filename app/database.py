@@ -119,8 +119,18 @@ class Tag(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     kind = Column(String, nullable=False, default="tag")  # "person" | "tag"
+    parent_id = Column(
+        Integer, ForeignKey("tags.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     photos = relationship("Photo", secondary=photo_tags, back_populates="tags")
+    parent = relationship("Tag", remote_side=[id], back_populates="children")
+    # Ingen delete-orphan: när en förälder tas bort flyttas barnen (i routen),
+    # de får aldrig raderas på köpet. passive_deletes -> DB:ns ON DELETE SET NULL
+    # är säkerhetsnätet om ett barn ändå skulle hänga kvar.
+    children = relationship(
+        "Tag", back_populates="parent", passive_deletes=True,
+    )
 
 
 class FaceRegion(Base):
@@ -198,3 +208,5 @@ def init_db() -> None:
                        ("place_id", "INTEGER")):
             if not _column_exists(conn, "photos", _c):
                 conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")
+        if not _column_exists(conn, "tags", "parent_id"):
+            conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN parent_id INTEGER")

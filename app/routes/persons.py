@@ -7,6 +7,7 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
 from app.schemas import PersonMerge, PersonRename
+from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
@@ -81,11 +82,14 @@ def person_detail(
         query = db.query(Photo).filter(Photo.id.in_(ids))
         query = apply_dimensions(query, reviewed, ptype, paired, separate)
         photos = query.order_by(*sort_order(sort)).all()
+    card_qs = context_card_qs(
+        "person", tag.id, reviewed, ptype, paired, separate, sort
+    )
     return templates.TemplateResponse(
         request, "person_detail.html",
         {"person": tag, "photos": photos, "region_id": _sample_region_id(db, tag),
          "reviewed": reviewed, "ptype": ptype, "paired": paired,
-         "separate": separate, "sort": sort},
+         "separate": separate, "sort": sort, "card_qs": card_qs},
     )
 
 

@@ -17,6 +17,9 @@ from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import apply_adjustments, has_adjustments, suggest_auto
+from app.services.context import (
+    context_back, context_nav_qs, context_ordered_ids,
+)
 from app.services.dates import parse_date_text
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
@@ -211,18 +214,30 @@ def photo_detail(
     photo_id: int, request: Request,
     q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
     folder: str = "*", recursive: bool = False, separate: bool = False,
-    sort: str = "date",
+    sort: str = "date", ctx: str = "", ctx_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "Foto hittades inte")
 
-    # Navigera inom samma filtrering man kom ifrån. Om fotot inte ingår i den
-    # (t.ex. direktlänk eller dolt sekundär-negativ), falla tillbaka.
-    ids = _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort)
+    # Navigera inom samma lista man kom ifrån. ctx (person/tagg/plats/tidslinje)
+    # har företräde; annars galleriets filtrering. Faller tillbaka på alla foton
+    # om fotot inte ingår (t.ex. direktlänk eller dolt sekundär-negativ).
+    ctx_ids = (
+        context_ordered_ids(db, ctx, ctx_id, reviewed, ptype, paired, separate, sort)
+        if ctx else None
+    )
+    in_ctx = ctx_ids is not None
+    if in_ctx:
+        ids = ctx_ids
+    else:
+        ids = _ordered_ids(
+            db, q, reviewed, ptype, paired, folder, recursive, separate, sort
+        )
     if photo_id not in ids:
         ids = _ordered_ids(db, "", "", "", "", "*", False, True, sort)
+        in_ctx = False
 
     prev_id = next_id = None
     pos = total = len(ids)
@@ -232,25 +247,34 @@ def photo_detail(
         prev_id = ids[i - 1] if i > 0 else None
         next_id = ids[i + 1] if i < len(ids) - 1 else None
 
-    # Querystring som bär filterkontexten vidare i prev/next/galleri-länkar.
-    params = {}
-    if q:
-        params["q"] = q
-    if reviewed:
-        params["reviewed"] = reviewed
-    if ptype:
-        params["ptype"] = ptype
-    if paired:
-        params["paired"] = paired
-    if folder and folder != "*":
-        params["folder"] = folder
-    if recursive:
-        params["recursive"] = "1"
-    if separate:
-        params["separate"] = "1"
-    if sort and sort != "date":
-        params["sort"] = sort
-    nav_qs = ("?" + urlencode(params)) if params else ""
+    # Querystring som bär kontexten vidare i prev/next-länkar, samt bakåtlänk.
+    if in_ctx:
+        nav_qs = context_nav_qs(
+            ctx, ctx_id, reviewed, ptype, paired, separate, sort
+        )
+        back_url, back_label = context_back(
+            ctx, ctx_id, reviewed, ptype, paired, separate, sort
+        )
+    else:
+        params = {}
+        if q:
+            params["q"] = q
+        if reviewed:
+            params["reviewed"] = reviewed
+        if ptype:
+            params["ptype"] = ptype
+        if paired:
+            params["paired"] = paired
+        if folder and folder != "*":
+            params["folder"] = folder
+        if recursive:
+            params["recursive"] = "1"
+        if separate:
+            params["separate"] = "1"
+        if sort and sort != "date":
+            params["sort"] = sort
+        nav_qs = ("?" + urlencode(params)) if params else ""
+        back_url, back_label = "/" + nav_qs, "Galleri"
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None
 
@@ -273,6 +297,8 @@ def photo_detail(
             "pos": pos,
             "total": total,
             "nav_qs": nav_qs,
+            "back_url": back_url,
+            "back_label": back_label,
         },
     )
 

@@ -10,7 +10,7 @@
         {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}{{ nav_qs }}" title="Nästa (J)"><kbd class="kbd-hint">J</kbd> <i class="bi bi-arrow-right"></i></a>
         {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>{% endif %}
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="/{{ nav_qs }}"><i class="bi bi-grid-3x3-gap"></i> Galleri <kbd class="kbd-hint">G</kbd></a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ back_url }}"><i class="bi bi-grid-3x3-gap"></i> {{ back_label }} <kbd class="kbd-hint">G</kbd></a>
     <button class="btn btn-outline-secondary btn-sm" id="help-btn" title="Kortkommandon"><i class="bi bi-question-lg"></i> <kbd class="kbd-hint">?</kbd></button>
 {% endblock %}
 

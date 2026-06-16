@@ -7,6 +7,7 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import Photo, Place
 from app.deps import get_db
 from app.schemas import NameIn
+from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
@@ -81,11 +82,15 @@ def place_detail(
     photos = query.order_by(*sort_order(sort)).all()
     avg = place_avg_gps(db, place.id)
     place_gps = {"lat": round(avg[0], 6), "lon": round(avg[1], 6), "n": avg[2]} if avg else None
+    card_qs = context_card_qs(
+        "place", place.id, reviewed, ptype, paired, separate, sort
+    )
     return templates.TemplateResponse(
         request, "place_detail.html",
         {"place": place, "photos": photos, "place_gps": place_gps,
          "reviewed": reviewed, "ptype": ptype,
-         "paired": paired, "separate": separate, "sort": sort},
+         "paired": paired, "separate": separate, "sort": sort,
+         "card_qs": card_qs},
     )
 
 

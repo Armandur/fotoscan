@@ -12,6 +12,11 @@ class PersonRename(BaseModel):
 
 class NameIn(BaseModel):
     name: str
+    parent_id: int | None = None
+
+
+class TagParentUpdate(BaseModel):
+    parent_id: int | None = None
 
 
 class PlaceRename(BaseModel):

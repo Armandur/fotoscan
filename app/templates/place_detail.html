@@ -33,7 +33,7 @@
 {{ filterbar("/place/" ~ place.id, reviewed, ptype, paired, separate, sort) }}
 
 <div class="gallery-grid">
-    {% for photo in photos %}{{ photocard(photo) }}{% endfor %}
+    {% for photo in photos %}{{ photocard(photo, card_qs) }}{% endfor %}
 </div>
 {% endblock %}
 

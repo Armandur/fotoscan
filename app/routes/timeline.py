@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import Photo
 from app.deps import get_db
+from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions
 
 router = APIRouter()
@@ -59,8 +60,12 @@ def timeline(
             })
         groups.append({"year": year, "count": total, "months": month_groups})
 
+    card_qs = context_card_qs(
+        "timeline", None, reviewed, ptype, paired, separate, sort
+    )
     return templates.TemplateResponse(
         request, "timeline.html",
         {"groups": groups, "undated": undated, "reviewed": reviewed,
-         "ptype": ptype, "paired": paired, "separate": separate, "sort": sort},
+         "ptype": ptype, "paired": paired, "separate": separate, "sort": sort,
+         "card_qs": card_qs},
     )

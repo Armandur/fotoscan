@@ -32,7 +32,7 @@
     <h3 class="h6 text-secondary mt-3">{{ mg.label }}</h3>
     {% endif %}
     <div class="gallery-grid">
-        {% for photo in mg.photos %}{{ photocard(photo) }}{% endfor %}
+        {% for photo in mg.photos %}{{ photocard(photo, card_qs) }}{% endfor %}
     </div>
     {% endfor %}
 </section>
@@ -44,7 +44,7 @@
         Okänt datum <span class="text-secondary fs-6">{{ undated|length }} foto{{ 'n' if undated|length != 1 else '' }}</span>
     </h2>
     <div class="gallery-grid">
-        {% for photo in undated %}{{ photocard(photo) }}{% endfor %}
+        {% for photo in undated %}{{ photocard(photo, card_qs) }}{% endfor %}
     </div>
 </section>
 {% endif %}

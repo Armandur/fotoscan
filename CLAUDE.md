@@ -34,6 +34,7 @@ app/
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     filtering.py       apply_dimensions + sort_order (delas av galleri/person/tagg/plats/tidslinje)
+    context.py         bläddringskontext (ctx=person/tag/place/timeline) för prev/next i detaljvyn
     scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
     adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
@@ -52,7 +53,13 @@ photos/                exempel/testbilder (gitignored)
   scan och sparning - hanterar ofullständiga datum och årstider. Underlag för
   framtida tidslinjevy.
 - **Personer och taggar i samma tabell** (`Tag.kind` = "person" | "tag"),
-  many-to-many via `photo_tags`.
+  many-to-many via `photo_tags`. Hierarki (`parent_id`) gäller bara `kind="tag"`.
+- **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
+  unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett
+  träd-UI där förälder kan väljas med cykelskydd. Detaljvyn (`/tags/{id}`) visar
+  foton för taggen OCH alla dess ättlingar rekursivt. Export skriver pipe-
+  separerad sökväg till `-XMP-lr:HierarchicalSubject` (t.ex. "Familj|Farfar").
+  Personer förblir platta.
 - **Metadatafält:** date_text, date_year, plats (Place), source (vem fotot kommer
   från), notes, taggar/personer. (Arkivnummer fanns tidigare men togs bort.)
 - **Plats normaliserad** (`Place`-tabell, `Photo.place_id`): plats är en egen
@@ -62,10 +69,17 @@ photos/                exempel/testbilder (gitignored)
 - **Rotation i DB** (`Photo.rotation`, grader medurs). `/image/{id}` roterar
   on-the-fly när rotation != 0; thumbnail regenereras vid rotation.
 - **prev/next** i detaljvyn beräknas från samma sortering som galleriet
-  (`_ordered_ids`) - OK för projektets skala (<1000 foton).
+  (`_ordered_ids`) - OK för projektets skala (<1000 foton). Öppnas en bild från
+  en annan vy bär kort-länken `?ctx=person|tag|place|timeline[&ctx_id=N]` (+ aktiva
+  filter); då går prev/next genom DEN listan i stället (`services/context.py`,
+  `context_ordered_ids`), och bakåtknappen leder till ursprungsvyn. Korten får
+  querystringen via `card_qs` -> `_cards.html`-macrots `qs`-arg. Galleriets egna
+  kort (i index.html, ej macrot) bär folder+qbase som förut.
 - **Inbäddat EXIF-datum** (`Photo.exif_datetime`): råa `DateTimeOriginal` läses
   en gång vid scan ur Exif-sub-IFD:n (0x8769, inte topp-IFD:n!) och skrivs
-  aldrig över. Visas read-only i detaljvyn med en "Använd"-knapp.
+  aldrig över. Visas read-only i detaljvyn med en "Använd"-knapp. OBS: klockslag
+  rensades en gång (skanntid = skräp) så lagrade värden är datum-only `YYYY:MM:DD`;
+  "Använd" hanterar både med och utan tid.
 - **Ansiktstaggning** (`Photo.faces` -> `FaceRegion`): normaliserade koordinater
   (0-1, övre vänstra hörnet) relativt den VISADE bilden. Rita ruta i detaljvyn ->
   personsök med ansikts-thumbnails (`/api/persons` + `/api/faces/{id}/thumb`).
@@ -104,6 +118,16 @@ photos/                exempel/testbilder (gitignored)
   komplement). Originalen rörs aldrig. Kräver `exiftool` installerat (finns i
   Docker-imagen). Rotation skrivs som EXIF Orientation (antar att originalet
   saknar egen Orientation - sant för de flesta scans).
+  - **Datum:** XMP `photoshop:DateCreated` byggs av vår kurerade `date_text`/
+    härledda fält via `dates.iso_date_for_export` med rätt precision
+    (`YYYY`/`YYYY-MM`/`YYYY-MM-DD`) - INTE av filens inbäddade tid. EXIF
+    `DateTimeOriginal`/`CreateDate`/`ModifyDate` normaliseras: vid dag-precision
+    sätts `YYYY:MM:DD 00:00:00` (skanntiden skrivs över, inget riktigt klockslag
+    finns), annars raderas fälten så ingen skanntid läcker in i kopian.
+  - **Par:** `export_with_pair` exporterar både huvudbild (eget namn) och negativ
+    (`{huvudbild}-negativ`, egen filändelse). Negativ får aldrig ansiktsrutor.
+  - **Taggar:** platt `dc:Subject` + `lr:HierarchicalSubject` (pipe-separerad
+    sökväg) per tagg; personer som `iptcExt:PersonInImage`.
 
 ## Deployment
 - Single-container Docker på Unraid (TERVO2), image till GHCR. `Dockerfile`

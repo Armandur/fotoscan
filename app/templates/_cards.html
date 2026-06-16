@@ -1,6 +1,6 @@
-{% macro photocard(photo) %}
+{% macro photocard(photo, qs="") %}
 <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
-   href="/photo/{{ photo.id }}">
+   href="/photo/{{ photo.id }}{{ qs }}">
     <div class="card-badges">
         {% if photo.is_negative %}<span class="badge text-bg-dark border border-secondary">Negativ</span>{% endif %}
         {% if photo.paired_with_id %}<span class="badge text-bg-info" title="Hopparad"><i class="bi bi-link-45deg"></i></span>{% endif %}

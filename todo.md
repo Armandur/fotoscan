@@ -1,9 +1,13 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Hierarkiska taggar.** Taggar-vyn finns (platt). Lägg till hierarki -
-  XMP stödjer det via Lightroom `lr:hierarchicalSubject` (pipe-separerat, t.ex.
-  "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
+- [ ] **Välj tumnagel för en person.** Idag visas en godtycklig/första bild som
+  tumnagel för en person (i personvyn). Lägg till att man kan välja vilken
+  specifik bild som ska representera personen.
+- [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
+  ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
+  ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
+  vid export i stället för dagens 00:00:00.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -21,8 +25,11 @@
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
-- [ ] Fler massåtgärder: sätt datum/plats/tagg på flera markerade foton
-  (massåtgärder för negativ/granskad finns redan).
+- [ ] Fler massåtgärder: sätt datum/plats på flera markerade foton, samt
+  lägg till/ta bort en tagg (eller person) på urvalet (massåtgärder för
+  negativ/granskad finns redan).
+- [ ] Gruppera massåtgärderna i en liten meny/dropdown i batch-baren när de
+  blir fler (i stället för en rad knappar).
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
 - [ ] Backup/databasexport.
 
@@ -34,6 +41,16 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Bläddringskontext från ursprungsvyn.** Öppnas en bild från person-/tagg-/
+  plats-/tidslinjevyn går prev/next genom just den listan (`services/context.py`,
+  `?ctx=...&ctx_id=...`), inte hela galleriet. Bakåtknappen leder till
+  ursprungsvyn. Filter (granskat/typ/hopparat/separat/sort) bärs med.
+- [x] **Par-export.** Exportera en parad bild exporterar båda: huvudbilden under
+  sitt namn, negativet som `{huvudbild}-negativ` (egen filändelse). Negativ får
+  samma metadata men aldrig ansiktsrutor (kan vara skannat i annan dimension).
+- [x] **Hierarkiska taggar.** Taggar (Tag-modellen, kind="tag") bildar ett träd
+  via parent_id. Träd-UI i tagg-vyn, cykelskydd vid föräldraval. Detaljvy visar
+  foton för tagg + ättlingar. Export skriver lr:HierarchicalSubject (pipe-sep).
 - [x] Representativ GPS per plats (snitt av fotonas GPS) - centrerar kart-modalen
   när fotot saknar egen position; visas på platsdetaljen.
 - [x] Normalisera plats: egen Place-tabell + Photo.place_id (location som cache),

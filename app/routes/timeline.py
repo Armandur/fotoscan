@@ -28,7 +28,8 @@ def timeline(
     photos = (
         query.order_by(
             Photo.date_year.is_(None), Photo.date_year,
-            Photo.date_month.is_(None), Photo.date_month, Photo.filename,
+            Photo.date_month.is_(None), Photo.date_month,
+            Photo.date_text, Photo.filename,
         )
         .all()
     )

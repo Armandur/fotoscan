@@ -6,16 +6,21 @@ from app.database import Photo
 
 
 def sort_order(sort: str):
-    """Order-by-uttryck för en fotolista. Okänt datum hamnar sist."""
+    """Order-by-uttryck för en fotolista. Okänt datum hamnar sist.
+
+    date_text ("YYYY-MM-DD") används som tiebreaker efter år/månad så att dagen
+    sorteras rätt (vi lagrar inte dagen i en egen kolumn)."""
     if sort == "date_desc":
         return [Photo.date_year.is_(None), Photo.date_year.desc(),
-                Photo.date_month.is_(None), Photo.date_month.desc(), Photo.filename]
+                Photo.date_month.is_(None), Photo.date_month.desc(),
+                Photo.date_text.desc(), Photo.filename]
     if sort == "name":
         return [Photo.folder, Photo.filename]
     if sort == "added":
         return [Photo.id]
     return [Photo.date_year.is_(None), Photo.date_year,
-            Photo.date_month.is_(None), Photo.date_month, Photo.filename]
+            Photo.date_month.is_(None), Photo.date_month,
+            Photo.date_text, Photo.filename]
 
 
 def apply_dimensions(query, reviewed="", ptype="", paired="", separate=False):

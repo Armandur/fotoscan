@@ -308,10 +308,10 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/photo.js"></script>
-<script src="/static/js/faces.js"></script>
-<script src="/static/js/adjust.js"></script>
-<script src="/static/js/pairing.js"></script>
+<script src="/static/js/photo.js?v={{ asset_v }}"></script>
+<script src="/static/js/faces.js?v={{ asset_v }}"></script>
+<script src="/static/js/adjust.js?v={{ asset_v }}"></script>
+<script src="/static/js/pairing.js?v={{ asset_v }}"></script>
 <script src="/static/vendor/leaflet/leaflet.js"></script>
-<script src="/static/js/map.js"></script>
+<script src="/static/js/map.js?v={{ asset_v }}"></script>
 {% endblock %}

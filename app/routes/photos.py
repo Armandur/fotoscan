@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.config import BASE_DIR, THUMB_DIR
+from app.config import BASE_DIR, THUMB_DIR, ASSET_V
 from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
@@ -26,6 +26,7 @@ from app.services.scanner import (
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+templates.env.globals["asset_v"] = ASSET_V
 
 PAGE_SIZE = 60
 
@@ -136,7 +137,7 @@ def index(
     pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
 
     total_all = db.query(Photo).count()
-    reviewed = db.query(Photo).filter(Photo.reviewed_at.isnot(None)).count()
+    reviewed_count = db.query(Photo).filter(Photo.reviewed_at.isnot(None)).count()
 
     # Distinkta undermappar -> nästlat träd. None hoppas över.
     folders = [
@@ -167,7 +168,7 @@ def index(
             "pages": pages,
             "total": total,
             "total_all": total_all,
-            "reviewed": reviewed,
+            "reviewed_count": reviewed_count,
         },
     )
 

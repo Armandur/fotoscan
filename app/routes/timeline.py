@@ -3,13 +3,14 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.config import BASE_DIR
+from app.config import BASE_DIR, ASSET_V
 from app.database import Photo
 from app.deps import get_db
 from app.services.filtering import apply_dimensions
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+templates.env.globals["asset_v"] = ASSET_V
 
 _MONTHS = [
     "", "Januari", "Februari", "Mars", "April", "Maj", "Juni",

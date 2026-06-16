@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.config import BASE_DIR
+from app.config import BASE_DIR, ASSET_V
 from app.database import Photo, Tag
 from app.deps import get_db
 from app.schemas import NameIn
@@ -11,6 +11,7 @@ from app.services.filtering import apply_dimensions, sort_order
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+templates.env.globals["asset_v"] = ASSET_V
 
 
 @router.get("/api/tags")

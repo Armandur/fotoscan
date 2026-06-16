@@ -19,6 +19,22 @@ EXPORT_DIR = Path(os.getenv("EXPORT_DIR", BASE_DIR / "export")).resolve()
 
 PORT = int(os.getenv("PORT", "8810"))
 
+
+def _asset_version() -> str:
+    """Senaste ändringstid bland egna css/js - för cache-busting av statiska
+    assets (beräknas vid uppstart)."""
+    latest = 0
+    for sub in ("css", "js"):
+        d = BASE_DIR / "app" / "static" / sub
+        if d.exists():
+            for f in d.rglob("*"):
+                if f.is_file():
+                    latest = max(latest, int(f.stat().st_mtime))
+    return str(latest)
+
+
+ASSET_V = _asset_version()
+
 THUMB_SIZE = (400, 400)
 
 # Filändelser som behandlas som bilder vid scanning

@@ -10,7 +10,7 @@
     <!-- Självhostad Bootstrap (lokalt = snabbt, ingen FOUC, funkar offline) -->
     <link href="/static/vendor/bootstrap.min.css" rel="stylesheet">
     <link href="/static/vendor/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ asset_v }}">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -63,7 +63,7 @@
     </div>
 
     <script src="/static/vendor/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/utils.js?v={{ asset_v }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

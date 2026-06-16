@@ -208,6 +208,14 @@
     color: #fff;
 }
 
+/* Kortkommando-hint vid knappar och fält */
+.kbd-hint {
+    font-size: .65rem;
+    opacity: .6;
+    padding: 1px 4px;
+    vertical-align: middle;
+}
+
 /* Lightbox */
 .lightbox {
     position: fixed;

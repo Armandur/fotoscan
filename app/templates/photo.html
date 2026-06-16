@@ -4,13 +4,13 @@
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ pos }} / {{ total }}</span>
     <div class="btn-group btn-group-sm">
-        {% if prev_id %}<a class="btn btn-outline-secondary" href="/photo/{{ prev_id }}"><i class="bi bi-arrow-left"></i></a>
+        {% if prev_id %}<a class="btn btn-outline-secondary" href="/photo/{{ prev_id }}" title="Föregående (K)"><i class="bi bi-arrow-left"></i> <kbd class="kbd-hint">K</kbd></a>
         {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-left"></i></button>{% endif %}
-        {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}"><i class="bi bi-arrow-right"></i></a>
+        {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}" title="Nästa (J)"><kbd class="kbd-hint">J</kbd> <i class="bi bi-arrow-right"></i></a>
         {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>{% endif %}
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="/"><i class="bi bi-grid-3x3-gap"></i> Galleri</a>
-    <button class="btn btn-outline-secondary btn-sm" id="help-btn" title="Kortkommandon"><i class="bi bi-question-lg"></i></button>
+    <a class="btn btn-outline-secondary btn-sm" href="/"><i class="bi bi-grid-3x3-gap"></i> Galleri <kbd class="kbd-hint">G</kbd></a>
+    <button class="btn btn-outline-secondary btn-sm" id="help-btn" title="Kortkommandon"><i class="bi bi-question-lg"></i> <kbd class="kbd-hint">?</kbd></button>
 {% endblock %}
 
 {% block content %}
@@ -24,14 +24,14 @@
             </div>
         </div>
         <div class="d-flex gap-2 my-2 flex-wrap">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-ccw" title="Rotera moturs (Shift+R)">
-                <i class="bi bi-arrow-counterclockwise"></i> Vänster
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-ccw" title="Rotera moturs">
+                <i class="bi bi-arrow-counterclockwise"></i> Vänster <kbd class="kbd-hint">⇧R</kbd>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-cw" title="Rotera medurs (R)">
-                Höger <i class="bi bi-arrow-clockwise"></i>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="rot-cw" title="Rotera medurs">
+                Höger <i class="bi bi-arrow-clockwise"></i> <kbd class="kbd-hint">R</kbd>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="face-tag-btn" title="Markera ansikte och knyt till person (F)">
-                <i class="bi bi-person-bounding-box"></i> Tagga ansikte
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="face-tag-btn" title="Markera ansikte och knyt till person">
+                <i class="bi bi-person-bounding-box"></i> Tagga ansikte <kbd class="kbd-hint">F</kbd>
             </button>
             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#adjust-panel" title="Justera ljus och färg">
                 <i class="bi bi-sliders"></i> Justera färg
@@ -102,7 +102,7 @@
 
             <div class="row mb-3">
                 <div class="col-8">
-                    <label class="form-label">Fotodatum (fritext)</label>
+                    <label class="form-label">Fotodatum (fritext) <kbd class="kbd-hint">D</kbd></label>
                     <input type="text" class="form-control" name="date_text" value="{{ photo.date_text }}"
                            placeholder="ex. ca 1975, sommaren 1962">
                 </div>
@@ -125,21 +125,21 @@
             {% endif %}
 
             <div class="mb-3">
-                <label class="form-label">Plats</label>
+                <label class="form-label">Plats <kbd class="kbd-hint">L</kbd></label>
                 <input type="text" class="form-control" name="location" value="{{ photo.location }}"
                        placeholder="ex. Storgatan, Luleå">
                 <div class="form-text">Ange <strong>fotografens</strong> position (där bilden togs), inte motivets.</div>
             </div>
 
             <div class="mb-3 autocomplete-wrap">
-                <label class="form-label">Personer <span class="text-secondary">(kommaseparerat)</span></label>
+                <label class="form-label">Personer <span class="text-secondary">(kommaseparerat)</span> <kbd class="kbd-hint">P</kbd></label>
                 <input type="text" class="form-control" name="people" autocomplete="off"
                        value="{{ photo.tags | selectattr('kind', 'equalto', 'person') | map(attribute='name') | join(', ') }}"
                        placeholder="Farfar Erik, Mormor Astrid">
             </div>
 
             <div class="mb-3 autocomplete-wrap">
-                <label class="form-label">Taggar <span class="text-secondary">(kommaseparerat)</span></label>
+                <label class="form-label">Taggar <span class="text-secondary">(kommaseparerat)</span> <kbd class="kbd-hint">T</kbd></label>
                 <input type="text" class="form-control" name="tags" autocomplete="off"
                        value="{{ photo.tags | selectattr('kind', 'equalto', 'tag') | map(attribute='name') | join(', ') }}"
                        placeholder="bil, bröllop, semester">
@@ -152,7 +152,7 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Anteckningar</label>
+                <label class="form-label">Anteckningar <kbd class="kbd-hint">N</kbd></label>
                 <textarea class="form-control" name="notes" rows="5"
                           placeholder="berättelser, sammanhang...">{{ photo.notes }}</textarea>
             </div>
@@ -164,8 +164,8 @@
             </div>
 
             <div class="d-flex gap-2 align-items-center flex-wrap">
-                <button type="submit" class="btn btn-primary" id="save-btn">Spara <kbd>Ctrl+S</kbd></button>
-                <button type="button" class="btn btn-success" id="save-reviewed-btn">Spara + granskad</button>
+                <button type="submit" class="btn btn-primary" id="save-btn">Spara <kbd class="kbd-hint">Ctrl S</kbd></button>
+                <button type="button" class="btn btn-success" id="save-reviewed-btn">Spara + granskad <kbd class="kbd-hint">Ctrl ⏎</kbd></button>
                 <button type="button" class="btn btn-outline-info" id="export-btn"
                         title="Exportera kopia med inbäddad metadata (XMP + EXIF)">
                     <i class="bi bi-box-arrow-up"></i> Exportera
@@ -191,7 +191,7 @@
                     <tbody>
                         <tr><td><kbd>J</kbd> / <kbd>&rarr;</kbd></td><td>Nästa foto</td></tr>
                         <tr><td><kbd>K</kbd> / <kbd>&larr;</kbd></td><td>Föregående foto</td></tr>
-                        <tr><td><kbd>R</kbd> / <kbd>Shift+R</kbd></td><td>Rotera medurs / moturs</td></tr>
+                        <tr><td><kbd>R</kbd> / <kbd>⇧</kbd><kbd>R</kbd></td><td>Rotera medurs / moturs</td></tr>
                         <tr><td><kbd>F</kbd></td><td>Tagga ansikte (rita ruta)</td></tr>
                         <tr><td><kbd>Ctrl+S</kbd></td><td>Spara</td></tr>
                         <tr><td><kbd>Ctrl+Enter</kbd></td><td>Spara och markera granskad</td></tr>

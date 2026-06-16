@@ -85,6 +85,15 @@
     document.getElementById("rot-cw").addEventListener("click", () => rotate("cw"));
     document.getElementById("rot-ccw").addEventListener("click", () => rotate("ccw"));
 
+    // ---- Lightbox (förstora) ----
+    const lbBtn = document.getElementById("lightbox-btn");
+    if (lbBtn) {
+        lbBtn.addEventListener("click", () => {
+            // Cache-busta så senaste rendering (rotation/justering) visas
+            showLightbox(lbBtn.dataset.src + "?t=" + Date.now());
+        });
+    }
+
     // ---- Inbäddat EXIF-datum: fyll fälten ----
     const exifBox = document.getElementById("exif-date-box");
     if (exifBox) {

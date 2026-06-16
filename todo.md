@@ -1,6 +1,23 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Para ihop negativ + skannat foto (samma motiv).** Länka två (eller
+  flera) foton som representerar samma bild. Designidé: en självrefererande
+  länk (photo_links eller group_id). Vid hopparning: slå samman metadatan -
+  om båda har värden i samma fält och de skiljer sig, visa en diff-/merge-vy
+  där man väljer vilket värde som gäller (eller behåller båda för taggar/
+  personer). Ansiktsregioner hör till respektive bild men personlistan kan
+  delas. Fundera på vilken bild som är "primär" vid export.
+  Förfinat:
+    - Flagga/tagg på foto: "skannat negativ" (eget fält, t.ex. is_negative),
+      används för att hitta negativ att para ihop.
+    - Sökläge för matchning: redan matchade negativ visas INTE som default i
+      sökträfflistan, men en toggle kan visa även redan matchade.
+- [ ] **Mer metadata på personer.** Idag är en person bara en tagg (namn). I
+  framtiden: födelse-/dödsår, relation, alias/smeknamn, anteckningar, ev. länk
+  mellan personer (familj). Kräver en egen Person-modell (eller utökad Tag) -
+  migrera person-taggar dit. Exportera till XMP där det går (PersonInImage med
+  detaljer / MWG).
 - [ ] **Ansiktstaggning steg 2 - AI.** Automatisk ansiktsdetektering +
   igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
   bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som

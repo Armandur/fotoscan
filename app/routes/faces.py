@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
 from app.routes.photos import _get_or_create_tag
-from app.schemas import FaceRegionIn
+from app.schemas import FaceBox, FaceRegionIn
 from app.services.scanner import load_oriented
 
 router = APIRouter()
@@ -55,6 +55,7 @@ def list_persons(q: str = "", db: Session = Depends(get_db)):
             .all()
         )
         result.append({
+            "id": tag.id,
             "name": tag.name,
             "count": len(faces),
             "region_id": faces[0].id if faces else None,
@@ -87,6 +88,21 @@ def add_face(
         w=_clamp(data.w), h=_clamp(data.h),
     )
     db.add(face)
+    # En markerad person finns i bilden -> lägg även till i fotots Personer-fält.
+    if tag not in photo.tags:
+        photo.tags.append(tag)
+    db.commit()
+    db.refresh(face)
+    return JSONResponse(_serialize(face))
+
+
+@router.post("/api/faces/{region_id}/move")
+def move_face(region_id: int, data: FaceBox, db: Session = Depends(get_db)):
+    face = db.get(FaceRegion, region_id)
+    if not face:
+        raise HTTPException(404, "Region hittades inte")
+    face.x, face.y = _clamp(data.x), _clamp(data.y)
+    face.w, face.h = _clamp(data.w), _clamp(data.h)
     db.commit()
     db.refresh(face)
     return JSONResponse(_serialize(face))
@@ -97,9 +113,28 @@ def delete_face(region_id: int, db: Session = Depends(get_db)):
     face = db.get(FaceRegion, region_id)
     if not face:
         raise HTTPException(404, "Region hittades inte")
+    tag = face.tag
+    photo = face.photo
     db.delete(face)
+    db.flush()
+
+    # Om personen inte har någon kvarvarande ruta på detta foto, ta även bort
+    # personen ur fotots Personer-fält (taggades dit när rutan skapades).
+    remaining_here = (
+        db.query(FaceRegion)
+        .filter(FaceRegion.photo_id == photo.id, FaceRegion.tag_id == tag.id)
+        .count()
+    )
+    if remaining_here == 0 and tag in photo.tags:
+        photo.tags.remove(tag)
+    db.flush()
+
+    # Är personen nu helt oanvänd (inga rutor, inga foton)? Då kan den städas bort.
+    total_faces = db.query(FaceRegion).filter(FaceRegion.tag_id == tag.id).count()
+    orphaned = total_faces == 0 and len(tag.photos) == 0
+    person = {"id": tag.id, "name": tag.name, "orphaned": orphaned}
     db.commit()
-    return JSONResponse({"ok": True})
+    return JSONResponse({"ok": True, "person": person})
 
 
 @router.get("/api/faces/{region_id}/thumb")

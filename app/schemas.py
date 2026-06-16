@@ -6,6 +6,21 @@ class TagItem(BaseModel):
     kind: str = "tag"
 
 
+class PersonRename(BaseModel):
+    name: str
+
+
+class PersonMerge(BaseModel):
+    into_id: int
+
+
+class FaceBox(BaseModel):
+    x: float
+    y: float
+    w: float
+    h: float
+
+
 class PhotoAdjust(BaseModel):
     auto_tone: bool = False
     adj_brightness: float = 1.0

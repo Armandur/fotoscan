@@ -36,9 +36,10 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#adjust-panel" title="Justera ljus och färg">
                 <i class="bi bi-sliders"></i> Justera färg
             </button>
-            <a class="btn btn-outline-secondary btn-sm" href="/image/{{ photo.id }}" target="_blank">
-                <i class="bi bi-arrows-fullscreen"></i> Öppna full
-            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="lightbox-btn"
+                    data-src="/image/{{ photo.id }}">
+                <i class="bi bi-arrows-fullscreen"></i> Förstora
+            </button>
         </div>
 
         <div class="collapse" id="adjust-panel">

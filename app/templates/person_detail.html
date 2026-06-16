@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ person.name }} - Fotoscan{% endblock %}
+
+{% block headeractions %}
+    <a class="btn btn-outline-secondary btn-sm" href="/persons">Alla personer</a>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3" data-person-id="{{ person.id }}">
+    {% if region_id %}
+    <img src="/api/faces/{{ region_id }}/thumb" alt="{{ person.name }}"
+         style="width:64px;height:64px;object-fit:cover;border-radius:8px">
+    {% endif %}
+    <div class="flex-grow-1">
+        <div class="input-group" style="max-width:420px">
+            <input type="text" class="form-control" id="person-name" value="{{ person.name }}">
+            <button class="btn btn-primary" id="rename-btn">Spara namn</button>
+        </div>
+        <div class="input-group mt-2" style="max-width:420px">
+            <span class="input-group-text">Slå ihop med</span>
+            <select class="form-select" id="merge-select">
+                <option value="">Välj person...</option>
+            </select>
+            <button class="btn btn-outline-warning" id="merge-btn">Slå ihop</button>
+        </div>
+        <div class="text-secondary small mt-1">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} där personen förekommer</div>
+    </div>
+</div>
+
+<div class="gallery-grid">
+    {% for photo in photos %}
+    <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
+       href="/photo/{{ photo.id }}">
+        <img loading="lazy" class="card-img-top" src="/thumb/{{ photo.id }}" alt="{{ photo.filename }}">
+        <div class="card-body p-2">
+            <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
+            <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
+            {% if photo.location %}
+            <div class="small text-truncate"><i class="bi bi-geo-alt"></i> {{ photo.location }}</div>
+            {% endif %}
+            {% set persons = photo.tags | selectattr('kind', 'equalto', 'person') | map(attribute='name') | join(', ') %}
+            {% if persons %}
+            <div class="small text-truncate" title="{{ persons }}"><i class="bi bi-people"></i> {{ persons }}</div>
+            {% endif %}
+            {% set kws = photo.tags | selectattr('kind', 'equalto', 'tag') | map(attribute='name') | join(', ') %}
+            {% if kws %}
+            <div class="small text-secondary text-truncate" title="{{ kws }}"><i class="bi bi-tags"></i> {{ kws }}</div>
+            {% endif %}
+            {% if photo.notes %}
+            <div class="small text-secondary text-truncate" title="{{ photo.notes }}">{{ photo.notes }}</div>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const personId = document.querySelector("[data-person-id]").dataset.personId;
+
+// Fyll merge-listan med övriga personer
+(async () => {
+    try {
+        const persons = await apiFetch("/api/persons");
+        const sel = document.getElementById("merge-select");
+        persons.filter(p => String(p.id) !== String(personId)).forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.name} (${p.count})`;
+            sel.appendChild(opt);
+        });
+    } catch (e) {}
+})();
+
+document.getElementById("merge-btn").addEventListener("click", async (e) => {
+    const sel = document.getElementById("merge-select");
+    const intoId = sel.value;
+    if (!intoId) { showToast("Välj en person att slå ihop med", true); return; }
+    const targetLabel = sel.options[sel.selectedIndex].textContent;
+    if (!confirm(`Slå ihop "${document.getElementById('person-name').value}" in i "${targetLabel}"? Detta går inte att ångra.`)) return;
+    e.target.disabled = true;
+    try {
+        const res = await apiFetch(`/api/persons/${personId}/merge`, {
+            method: "POST", body: { into_id: parseInt(intoId, 10) },
+        });
+        showToast("Personerna sammanslagna");
+        setTimeout(() => { location.href = `/persons/${res.id}`; }, 700);
+    } catch (err) {
+        showToast("Kunde inte slå ihop: " + err.message, true);
+        e.target.disabled = false;
+    }
+});
+
+document.getElementById("rename-btn").addEventListener("click", async (e) => {
+    const id = document.querySelector("[data-person-id]").dataset.personId;
+    const name = document.getElementById("person-name").value.trim();
+    if (!name) { showToast("Ange ett namn", true); return; }
+    e.target.disabled = true;
+    try {
+        const res = await apiFetch(`/api/persons/${id}/rename`, {
+            method: "POST", body: { name },
+        });
+        if (res.merged) {
+            showToast("Sammanslagen med befintlig person");
+            setTimeout(() => { location.href = `/persons/${res.id}`; }, 800);
+        } else {
+            showToast("Namn sparat");
+        }
+    } catch (err) {
+        showToast("Kunde inte spara: " + err.message, true);
+    } finally {
+        e.target.disabled = false;
+    }
+});
+</script>
+{% endblock %}

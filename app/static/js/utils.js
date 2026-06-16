@@ -28,3 +28,35 @@ function escapeHtml(str) {
     div.textContent = str ?? "";
     return div.innerHTML;
 }
+
+// Lightbox: visa en bild i helskärmsoverlay. Klick eller Esc stänger.
+function showLightbox(src) {
+    const lb = document.getElementById("lightbox");
+    if (!lb) return;
+    document.getElementById("lightbox-img").src = src;
+    lb.hidden = false;
+}
+function _closeLightbox() {
+    const lb = document.getElementById("lightbox");
+    if (!lb || lb.hidden) return;
+    lb.hidden = true;
+    document.getElementById("lightbox-img").src = "";
+}
+document.addEventListener("DOMContentLoaded", () => {
+    const lb = document.getElementById("lightbox");
+    if (lb) lb.addEventListener("click", _closeLightbox);
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") _closeLightbox();
+});
+
+// Markera thumbnails som laddade så skeleton-shimmern stängs av.
+function initSkeletons() {
+    document.querySelectorAll("img.card-img-top").forEach((img) => {
+        if (img.complete && img.naturalWidth) { img.classList.add("loaded"); return; }
+        const done = () => img.classList.add("loaded");
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+    });
+}
+document.addEventListener("DOMContentLoaded", initSkeletons);

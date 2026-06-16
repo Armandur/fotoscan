@@ -60,10 +60,21 @@
     }
 
     function initMap() {
-        map = L.map("map").setView([62.0, 15.0], 4);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19, attribution: "© OpenStreetMap",
-        }).addTo(map);
+        });
+        const sat = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            { maxZoom: 19, attribution: "Tiles © Esri" },
+        );
+        const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+            maxZoom: 17, attribution: "© OpenTopoMap (CC-BY-SA)",
+        });
+        map = L.map("map", { layers: [osm] }).setView([62.0, 15.0], 4);
+        L.control.layers(
+            { "Karta (OSM)": osm, "Satellit": sat, "Topografisk": topo },
+            null, { collapsed: false },
+        ).addTo(map);
         map.on("click", (e) => setPoint(e.latlng.lat, e.latlng.lng));
     }
 

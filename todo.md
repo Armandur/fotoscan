@@ -4,14 +4,9 @@
 - [ ] **Hierarkiska taggar.** Taggar-vyn finns (platt). Lägg till hierarki -
   XMP stödjer det via Lightroom `lr:hierarchicalSubject` (pipe-separerat, t.ex.
   "Familj|Farfar") parallellt med platta `dc:subject`. Kräver parent-fält + träd-UI.
-- [ ] **Normalisera plats.** Platser-vyn finns (grupperar fritextfältet). Gör
-  plats till en egen `Place`-tabell: en namngiven, återanvändbar etikett
-  ("Stigsjö kyrka") som är medvetet grov - den behöver inte vara exakt (täcker
-  både vid/i kyrkan, ingen "södra hörnet"-granularitet). Place kan ha en grov/
-  representativ GPS som default-förslag. Foton länkar till Place via FK.
-  VIKTIGT: fotots egen `gps_lat/lon` (exakt fotografposition) lever kvar
-  oberoende och är frikopplad från platsen - olika foton med samma plats kan ha
-  olika (eller ingen) exakt GPS. Place = grov hink, foto-GPS = exaktheten.
+- [ ] **Plats: representativ GPS.** Place-tabellen finns nu. Lägg till en grov/
+  representativ GPS på platsen (t.ex. snitt av fotonas GPS, eller satt på karta)
+  som default-förslag i fotots kart-modal när fotot saknar egen GPS.
 - [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
   (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
   hela bilden med en rektangel som markerar aktuellt visat område.
@@ -42,6 +37,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Normalisera plats: egen Place-tabell + Photo.place_id (location som cache),
+  platsvy mot tabellen (byt namn/merge/ta bort), 12 platser migrerade. Foto-GPS
+  frikopplad.
 - [x] Galleri-tangentnavigering mellan sidor (J/K + pilar).
 - [x] Hopparning som kombination: delad metadata (speglas vid sparning),
   grupperad gallerivy (primär=fotot) med "visa separat"-toggle, primär-roll i DB.

@@ -17,6 +17,7 @@ from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
 from app.services.adjust import has_adjustments, suggest_auto
 from app.services.dates import parse_date_text
+from app.routes.places import get_or_create_place
 from app.services.scanner import (
     load_oriented, render_cache_path, refresh_derived, write_render,
 )
@@ -349,8 +350,8 @@ def adjust_photo(
 # delas INTE.
 _SHARED_META = [
     "date_text", "date_year", "date_month", "date_precision",
-    "location", "notes", "source", "gps_lat", "gps_lon", "gps_radius_m",
-    "reviewed_at",
+    "place_id", "location", "notes", "source",
+    "gps_lat", "gps_lon", "gps_radius_m", "reviewed_at",
 ]
 
 
@@ -392,7 +393,15 @@ def update_photo(
     photo.date_text = data.date_text.strip()
     # Härled år/månad/precision ur fritexten.
     photo.date_year, photo.date_month, photo.date_precision = parse_date_text(photo.date_text)
-    photo.location = data.location.strip()
+    # Plats normaliseras till en Place; location hålls som synkad cache.
+    place_name = data.location.strip()
+    if place_name:
+        place = get_or_create_place(db, place_name)
+        photo.place_id = place.id
+        photo.location = place.name
+    else:
+        photo.place_id = None
+        photo.location = ""
     photo.notes = data.notes.strip()
     photo.source = data.source.strip()
     photo.is_negative = 1 if data.is_negative else 0

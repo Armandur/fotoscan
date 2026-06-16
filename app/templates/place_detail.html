@@ -1,19 +1,24 @@
 {% extends "base.html" %}
 {% from "_cards.html" import photocard %}
-{% block title %}{{ place }} - Platser{% endblock %}
+{% block title %}{{ place.name }} - Platser{% endblock %}
 
 {% block headeractions %}
     <a class="btn btn-outline-secondary btn-sm" href="/places">Alla platser</a>
 {% endblock %}
 
 {% block content %}
-<div class="mb-3" data-place="{{ place }}">
+<div class="mb-3" data-place-id="{{ place.id }}">
     <div class="input-group" style="max-width:520px">
         <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-        <input type="text" class="form-control" id="place-name" value="{{ place }}">
-        <button class="btn btn-primary" id="rename-place-btn">Byt namn på platsen</button>
+        <input type="text" class="form-control" id="place-name" value="{{ place.name }}">
+        <button class="btn btn-primary" id="rename-place-btn">Spara namn</button>
     </div>
-    <div class="text-secondary small mt-1">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} på denna plats</div>
+    <div class="d-flex gap-2 align-items-center mt-2">
+        <button class="btn btn-outline-danger btn-sm" id="delete-place-btn">
+            <i class="bi bi-trash"></i> Ta bort plats
+        </button>
+        <span class="text-secondary small">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} på denna plats</span>
+    </div>
 </div>
 
 <div class="gallery-grid">
@@ -23,22 +28,39 @@
 
 {% block scripts %}
 <script>
-const oldPlace = document.querySelector("[data-place]").dataset.place;
+const placeId = document.querySelector("[data-place-id]").dataset.placeId;
+
 document.getElementById("rename-place-btn").addEventListener("click", async (e) => {
     const name = document.getElementById("place-name").value.trim();
     if (!name) { showToast("Ange ett namn", true); return; }
-    if (name === oldPlace) { showToast("Samma namn"); return; }
+    e.target.disabled = true;
+    try {
+        const res = await apiFetch(`/api/places/${placeId}/rename`, { method: "POST", body: { name } });
+        if (res.merged) {
+            showToast("Sammanslagen med befintlig plats");
+            setTimeout(() => { location.href = `/place/${res.id}`; }, 700);
+        } else {
+            showToast("Namn sparat");
+        }
+    } catch (err) {
+        showToast("Kunde inte spara: " + err.message, true);
+    } finally {
+        e.target.disabled = false;
+    }
+});
+
+document.getElementById("delete-place-btn").addEventListener("click", async (e) => {
     const ok = await showConfirm(
-        `Byt plats "${oldPlace}" till "${name}" på alla foton med denna plats?`,
-        { okLabel: "Byt namn", okClass: "btn-warning" });
+        `Ta bort platsen "${document.getElementById('place-name').value}"? Den tas bort från alla foton (fotonas egna GPS påverkas inte). Detta går inte att ångra.`,
+        { okLabel: "Ta bort", okClass: "btn-danger" });
     if (!ok) return;
     e.target.disabled = true;
     try {
-        await apiFetch("/api/places/rename", { method: "POST", body: { old: oldPlace, new: name } });
-        showToast("Platsen omdöpt");
-        setTimeout(() => { location.href = `/place?loc=${encodeURIComponent(name)}`; }, 700);
+        await apiFetch(`/api/places/${placeId}`, { method: "DELETE" });
+        showToast("Platsen borttagen");
+        setTimeout(() => { location.href = "/places"; }, 600);
     } catch (err) {
-        showToast("Kunde inte byta namn: " + err.message, true);
+        showToast("Kunde inte ta bort: " + err.message, true);
         e.target.disabled = false;
     }
 });

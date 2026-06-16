@@ -61,6 +61,11 @@ class Photo(Base):
     # representerar paret i grupperad gallerivy.
     is_pair_primary = Column(Integer, default=0)
 
+    # Plats: normaliserad via Place (place_id). location är en synkad cache av
+    # platsnamnet (för sök/visning). Fotots egen GPS nedan är frikopplad.
+    place_id = Column(
+        Integer, ForeignKey("places.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     location = Column(String, default="")
     # Fotografens position (där bilden togs). Valfri osäkerhetsradie i meter.
     gps_lat = Column(Float, nullable=True)
@@ -98,6 +103,14 @@ class Photo(Base):
         "FaceRegion", back_populates="photo",
         cascade="all, delete-orphan", lazy="selectin",
     )
+    place = relationship("Place", lazy="selectin")
+
+
+class Place(Base):
+    __tablename__ = "places"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
 
 
 class Tag(Base):
@@ -181,6 +194,7 @@ def init_db() -> None:
         for _c, _t in (("gps_lat", "FLOAT"), ("gps_lon", "FLOAT"),
                        ("gps_radius_m", "INTEGER"), ("date_month", "INTEGER"),
                        ("date_precision", "VARCHAR"),
-                       ("is_pair_primary", "INTEGER")):
+                       ("is_pair_primary", "INTEGER"),
+                       ("place_id", "INTEGER")):
             if not _column_exists(conn, "photos", _c):
                 conn.exec_driver_sql(f"ALTER TABLE photos ADD COLUMN {_c} {_t}")

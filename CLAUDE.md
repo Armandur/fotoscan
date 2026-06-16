@@ -28,7 +28,7 @@ app/
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
-    places.py          platsvy (lista/detalj per plats-fält) + byt namn på plats
+    places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
@@ -52,8 +52,12 @@ photos/                exempel/testbilder (gitignored)
   framtida tidslinjevy.
 - **Personer och taggar i samma tabell** (`Tag.kind` = "person" | "tag"),
   many-to-many via `photo_tags`.
-- **Metadatafält:** date_text, date_year, location, source (vem fotot kommer
+- **Metadatafält:** date_text, date_year, plats (Place), source (vem fotot kommer
   från), notes, taggar/personer. (Arkivnummer fanns tidigare men togs bort.)
+- **Plats normaliserad** (`Place`-tabell, `Photo.place_id`): plats är en egen
+  återanvändbar entitet. `Photo.location` är en synkad namn-cache (för sök/kort).
+  `update_photo` gör get_or_create_place. Fotots egen GPS (`gps_lat/lon`) är
+  frikopplad - grov plats vs exakt fotografposition.
 - **Rotation i DB** (`Photo.rotation`, grader medurs). `/image/{id}` roterar
   on-the-fly när rotation != 0; thumbnail regenereras vid rotation.
 - **prev/next** i detaljvyn beräknas från samma sortering som galleriet

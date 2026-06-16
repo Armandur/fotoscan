@@ -15,7 +15,7 @@
 
 <div class="gallery-grid">
     {% for p in places %}
-    <a class="card photo-card text-decoration-none" href="/place?loc={{ p.name|urlencode }}">
+    <a class="card photo-card text-decoration-none" href="/place/{{ p.id }}">
         {% if p.sample %}
         <img loading="lazy" class="card-img-top" src="/thumb/{{ p.sample }}" alt="{{ p.name }}">
         {% else %}

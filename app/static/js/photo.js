@@ -64,7 +64,12 @@
         try {
             await save(false);  // spara senaste ändringar först
             const res = await apiFetch(`/api/photos/${photoId}/export`, { method: "POST" });
-            showToast("Exporterad: " + res.path);
+            const names = res.paths.map((p) => p.split("/").pop());
+            showToast(
+                names.length > 1
+                    ? `Exporterade ${names.length} filer: ${names.join(", ")}`
+                    : "Exporterad: " + names[0]
+            );
         } catch (err) {
             showToast("Export misslyckades: " + err.message, true);
         } finally {

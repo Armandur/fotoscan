@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import Photo
 from app.deps import get_db
 from app.services.exporter import (
-    exiftool_available, export_many, export_photo,
+    exiftool_available, export_many, export_with_pair,
 )
 
 router = APIRouter()
@@ -19,10 +19,10 @@ def export_one(photo_id: int, db: Session = Depends(get_db)):
     if not photo:
         raise HTTPException(404, "Foto hittades inte")
     try:
-        dest = export_photo(photo)
+        paths = export_with_pair(db, photo)
     except FileNotFoundError as e:
         raise HTTPException(404, str(e))
-    return JSONResponse({"ok": True, "path": str(dest)})
+    return JSONResponse({"ok": True, "paths": [str(p) for p in paths]})
 
 
 @router.post("/api/export")

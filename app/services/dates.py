@@ -16,6 +16,27 @@ _SEASONS_SV = {
 }
 
 
+def iso_date_for_export(
+    text: str | None, year: int | None, month: int | None, precision: str
+) -> str:
+    """Bästa ISO-datum (YYYY / YYYY-MM / YYYY-MM-DD) för XMP DateCreated, som
+    respekterar precisionen. Tomt om inget år är känt.
+
+    Dagen finns inte i de härledda fälten, men precision 'day' sätts bara av
+    ISO-regexen i parse_date_text (som kräver en dagdel), så date_text matchar
+    alltid mönstret YYYY-MM-DD när precisionen är 'day'.
+    """
+    if not year:
+        return ""
+    if precision == "day":
+        m = re.search(r"\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b", text or "")
+        if m:
+            return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    if month and precision in ("day", "month", "season"):
+        return f"{year:04d}-{month:02d}"
+    return f"{year:04d}"
+
+
 def parse_date_text(text: str | None) -> tuple[int | None, int | None, str]:
     """Härled (year, month, precision) ur ett fritext-datum.
 

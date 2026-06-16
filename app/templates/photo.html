@@ -109,16 +109,12 @@
                 <input type="text" class="form-control" value="{{ photo.filename }}" disabled>
             </div>
 
-            <div class="row mb-3">
-                <div class="col-8">
-                    <label class="form-label">Fotodatum (fritext) <kbd class="kbd-hint">D</kbd></label>
-                    <input type="text" class="form-control" name="date_text" value="{{ photo.date_text }}"
-                           placeholder="ex. ca 1975, sommaren 1962">
-                </div>
-                <div class="col-4">
-                    <label class="form-label">År</label>
-                    <input type="number" class="form-control" name="date_year" value="{{ photo.date_year or '' }}"
-                           placeholder="1975">
+            <div class="mb-3">
+                <label class="form-label">Fotodatum <kbd class="kbd-hint">D</kbd></label>
+                <input type="text" class="form-control" name="date_text" value="{{ photo.date_text }}"
+                       placeholder="ex. 2003-10-14, juni 2003, ca 1975, sommaren 1962">
+                <div class="form-text">
+                    Helt datum, år + månad, bara år, "ca 1975", "1970-talet" eller årstid - tolkas automatiskt.
                 </div>
             </div>
 

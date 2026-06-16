@@ -51,7 +51,6 @@ class FaceRegionIn(BaseModel):
 
 class PhotoUpdate(BaseModel):
     date_text: str = ""
-    date_year: int | None = None
     location: str = ""
     notes: str = ""
     source: str = ""

@@ -13,14 +13,12 @@
     }
 
     function collect(markReviewed) {
-        const yearRaw = field("date_year").value.trim();
         const tags = [
             ...splitList(field("people").value).map(name => ({ name, kind: "person" })),
             ...splitList(field("tags").value).map(name => ({ name, kind: "tag" })),
         ];
         return {
             date_text: field("date_text").value,
-            date_year: yearRaw ? parseInt(yearRaw, 10) : null,
             location: field("location").value,
             notes: field("notes").value,
             source: field("source").value,
@@ -123,7 +121,6 @@
             const raw = exifBox.dataset.exif;               // "YYYY:MM:DD HH:MM:SS"
             const datePart = raw.split(" ")[0];
             const pieces = datePart.split(":");
-            if (pieces[0]) field("date_year").value = pieces[0];
             field("date_text").value = pieces.slice(0, 3).join("-");
             showToast("Datum ifyllt från filen");
         });

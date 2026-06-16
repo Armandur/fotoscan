@@ -1,6 +1,19 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Ansiktstaggning (regioner knutna till personer).**
+  Steg 1 - manuellt: ny tabell `face_regions` (photo_id, person-tag, x/y/w/h
+  normaliserat 0-1). I detaljvyn: dra en ruta över ansiktet, välj/skriv person
+  (återanvänd person-autocomplete), visa befintliga rutor som overlay med namn.
+  Rent koordinatbaserat - ingen bildmanipulation, originalet orört.
+  Export: skriv som **MWG-rs Regions** (Region Name = person, Type = Face) via
+  exiftool -> läses av Lightroom/digiKam/Apple Foton/Picasa. Knyter an till
+  IPTC Image Regions / PersonInImage vi redan exporterar.
+  Att lösa: koordinaterna måste hantera rotation (ritas på den visade/roterade
+  bilden, exporteras relativt exportfilens orientering).
+  Steg 2 - AI: automatisk ansiktsdetektering + igenkänning (face_recognition/
+  dlib eller InsightFace) som ger förslag att bekräfta. CPU-only på VM:en (ingen
+  GPU) men görbart för <1000 foton som batch-jobb.
 - [ ] **Foto-/färgkorrigering.** Två lägen: (a) "Auto" likt IrfanView
   (ett klick), och (b) detaljerad med ljusstyrka, kontrast, gamma samt
   per-kanal-justering (RGB) för färgfoton.

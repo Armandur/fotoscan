@@ -29,8 +29,6 @@
   scikit-image om Pillow inte räcker).
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
-- [ ] Galleri-navigering med tangentbord: J/K och vänster/höger-pil för att
-  bläddra sida (när det finns fler än en sida), ev. Enter för att öppna markerat.
 - [ ] Fler massåtgärder: sätt datum/plats/tagg på flera markerade foton
   (massåtgärder för negativ/granskad finns redan).
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
@@ -44,6 +42,7 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] Galleri-tangentnavigering mellan sidor (J/K + pilar).
 - [x] Hopparning som kombination: delad metadata (speglas vid sparning),
   grupperad gallerivy (primär=fotot) med "visa separat"-toggle, primär-roll i DB.
 - [x] Modulär filterrad (Granskat/Typ/Hopparat som kombineras).

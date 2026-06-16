@@ -126,8 +126,9 @@
         });
     }
 
-    // ---- Navigering ----
-    function go(id) { if (id) location.href = `/photo/${id}`; }
+    // ---- Navigering ---- (bär med filterkontexten från galleriet)
+    const navQs = detail.dataset.nav || "";
+    function go(id) { if (id) location.href = `/photo/${id}${navQs}`; }
 
     // ---- Hjälp-modal ----
     const helpModal = bootstrap.Modal.getOrCreateInstance("#help-modal");
@@ -219,7 +220,7 @@
         if (e.key === "R") { e.preventDefault(); rotate("ccw"); return; }
         if (e.key === "f") { e.preventDefault(); window.toggleFaceDraw && window.toggleFaceDraw(); return; }
         if (e.key === "m") { e.preventDefault(); window.openPairModal && window.openPairModal(); return; }
-        if (e.key === "g") { e.preventDefault(); location.href = "/"; return; }
+        if (e.key === "g") { e.preventDefault(); location.href = "/" + navQs; return; }
 
         const lower = e.key.toLowerCase();
         if (fieldKeys[lower]) {

@@ -1,5 +1,6 @@
 import io
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import (
@@ -161,10 +162,11 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True, "count": len(photos)})
 
 
-def _ordered_ids(db: Session) -> list[int]:
-    """Foto-id i samma ordning som galleriet (för prev/next-navigering)."""
+def _ordered_ids(db: Session, q: str, filter: str, folder: str, recursive: bool) -> list[int]:
+    """Foto-id i galleriets ordning för given filtrering (för prev/next-nav)."""
     rows = (
-        db.query(Photo.id)
+        _filtered_query(db, q, filter, folder, recursive)
+        .with_entities(Photo.id)
         .order_by(Photo.date_year.is_(None), Photo.date_year, Photo.filename)
         .all()
     )
@@ -172,12 +174,21 @@ def _ordered_ids(db: Session) -> list[int]:
 
 
 @router.get("/photo/{photo_id}", response_class=HTMLResponse)
-def photo_detail(photo_id: int, request: Request, db: Session = Depends(get_db)):
+def photo_detail(
+    photo_id: int, request: Request,
+    q: str = "", filter: str = "all", folder: str = "*", recursive: bool = False,
+    db: Session = Depends(get_db),
+):
     photo = db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "Foto hittades inte")
 
-    ids = _ordered_ids(db)
+    # Navigera inom samma filtrering man kom ifrån. Om fotot inte ingår i den
+    # (t.ex. direktlänk), falla tillbaka till hela samlingen.
+    ids = _ordered_ids(db, q, filter, folder, recursive)
+    if photo_id not in ids:
+        ids = _ordered_ids(db, "", "all", "*", False)
+
     prev_id = next_id = None
     pos = total = len(ids)
     if photo_id in ids:
@@ -185,6 +196,18 @@ def photo_detail(photo_id: int, request: Request, db: Session = Depends(get_db))
         pos = i + 1
         prev_id = ids[i - 1] if i > 0 else None
         next_id = ids[i + 1] if i < len(ids) - 1 else None
+
+    # Querystring som bär filterkontexten vidare i prev/next/galleri-länkar.
+    params = {}
+    if q:
+        params["q"] = q
+    if filter and filter != "all":
+        params["filter"] = filter
+    if folder and folder != "*":
+        params["folder"] = folder
+    if recursive:
+        params["recursive"] = "1"
+    nav_qs = ("?" + urlencode(params)) if params else ""
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None
 
@@ -198,6 +221,7 @@ def photo_detail(photo_id: int, request: Request, db: Session = Depends(get_db))
             "next_id": next_id,
             "pos": pos,
             "total": total,
+            "nav_qs": nav_qs,
         },
     )
 

@@ -5,18 +5,18 @@
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ pos }} / {{ total }}</span>
     <div class="btn-group btn-group-sm">
-        {% if prev_id %}<a class="btn btn-outline-secondary" href="/photo/{{ prev_id }}" title="Föregående (K)"><i class="bi bi-arrow-left"></i> <kbd class="kbd-hint">K</kbd></a>
+        {% if prev_id %}<a class="btn btn-outline-secondary" href="/photo/{{ prev_id }}{{ nav_qs }}" title="Föregående (K)"><i class="bi bi-arrow-left"></i> <kbd class="kbd-hint">K</kbd></a>
         {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-left"></i></button>{% endif %}
-        {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}" title="Nästa (J)"><kbd class="kbd-hint">J</kbd> <i class="bi bi-arrow-right"></i></a>
+        {% if next_id %}<a class="btn btn-outline-secondary" href="/photo/{{ next_id }}{{ nav_qs }}" title="Nästa (J)"><kbd class="kbd-hint">J</kbd> <i class="bi bi-arrow-right"></i></a>
         {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>{% endif %}
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="/"><i class="bi bi-grid-3x3-gap"></i> Galleri <kbd class="kbd-hint">G</kbd></a>
+    <a class="btn btn-outline-secondary btn-sm" href="/{{ nav_qs }}"><i class="bi bi-grid-3x3-gap"></i> Galleri <kbd class="kbd-hint">G</kbd></a>
     <button class="btn btn-outline-secondary btn-sm" id="help-btn" title="Kortkommandon"><i class="bi bi-question-lg"></i> <kbd class="kbd-hint">?</kbd></button>
 {% endblock %}
 
 {% block content %}
 <div class="detail row g-4" data-id="{{ photo.id }}"
-     data-prev="{{ prev_id or '' }}" data-next="{{ next_id or '' }}">
+     data-prev="{{ prev_id or '' }}" data-next="{{ next_id or '' }}" data-nav="{{ nav_qs }}">
     <div class="col-lg-7">
         <div class="img-wrap">
             <div class="img-stage" id="img-stage">

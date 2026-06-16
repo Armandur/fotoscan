@@ -97,10 +97,11 @@
         <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
     </div>
 
+    {% set photo_qs = "?q=" ~ (q|urlencode) ~ "&filter=" ~ filter ~ "&folder=" ~ (folder|urlencode) ~ ("&recursive=1" if recursive else "") %}
     <div class="gallery-grid">
         {% for photo in photos %}
         <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
-           href="/photo/{{ photo.id }}" data-id="{{ photo.id }}">
+           href="/photo/{{ photo.id }}{{ photo_qs }}" data-id="{{ photo.id }}">
             <div class="card-badges">
                 {% if photo.is_negative %}<span class="badge text-bg-dark border border-secondary">Negativ</span>{% endif %}
                 {% if photo.paired_with_id %}<span class="badge text-bg-info" title="Hopparad"><i class="bi bi-link-45deg"></i></span>{% endif %}

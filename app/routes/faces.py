@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
+from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
 from app.schemas import FaceBox, FaceRegionIn
 from app.services.scanner import load_oriented
@@ -58,7 +59,7 @@ def list_persons(q: str = "", db: Session = Depends(get_db)):
             "id": tag.id,
             "name": tag.name,
             "count": len(faces),
-            "region_id": faces[0].id if faces else None,
+            "region_id": _avatar_region_id(db, tag),
         })
     return result
 

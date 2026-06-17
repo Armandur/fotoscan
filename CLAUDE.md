@@ -170,6 +170,10 @@ photos/                exempel/testbilder (gitignored)
 - **Använd aldrig `alert()` eller `confirm()`** - använd Bootstrap-modaler.
   För bekräftelser finns `showConfirm(message, {okLabel, okClass})` i `utils.js`
   som returnerar en `Promise<boolean>`.
+- **Avsluta alltid varje svar med den körande appens fulla adress** så Rasmus
+  kan klicka på länken (även från telefonen via Tailscale): `http://ubuntu-ai:8810`
+  (dev-servern). Skriv ut hela `http://HOSTNAME:PORT`, aldrig bara porten eller
+  localhost.
 
 ## Fallgropar
 - `Jinja2Templates.TemplateResponse` kräver nya signaturen

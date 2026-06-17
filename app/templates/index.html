@@ -173,6 +173,9 @@
                     <i class="bi bi-folder"></i> {{ photo.folder }}
                 </div>
                 {% endif %}
+                {% if photo.location %}
+                <div class="small text-truncate" title="{{ photo.location }}"><i class="bi bi-geo-alt"></i> {{ photo.location }}</div>
+                {% endif %}
                 {% set persons = photo.tags | selectattr('kind', 'equalto', 'person') | map(attribute='name') | join(', ') %}
                 {% if persons %}
                 <div class="small text-truncate" title="{{ persons }}"><i class="bi bi-people"></i> {{ persons }}</div>

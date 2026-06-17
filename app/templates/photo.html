@@ -15,8 +15,15 @@
 {% endblock %}
 
 {% block content %}
+{% if review %}
+<div class="alert alert-primary d-flex align-items-center justify-content-between py-2 px-3 mb-3">
+    <span><i class="bi bi-clipboard-check"></i> Granskningsläge - {{ total }} ogranskade kvar. Fyll i och tryck <kbd>Spara &amp; granska</kbd> för nästa.</span>
+    <a href="/dashboard" class="btn btn-sm btn-outline-light">Avsluta</a>
+</div>
+{% endif %}
 <div class="detail row g-4" data-id="{{ photo.id }}"
-     data-prev="{{ prev_id or '' }}" data-next="{{ next_id or '' }}" data-nav="{{ nav_qs }}">
+     data-prev="{{ prev_id or '' }}" data-next="{{ next_id or '' }}" data-nav="{{ nav_qs }}"
+     data-review="{{ 1 if review else 0 }}">
     <div class="col-lg-7">
         <div class="img-wrap">
             <div class="img-stage" id="img-stage">

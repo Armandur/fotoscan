@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import (
-    FileResponse, HTMLResponse, JSONResponse, StreamingResponse,
+    FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse,
 )
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_
@@ -248,12 +248,30 @@ def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, so
     return [r[0] for r in rows]
 
 
+@router.get("/review")
+def review(db: Session = Depends(get_db)):
+    """Granskningsläge: hoppa till första ogranskade fotot (galleriets ordning).
+    Markeras ett som granskat och man går vidare hamnar man här igen och får
+    nästa. Inga ogranskade kvar -> tillbaka till översikten."""
+    photo = (
+        _filtered_query(db, "", "no", "", "", "*", False, False)
+        .order_by(*_sort_order("date"))
+        .first()
+    )
+    if not photo:
+        return RedirectResponse("/dashboard", status_code=302)
+    return RedirectResponse(
+        f"/photo/{photo.id}?reviewed=no&review=1", status_code=302
+    )
+
+
 @router.get("/photo/{photo_id}", response_class=HTMLResponse)
 def photo_detail(
     photo_id: int, request: Request,
     q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
     folder: str = "*", recursive: bool = False, separate: bool = False,
     sort: str = "date", missing: str = "", ctx: str = "", ctx_id: int | None = None,
+    review: bool = False,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -340,6 +358,7 @@ def photo_detail(
             "nav_qs": nav_qs,
             "back_url": back_url,
             "back_label": back_label,
+            "review": review,
         },
     )
 

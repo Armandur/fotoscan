@@ -1,10 +1,6 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Granskningsläge / triage.** Ett fokuserat flöde som stegar igenom
-  ogranskade foton ett i taget, tangentbordsdrivet (fyll datum/personer/plats ->
-  markera granskad -> nästa). Snabbar upp katalogiseringen jämfört med att bläddra
-  i galleriet.
 - [ ] **Baksides-koppling.** Koppla en skanning av fotots baksida (handskrivna
   namn/datum) till framsidan, likt negativ-hopparningen men en egen relation.
   Visa baksidan i detaljvyn; den delar inte metadata utan är ett stöd-foto.
@@ -44,6 +40,11 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Att-göra-dashboard.** /dashboard: antal foton, andel granskade, antal som
+  saknar datum/plats/personer (med saknar-filter i galleriet), foton per decennium.
+- [x] **Granskningsläge / triage.** /review hoppar till första ogranskade
+  (`reviewed=no&review=1`); "Spara & granska" går vidare till nästa via /review.
+  Banner med antal kvar + Avsluta. Återanvänder detaljvyns formulär/kortkommandon.
 - [x] **Fler massåtgärder + meny.** Batch-baren har nu en "Åtgärder"-dropdown:
   markera/avmarkera negativ + granskad, lägg till/ta bort tagg eller person,
   sätt datum, sätt plats - på urval eller hela filtret. Datum/plats/taggar är

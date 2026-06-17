@@ -3,6 +3,7 @@
     const photoId = detail.dataset.id;
     const prevId = detail.dataset.prev;
     const nextId = detail.dataset.next;
+    const reviewMode = detail.dataset.review === "1";
     const form = document.getElementById("meta-form");
     const img = document.getElementById("main-img");
     const field = (name) => form.querySelector(`[name="${name}"]`);
@@ -40,8 +41,12 @@
             if (markReviewed) {
                 document.getElementById("reviewed-state").textContent = "Granskad";
                 showToast("Sparat och markerat granskat");
-                if (nextId) {
-                    setTimeout(() => { location.href = `/photo/${nextId}`; }, 400);
+                const qs = detail.dataset.nav || "";
+                if (reviewMode) {
+                    // Granskningsläge: hoppa till nästa ogranskade via /review.
+                    setTimeout(() => { location.href = "/review"; }, 400);
+                } else if (nextId) {
+                    setTimeout(() => { location.href = `/photo/${nextId}${qs}`; }, 400);
                 }
             } else {
                 showToast("Sparat");

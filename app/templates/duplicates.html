@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_cards.html" import photocard %}
+{% block title %}Möjliga dubbletter - Fotoscan{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h1 class="h4 mb-0">Möjliga dubbletter</h1>
+    <form class="d-flex align-items-center gap-2" method="get">
+        <label class="small text-secondary" for="dist">Känslighet (max skillnad)</label>
+        <input type="number" class="form-control form-control-sm" style="width:80px"
+               id="dist" name="dist" value="{{ dist }}" min="0" max="20">
+        <button class="btn btn-sm btn-primary" type="submit">Uppdatera</button>
+    </form>
+</div>
+
+<p class="text-secondary small">
+    Jämför {{ total }} foton via perceptuell hash. Lägre värde = striktare (bara
+    nära identiska). Högre = fler men lösare träffar.
+</p>
+
+{% if not groups %}
+<div class="alert alert-success">Inga möjliga dubbletter hittades vid den här känsligheten.</div>
+{% else %}
+<p class="small">{{ groups|length }} grupp{{ 'er' if groups|length != 1 else '' }} med möjliga dubbletter.</p>
+{% for group in groups %}
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="text-secondary small mb-2"><i class="bi bi-files"></i> {{ group|length }} liknande foton</div>
+        <div class="gallery-grid">
+            {% for photo in group %}{{ photocard(photo) }}{% endfor %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

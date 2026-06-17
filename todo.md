@@ -1,8 +1,6 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Dubblett-/liknande-detektering.** Perceptuell hash (t.ex. pHash) för att
-  hitta foton som skannats två gånger eller är nära dubbletter.
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
@@ -32,6 +30,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Dubblett-/liknande-detektering.** dHash (ren Pillow) på `Photo.phash`,
+  beräknad från thumbnailen vid scan + backfill. /duplicates grupperar liknande
+  foton (union-find på Hamming-avstånd, justerbar känslighet). `services/dupes.py`,
+  `routes/duplicates.py`. Hittar t.ex. samma bild skannad som både foto och negativ.
 - [x] **Kartöversikt.** /map: en Leaflet-markör per plats med representativ GPS
   (snitt av platsens fotons GPS), popup med namn + antal + länk till platsens
   foton. Lagerväxling (Karta/Satellit/Topografisk). `/api/map/points` i places.py,

@@ -33,6 +33,7 @@ app/
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
     dashboard.py       /dashboard: översikt + saknar-statistik; /review-flödet ligger i photos.py
+    duplicates.py      /duplicates: grupperar liknande foton via phash (services/dupes.py)
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     filtering.py       apply_dimensions + sort_order (delas av galleri/person/tagg/plats/tidslinje)
@@ -40,6 +41,7 @@ app/
     scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
     adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
+    dupes.py           dHash (perceptuell hash, ren Pillow) + hamming + group_similar
   templates/           base/index/photo.html; _cards.html + _filterbar.html (delade macron)
   static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js, adjust.js
 data/                  fotoscan.db + thumbnails/ (gitignored)

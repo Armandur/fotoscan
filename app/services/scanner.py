@@ -10,6 +10,7 @@ from app.config import (
 from app.database import Photo
 from app.services.adjust import apply_adjustments, has_adjustments
 from app.services.dates import parse_date_text
+from app.services.dupes import dhash_from_path
 
 logger = logging.getLogger("fotoscan.scanner")
 
@@ -144,6 +145,7 @@ def scan_directory(db: Session) -> dict:
             db.add(photo)
             db.flush()  # ger photo.id för thumbnailen
             write_thumbnail(photo)
+            photo.phash = dhash_from_path(THUMB_DIR / f"{photo.id}.jpg")
             db.commit()
             added += 1
         except Exception:

@@ -95,6 +95,9 @@ class Photo(Base):
     adj_green = Column(Float, default=1.0)
     adj_blue = Column(Float, default=1.0)
 
+    # Perceptuell hash (dHash, 16 hex) för dubblett-/liknande-detektering.
+    phash = Column(String, nullable=True, index=True)
+
     # Sätt när metadata bekräftats/redigerats av användaren.
     reviewed_at = Column(DateTime, nullable=True)
 
@@ -226,3 +229,5 @@ def init_db() -> None:
             )
         if not _column_exists(conn, "photos", "back_of_id"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN back_of_id INTEGER")
+        if not _column_exists(conn, "photos", "phash"):
+            conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN phash VARCHAR")

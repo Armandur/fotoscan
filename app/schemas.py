@@ -84,6 +84,7 @@ class BatchUpdate(BaseModel):
     folder: str = "*"
     recursive: bool = False
     separate: bool = False
+    missing: str = ""       # filter: ""|"date"|"place"|"person"
     # Åtgärder (None/tom = lämna oförändrat).
     set_negative: bool | None = None
     set_reviewed: bool | None = None
@@ -91,6 +92,7 @@ class BatchUpdate(BaseModel):
     remove_tags: list[TagItem] = Field(default_factory=list)
     set_date: str | None = None       # date_text (härleds till år/månad/precision)
     set_location: str | None = None   # platsnamn (get_or_create_place)
+    add_to_album: int | None = None   # lägg foton i detta album
 
 
 class PairRequest(BaseModel):

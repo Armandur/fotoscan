@@ -111,7 +111,7 @@
     {% endif %}
 
     <div id="batch-bar" class="d-flex gap-2 align-items-center flex-wrap mb-3 p-2 rounded bg-body-tertiary border"
-         data-q="{{ q }}" data-reviewed="{{ reviewed }}" data-ptype="{{ ptype }}" data-paired="{{ paired }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-separate="{{ 1 if separate else 0 }}" data-sort="{{ sort }}" data-total="{{ total }}" hidden>
+         data-q="{{ q }}" data-reviewed="{{ reviewed }}" data-ptype="{{ ptype }}" data-paired="{{ paired }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-separate="{{ 1 if separate else 0 }}" data-sort="{{ sort }}" data-missing="{{ missing }}" data-total="{{ total }}" hidden>
         <span id="batch-count" class="small fw-bold">0 valda</span>
         <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
         <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
@@ -317,19 +317,19 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         });
     }
 
-    // Lägg till markerade foton i ett album.
+    // Lägg till markerade foton (eller hela filtret) i ett album.
     const albumAddBtn = document.getElementById("batch-album-add");
     if (albumAddBtn) {
         albumAddBtn.addEventListener("click", async () => {
             const albumId = document.getElementById("batch-album-select").value;
             if (!albumId) { showToast("Välj ett album", true); return; }
-            if (allFilter.checked) { showToast("Album-tillägg stöder bara markerade foton", true); return; }
-            if (!selected.size) { showToast("Inget valt", true); return; }
+            const base = batchBase();
+            if (!base) { showToast("Inget valt", true); return; }
             try {
-                const res = await apiFetch(`/api/albums/${albumId}/photos`, {
-                    method: "POST", body: { photo_ids: [...selected] },
+                const res = await apiFetch("/api/photos/batch", {
+                    method: "POST", body: { ...base, add_to_album: parseInt(albumId, 10) },
                 });
-                showToast(`${res.added} foton tillagda i albumet`);
+                showToast(`${res.count} foton tillagda i albumet`);
             } catch (err) { showToast("Kunde inte lägga till: " + err.message, true); }
         });
     }
@@ -387,6 +387,21 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         allFilter.checked = false;
         count();
     };
+
+    // Gemensam bas för batch-anrop: hela filtret eller markerade id:n.
+    // Returnerar null om inget urval finns.
+    function batchBase() {
+        if (allFilter.checked) {
+            return {
+                use_filter: true, q: bar.dataset.q, reviewed: bar.dataset.reviewed,
+                ptype: bar.dataset.ptype, paired: bar.dataset.paired,
+                folder: bar.dataset.folder, recursive: bar.dataset.recursive === "1",
+                separate: bar.dataset.separate === "1", missing: bar.dataset.missing,
+            };
+        }
+        if (!selected.size) return null;
+        return { ids: [...selected] };
+    }
 
     selectBtn.addEventListener("click", () => {
         selecting = !selecting;
@@ -498,15 +513,10 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         btn.addEventListener("click", async () => {
             const op = buildOp(btn.dataset.batch);
             if (!op) return;
-            const useFilter = allFilter.checked;
-            let body;
-            if (useFilter) {
-                body = { use_filter: true, q: bar.dataset.q, reviewed: bar.dataset.reviewed, ptype: bar.dataset.ptype, paired: bar.dataset.paired, folder: bar.dataset.folder, recursive: bar.dataset.recursive === "1", separate: bar.dataset.separate === "1", ...op };
-            } else {
-                if (!selected.size) { showToast("Inget valt", true); return; }
-                body = { ids: [...selected], ...op };
-            }
-            const n = useFilter ? bar.dataset.total : selected.size;
+            const base = batchBase();
+            if (!base) { showToast("Inget valt", true); return; }
+            const body = { ...base, ...op };
+            const n = allFilter.checked ? bar.dataset.total : selected.size;
             if (!(await showConfirm(`Tillämpa på ${n} foton?`))) return;
             try {
                 const res = await apiFetch("/api/photos/batch", { method: "POST", body });

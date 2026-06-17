@@ -143,7 +143,10 @@ photos/                exempel/testbilder (gitignored)
   eller hela filtret), samlade i en "Åtgärder"-dropdown i batch-baren. Åtgärder
   (alla None/tom = oförändrat): `set_negative`, `set_reviewed`, `add_tags`/
   `remove_tags` (tagg el. person), `set_date` (date_text -> härledda fält),
-  `set_location` (get_or_create_place). Tagg-/person-/plats-fälten har
+  `set_location` (get_or_create_place), `add_to_album` (lägg i album, funkar med
+  både markerade och "alla i filtret"). Galleri-söket (`q`) träffar även tagg-/
+  personnamn (`Photo.tags.any(Tag.name ...)`) utöver filnamn/mapp/plats/notis/
+  datum/källa. Tagg-/person-/plats-fälten har
   autocomplete via native `<datalist>` som fylls från `/api/tags`/`/api/places`
   när menyn öppnas. Datum/plats/taggar speglas till hopparad partner via
   `_sync_pair_metadata`. OBS: filterfältet heter `reviewed` (sträng), åtgärden

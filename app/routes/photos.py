@@ -8,11 +8,11 @@ from fastapi.responses import (
     FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse,
 )
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, THUMB_DIR, ASSET_V
-from app.database import Photo, Tag
+from app.database import Album, AlbumPhoto, Photo, Tag
 from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate, ReorderRequest
@@ -53,10 +53,11 @@ def _filtered_query(
             or_(
                 Photo.filename.ilike(like),
                 Photo.folder.ilike(like),
-                Photo.location.ilike(like),
+                Photo.location.ilike(like),  # plats (namn-cache)
                 Photo.notes.ilike(like),
                 Photo.date_text.ilike(like),
                 Photo.source.ilike(like),
+                Photo.tags.any(Tag.name.ilike(like)),  # taggar + personer
             )
         )
     query = apply_dimensions(query, reviewed, ptype, paired, separate)
@@ -193,7 +194,7 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     if data.use_filter:
         photos = _filtered_query(
             db, data.q, data.reviewed, data.ptype, data.paired,
-            data.folder, data.recursive, data.separate,
+            data.folder, data.recursive, data.separate, data.missing,
         ).all()
     elif data.ids:
         photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
@@ -233,6 +234,24 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
             p.tags = [t for t in p.tags if (t.name, t.kind) not in remove_keys]
         if shared_changed:
             _sync_pair_metadata(db, p)
+
+    # Lägg foton i ett album (appendar sist, hoppar över redan ingående).
+    if data.add_to_album is not None and db.get(Album, data.add_to_album):
+        existing = {
+            r[0] for r in db.query(AlbumPhoto.photo_id)
+            .filter(AlbumPhoto.album_id == data.add_to_album).all()
+        }
+        pos = (
+            db.query(func.max(AlbumPhoto.position))
+            .filter(AlbumPhoto.album_id == data.add_to_album).scalar()
+        )
+        pos = (pos + 1) if pos is not None else 0
+        for p in photos:
+            if p.id not in existing:
+                db.add(AlbumPhoto(album_id=data.add_to_album, photo_id=p.id, position=pos))
+                existing.add(p.id)
+                pos += 1
+
     db.commit()
     return JSONResponse({"ok": True, "count": len(photos)})
 

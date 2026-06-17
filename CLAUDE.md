@@ -28,7 +28,7 @@ app/
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
-    places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place
+    places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss

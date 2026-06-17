@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, ASSET_V
@@ -47,6 +48,31 @@ def list_places_api(q: str = "", db: Session = Depends(get_db)):
     if q:
         query = query.filter(Place.name.ilike(f"%{q}%"))
     return [{"id": p.id, "name": p.name} for p in query.order_by(Place.name).all()]
+
+
+@router.get("/map", response_class=HTMLResponse)
+def map_page(request: Request, db: Session = Depends(get_db)):
+    return templates.TemplateResponse(request, "map.html", {})
+
+
+@router.get("/api/map/points")
+def map_points(db: Session = Depends(get_db)):
+    """Platser med representativ GPS för kartöversikten (en markör per plats)."""
+    points = []
+    for place in db.query(Place).order_by(Place.name).all():
+        avg = place_avg_gps(db, place.id)
+        if not avg:
+            continue
+        count = db.query(Photo).filter(
+            Photo.place_id == place.id,
+            Photo.back_of_id.is_(None),
+            or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1),
+        ).count()
+        points.append({
+            "id": place.id, "name": place.name,
+            "lat": round(avg[0], 6), "lon": round(avg[1], 6), "count": count,
+        })
+    return points
 
 
 @router.get("/places", response_class=HTMLResponse)

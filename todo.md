@@ -3,8 +3,6 @@
 ## Planerat
 - [ ] **Dubblett-/liknande-detektering.** Perceptuell hash (t.ex. pHash) för att
   hitta foton som skannats två gånger eller är nära dubbletter.
-- [ ] **Kartöversikt.** En karta med alla foton som har GPS, klustrade; klicka en
-  plats -> se fotona därifrån. Återanvänder Leaflet/`map.js`.
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
@@ -34,6 +32,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Kartöversikt.** /map: en Leaflet-markör per plats med representativ GPS
+  (snitt av platsens fotons GPS), popup med namn + antal + länk till platsens
+  foton. Lagerväxling (Karta/Satellit/Topografisk). `/api/map/points` i places.py,
+  `map_overview.js`. (Leaflet kan ej obscura-testas - kräver riktig webbläsare.)
 - [x] **Baksides-koppling.** `Photo.back_of_id` -> ett stöd-foto (skanning av
   baksidan) kopplas till framsidan. Döljs i alla listningar (apply_dimensions),
   delar ingen metadata. Detaljvyn visar baksidan (klicka för lightbox/läs) +

@@ -133,10 +133,13 @@
                     <button class="btn btn-outline-success" type="button" data-batch="tag-add" title="Lägg till tagg"><i class="bi bi-plus-lg"></i></button>
                     <button class="btn btn-outline-danger" type="button" data-batch="tag-remove" title="Ta bort tagg"><i class="bi bi-dash-lg"></i></button>
                 </div>
-                <div class="input-group input-group-sm mb-2">
-                    <input type="text" class="form-control" id="batch-person-input" placeholder="Person..." list="batch-persons-list">
-                    <button class="btn btn-outline-success" type="button" data-batch="person-add" title="Lägg till person"><i class="bi bi-plus-lg"></i></button>
-                    <button class="btn btn-outline-danger" type="button" data-batch="person-remove" title="Ta bort person"><i class="bi bi-dash-lg"></i></button>
+                <div class="position-relative mb-2">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="batch-person-input" placeholder="Person..." autocomplete="off">
+                        <button class="btn btn-outline-success" type="button" data-batch="person-add" title="Lägg till person"><i class="bi bi-plus-lg"></i></button>
+                        <button class="btn btn-outline-danger" type="button" data-batch="person-remove" title="Ta bort person"><i class="bi bi-dash-lg"></i></button>
+                    </div>
+                    <div class="face-ac" id="batch-person-ac" style="position:absolute;left:0;right:0;z-index:1060"></div>
                 </div>
                 <div class="input-group input-group-sm mb-2">
                     <input type="text" class="form-control" id="batch-date-input" placeholder="Datum t.ex. 1975 / sommaren 1975" autocomplete="off">
@@ -147,7 +150,6 @@
                     <button class="btn btn-outline-primary" type="button" data-batch="place-set">Sätt plats</button>
                 </div>
                 <datalist id="batch-tags-list"></datalist>
-                <datalist id="batch-persons-list"></datalist>
                 <datalist id="batch-places-list"></datalist>
             </div>
         </div>
@@ -281,8 +283,36 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     if (dd) {
         dd.addEventListener("show.bs.dropdown", () => {
             fillList("batch-tags-list", "/api/tags?kind=tag");
-            fillList("batch-persons-list", "/api/tags?kind=person");
             fillList("batch-places-list", "/api/places");
+        });
+    }
+
+    // Person: egen autocomplete med ansikts-thumbnails (som "Slå ihop med").
+    const personInput = document.getElementById("batch-person-input");
+    const personAc = document.getElementById("batch-person-ac");
+    if (personInput && personAc) {
+        let pTimer = null;
+        async function runPersonAc() {
+            try {
+                const items = await apiFetch(`/api/persons?q=${encodeURIComponent(personInput.value.trim())}`);
+                personAc.innerHTML = items.slice(0, 30).map(p => {
+                    const thumb = p.region_id
+                        ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
+                        : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
+                    return `<div class="face-ac-item" data-name="${escapeHtml(p.name)}">`
+                        + thumb
+                        + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+                        + `<span class="face-ac-count">${p.count}</span></div>`;
+                }).join("");
+                personAc.classList.toggle("show", items.length > 0);
+            } catch (e) { personAc.classList.remove("show"); }
+        }
+        personInput.addEventListener("input", () => { clearTimeout(pTimer); pTimer = setTimeout(runPersonAc, 200); });
+        personInput.addEventListener("focus", runPersonAc);
+        personInput.addEventListener("blur", () => setTimeout(() => personAc.classList.remove("show"), 150));
+        personAc.addEventListener("mousedown", (e) => {
+            const item = e.target.closest(".face-ac-item");
+            if (item) { e.preventDefault(); personInput.value = item.dataset.name; personAc.classList.remove("show"); }
         });
     }
 

@@ -2,6 +2,7 @@
 {% block title %}{{ album.name }} - Fotoscan{% endblock %}
 
 {% block headeractions %}
+    {% if photos %}<button class="btn btn-outline-info btn-sm" id="pdf-btn"><i class="bi bi-file-earmark-pdf"></i> Exportera PDF</button>{% endif %}
     <a class="btn btn-outline-secondary btn-sm" href="/albums">Alla album</a>
 {% endblock %}
 
@@ -35,6 +36,45 @@
         </a>
     </div>
     {% endfor %}
+</div>
+
+<div class="modal fade" id="pdf-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exportera PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Layout (bilder per A4-sida)</label>
+                    <div class="btn-group w-100" role="group" id="pdf-layout">
+                        <input type="radio" class="btn-check" name="pdf-layout" id="pl1" value="1"><label class="btn btn-outline-secondary" for="pl1">1</label>
+                        <input type="radio" class="btn-check" name="pdf-layout" id="pl2" value="2"><label class="btn btn-outline-secondary" for="pl2">2</label>
+                        <input type="radio" class="btn-check" name="pdf-layout" id="pl4" value="4" checked><label class="btn btn-outline-secondary" for="pl4">4</label>
+                        <input type="radio" class="btn-check" name="pdf-layout" id="pl6" value="6"><label class="btn btn-outline-secondary" for="pl6">6</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Bildtext under varje foto</label>
+                    {% for key, label in [("date","Datum"),("place","Plats"),("persons","Personer"),("tags","Taggar"),("source","Källa"),("notes","Anteckning"),("filename","Filnamn")] %}
+                    <div class="form-check">
+                        <input class="form-check-input pdf-field" type="checkbox" value="{{ key }}" id="pf-{{ key }}" {{ 'checked' if key in ['date','place','persons'] else '' }}>
+                        <label class="form-check-label" for="pf-{{ key }}">{{ label }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary" for="pdf-subtitle">Undertitel (valfri)</label>
+                    <input type="text" class="form-control" id="pdf-subtitle" placeholder="t.ex. årtal eller plats">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Avbryt</button>
+                <button type="button" class="btn btn-primary" id="pdf-download"><i class="bi bi-download"></i> Ladda ner</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -81,6 +121,21 @@
             showToast("Borttaget ur albumet");
         } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
     });
+
+    // Exportera PDF
+    const pdfBtn = document.getElementById("pdf-btn");
+    if (pdfBtn) {
+        const pdfModal = bootstrap.Modal.getOrCreateInstance("#pdf-modal");
+        pdfBtn.addEventListener("click", () => pdfModal.show());
+        document.getElementById("pdf-download").addEventListener("click", () => {
+            const layout = document.querySelector("input[name='pdf-layout']:checked").value;
+            const fields = [...document.querySelectorAll(".pdf-field:checked")].map(c => c.value).join(",");
+            const subtitle = document.getElementById("pdf-subtitle").value.trim();
+            const qs = new URLSearchParams({ layout, fields, subtitle });
+            window.location.href = `/albums/${albumId}/pdf?${qs}`;
+            pdfModal.hide();
+        });
+    }
 
     // Dra-och-släpp för ordning
     let dragEl = null;

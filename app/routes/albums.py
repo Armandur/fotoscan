@@ -1,5 +1,7 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -8,6 +10,7 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import Album, AlbumPhoto, Photo
 from app.deps import get_db
 from app.schemas import AlbumPhotosIn, NameIn, ReorderRequest
+from app.services.pdf_album import render_album_pdf
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -45,6 +48,25 @@ def album_detail(album_id: int, request: Request, db: Session = Depends(get_db))
     photos = [e.photo for e in album.entries]  # entries är ordnade på position
     return templates.TemplateResponse(
         request, "album_detail.html", {"album": album, "photos": photos},
+    )
+
+
+@router.get("/albums/{album_id}/pdf")
+def album_pdf(
+    album_id: int, layout: int = 4, fields: str = "date,place,persons",
+    subtitle: str = "", db: Session = Depends(get_db),
+):
+    """Generera och ladda ner albumet som PDF. layout = bilder per A4 (1/2/4/6),
+    fields = kommaseparerade bildtextfält."""
+    album = db.get(Album, album_id)
+    if not album:
+        raise HTTPException(404, "Albumet hittades inte")
+    field_list = [f for f in fields.split(",") if f]
+    pdf = render_album_pdf(album, layout, field_list, subtitle.strip())
+    fname = quote(f"{album.name}.pdf")
+    return Response(
+        content=pdf, media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{fname}"},
     )
 
 

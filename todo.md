@@ -1,6 +1,10 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **PDF-album vidare.** (1) Avsnitt med rubriker - lagra avsnitt på albumet
+  (rubrik + position, ev. sidbrytning), rendera i PDF:en. (2) Per-sektion-layout-
+  override ovanpå albumets globala layout. (3) Full per-sida-kontroll (sidbyggare
+  där varje A4-sida får egen layout). Bygger på v1 (global layout + bildtextfält).
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
@@ -30,6 +34,11 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **PDF-album-export (v1).** weasyprint (HTML/CSS -> PDF). Titelsida + global
+  layout (1/2/4/6 bilder per A4) + valbara bildtextfält (datum/plats/personer/
+  taggar/källa/anteckning/filnamn) + undertitel. Konfig-modal i albumvyn,
+  `GET /albums/{id}/pdf`. `services/pdf_album.py` + `templates/album_pdf.html`.
+  Docker-imagen har libpango/cairo. (Per-sida-layout + avsnitt = framtida steg.)
 - [x] **Album (kurerade, ordnade samlingar).** Egen Album-/AlbumPhoto-modell med
   position; foton från flera källor, egen ordning oavsett datum, ett foto kan
   ligga i flera album. /albums + /albums/{id} med dra-och-släpp-ordning, lägg

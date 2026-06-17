@@ -43,6 +43,7 @@ app/
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
     adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
     dupes.py           dHash (perceptuell hash, ren Pillow) + hamming + group_similar
+    pdf_album.py       render_album_pdf (weasyprint HTML/CSS -> PDF, layout + bildtext)
   templates/           base/index/photo.html; _cards.html + _filterbar.html (delade macron)
   static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js, adjust.js
 data/                  fotoscan.db + thumbnails/ (gitignored)
@@ -88,6 +89,11 @@ photos/                exempel/testbilder (gitignored)
   (beskrivande) och `seq` (kronologisk). Ett foto kan ligga i flera album. Vy med
   dra-och-släpp-ordning (`/api/albums/{id}/reorder`), lägg till via galleriets
   åtgärdsmeny ("Lägg till i album", markerade foton). `routes/albums.py`.
+- **PDF-album** (`services/pdf_album.py`, `GET /albums/{id}/pdf`): weasyprint
+  renderar en Jinja-mall (`album_pdf.html`, `@page A4`) till PDF. Titelsida +
+  global layout (1/2/4/6 bilder per A4, foton chunkas i sidor) + valbara
+  bildtextfält. Varje foto renderas till en temp-JPEG (~1600px, orienterad +
+  justerad) som bäddas in. Kräver libpango/cairo (i Docker-imagen).
 - **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
   -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),
   för foton som skannats i oordning med grovt datum. Sätts via "Ordna"-läget i

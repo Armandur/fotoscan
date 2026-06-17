@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<style>
+    @page { size: A4; margin: 1cm; }
+    body { font-family: sans-serif; color: #111; margin: 0; }
+    .title-page {
+        height: 27.5cm;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+        page-break-after: always;
+    }
+    .title-page h1 { font-size: 30pt; margin: 0; }
+    .title-page .sub { font-size: 14pt; color: #555; margin-top: 1cm; }
+    .page {
+        height: 27.5cm;
+        page-break-after: always;
+        display: grid;
+        gap: 0.5cm;
+    }
+    .page:last-child { page-break-after: auto; }
+    .cell { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .cell img { width: 100%; flex: 1 1 auto; object-fit: contain; min-height: 0; }
+    .cap { margin-top: 4pt; font-size: 9pt; line-height: 1.25; text-align: center; }
+    .cap .l { display: block; }
+    .cap .l:first-child { font-weight: bold; }
+    .layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+    .layout-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    .layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .layout-6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+</style>
+</head>
+<body>
+    <div class="title-page">
+        <h1>{{ title }}</h1>
+        {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}
+    </div>
+    {% for page in pages %}
+    <div class="page layout-{{ layout }}">
+        {% for item in page %}
+        <div class="cell">
+            <img src="{{ item.src }}">
+            {% if item.lines %}
+            <div class="cap">{% for ln in item.lines %}<span class="l">{{ ln }}</span>{% endfor %}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</body>
+</html>

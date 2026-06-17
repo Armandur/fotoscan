@@ -58,7 +58,7 @@
                         <i class="bi bi-magic"></i> Auto <kbd class="kbd-hint">A</kbd>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-reset">Återställ <kbd class="kbd-hint">X</kbd></button>
-                    <button type="button" class="btn btn-sm btn-primary" id="adj-apply">Tillämpa <kbd class="kbd-hint">E</kbd></button>
+                    <span id="adj-status" class="small text-secondary ms-auto">Sparas automatiskt</span>
                 </div>
                 {% set sliders = [
                     ('adj_brightness', 'Ljusstyrka', 0.2, 2.0, photo.adj_brightness),
@@ -240,7 +240,7 @@
                         <tr><td><kbd>R</kbd> / <kbd>⇧</kbd><kbd>R</kbd></td><td>Rotera medurs / moturs</td></tr>
                         <tr><td><kbd>F</kbd></td><td>Tagga ansikte (rita ruta)</td></tr>
                         <tr><td><kbd>M</kbd></td><td>Para ihop med negativ</td></tr>
-                        <tr><td><kbd>C</kbd> <kbd>A</kbd> <kbd>E</kbd> <kbd>X</kbd></td><td>Justera färg: panel / Auto / Tillämpa / Återställ</td></tr>
+                        <tr><td><kbd>C</kbd> <kbd>A</kbd> <kbd>X</kbd></td><td>Justera färg: panel / Auto / Återställ (sparas automatiskt)</td></tr>
                         <tr><td><kbd>V</kbd> (håll)</td><td>Visa hopparat foto (jämför)</td></tr>
                         <tr><td><kbd>Ctrl+S</kbd></td><td>Spara</td></tr>
                         <tr><td><kbd>Ctrl+Enter</kbd></td><td>Spara och markera granskad</td></tr>

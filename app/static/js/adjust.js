@@ -35,50 +35,21 @@
         if (preview) schedulePreview();
     }
 
-    // Tvåvägs-synk slider <-> nummerfält.
-    sliders.forEach(s => {
-        const field = s.dataset.adj;
-        s.addEventListener("input", () => {
-            numFor(field).value = parseFloat(s.value).toFixed(2);
-            schedulePreview();
-        });
-        numFor(field).addEventListener("input", () => {
-            const v = parseFloat(numFor(field).value);
-            if (!isNaN(v)) { sliderFor(field).value = clampToSlider(field, v); schedulePreview(); }
-        });
-    });
-
-    // Öppna färgpanelen (collapse) och scrolla in den - för kortkommandona.
-    const panel = document.getElementById("adjust-panel");
-    function openPanel() {
-        bootstrap.Collapse.getOrCreateInstance(panel).show();
-        card.scrollIntoView({ block: "nearest" });
+    // Auto-spar (debounce:at) - inget Tillämpa-knapptryck behövs. changeSeq
+    // används för att bara byta till skarp fullupplösning om inget nytt hänt
+    // medan sparningen pågick.
+    let saveTimer = null, changeSeq = 0;
+    const status = document.getElementById("adj-status");
+    function setStatus(text, isErr = false) {
+        if (!status) return;
+        status.textContent = text;
+        status.classList.toggle("text-danger", isErr);
+        status.classList.toggle("text-success", text === "Sparat");
     }
 
-    // Auto: hämta föreslagna värden och fyll slidrarna (användaren kan finjustera).
-    const autoBtn = document.getElementById("adj-auto");
-    async function doAuto() {
-        autoBtn.disabled = true;
-        try {
-            const s = await apiFetch(`/api/photos/${photoId}/auto-suggest`);
-            Object.entries(s).forEach(([field, v]) => setField(field, v, false));
-            schedulePreview();
-            showToast("Auto-förslag ifyllt - justera och klicka Tillämpa");
-        } catch (err) {
-            showToast("Auto misslyckades: " + err.message, true);
-        } finally {
-            autoBtn.disabled = false;
-        }
-    }
-
-    function doReset() {
-        sliders.forEach(s => setField(s.dataset.adj, 1.0, false));
-        schedulePreview();
-    }
-
-    const applyBtn = document.getElementById("adj-apply");
-    async function doApply() {
-        applyBtn.disabled = true;
+    async function doSave() {
+        const gen = changeSeq;
+        setStatus("Sparar…");
         try {
             await apiFetch(`/api/photos/${photoId}/adjust`, {
                 method: "POST",
@@ -93,22 +64,72 @@
                     adj_blue: val("adj_blue"),
                 },
             });
-            img.src = `/image/${photoId}?t=${Date.now()}`;  // full upplösning
-            showToast("Justeringar tillämpade");
+            if (gen === changeSeq) img.src = `/image/${photoId}?t=${Date.now()}`;
+            setStatus("Sparat");
         } catch (err) {
-            showToast("Kunde inte spara: " + err.message, true);
-        } finally {
-            applyBtn.disabled = false;
+            setStatus("Kunde inte spara", true);
+            showToast("Kunde inte spara justering: " + err.message, true);
         }
+    }
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        setStatus("Ändrat…");
+        saveTimer = setTimeout(doSave, 700);
+    }
+
+    // Vid varje ändring: snabb förhandsvisning + debounce:ad sparning.
+    function onChange() {
+        changeSeq++;
+        schedulePreview();
+        scheduleSave();
+    }
+
+    // Tvåvägs-synk slider <-> nummerfält.
+    sliders.forEach(s => {
+        const field = s.dataset.adj;
+        s.addEventListener("input", () => {
+            numFor(field).value = parseFloat(s.value).toFixed(2);
+            onChange();
+        });
+        numFor(field).addEventListener("input", () => {
+            const v = parseFloat(numFor(field).value);
+            if (!isNaN(v)) { sliderFor(field).value = clampToSlider(field, v); onChange(); }
+        });
+    });
+
+    // Öppna färgpanelen (collapse) och scrolla in den - för kortkommandona.
+    const panel = document.getElementById("adjust-panel");
+    function openPanel() {
+        bootstrap.Collapse.getOrCreateInstance(panel).show();
+        card.scrollIntoView({ block: "nearest" });
+    }
+
+    // Auto: hämta föreslagna värden, fyll slidrarna och spara.
+    const autoBtn = document.getElementById("adj-auto");
+    async function doAuto() {
+        autoBtn.disabled = true;
+        try {
+            const s = await apiFetch(`/api/photos/${photoId}/auto-suggest`);
+            Object.entries(s).forEach(([field, v]) => setField(field, v, false));
+            onChange();
+            showToast("Auto-förslag ifyllt");
+        } catch (err) {
+            showToast("Auto misslyckades: " + err.message, true);
+        } finally {
+            autoBtn.disabled = false;
+        }
+    }
+
+    function doReset() {
+        sliders.forEach(s => setField(s.dataset.adj, 1.0, false));
+        onChange();
     }
 
     autoBtn.addEventListener("click", doAuto);
     document.getElementById("adj-reset").addEventListener("click", doReset);
-    applyBtn.addEventListener("click", doApply);
 
     // Exponera för kortkommandon i photo.js (öppnar panelen vid behov).
     window.adjToggle = () => bootstrap.Collapse.getOrCreateInstance(panel).toggle();
     window.adjAuto = () => { openPanel(); doAuto(); };
     window.adjReset = () => { openPanel(); doReset(); };
-    window.adjApply = () => { openPanel(); doApply(); };
 })();

@@ -104,9 +104,13 @@ photos/                exempel/testbilder (gitignored)
 - **Färg-/tonjustering** (`Photo.adj_*` + `auto_tone`, `services/adjust.py`):
   multiplikatorer (1.0 = oförändrat) för ljusstyrka/kontrast/gamma/mättnad +
   per-kanal RGB, samt auto-ton (`ImageOps.autocontrast`). Renderas on-the-fly i
-  `/image` (och thumbnail), live-preview i UI via CSS-filter på `/image?raw=1`.
-  Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
-  OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
+  `/image` (och thumbnail). Live-preview i UI via nedskalad server-rendering
+  (`/api/photos/{id}/preview`, debounce 200 ms) - klarar gamma/per-kanal som CSS
+  inte gör. Sparas AUTOMATISKT (debounce 700 ms i `adjust.js`) via
+  `POST /adjust` - ingen Tillämpa-knapp; en statusrad visar Ändrat/Sparar/Sparat.
+  Auto fyller bara reglagen (förslag), Återställ nollar till 1.0. Kortkommandon
+  C/A/X. Bakas in vid export (då re-kodas filen; utan justeringar behålls
+  bit-kopian). OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
 - **Mappnavigering**: galleriet har en trädvy (`_build_folder_tree` av distinkta
   `Photo.folder`-sökvägar) med expanderbara noder. `recursive`-toggle inkluderar
   undermappar (`folder == X OR folder LIKE X/%`). `_filtered_query` delas av

@@ -275,7 +275,6 @@
         // Färgjustering
         if (e.key === "c") { e.preventDefault(); window.adjToggle && window.adjToggle(); return; }
         if (e.key === "a") { e.preventDefault(); window.adjAuto && window.adjAuto(); return; }
-        if (e.key === "e") { e.preventDefault(); window.adjApply && window.adjApply(); return; }
         if (e.key === "x") { e.preventDefault(); window.adjReset && window.adjReset(); return; }
 
         const lower = e.key.toLowerCase();

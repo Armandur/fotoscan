@@ -6,6 +6,9 @@
     <button id="select-btn" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-check2-square"></i> Välj
     </button>
+    <button id="order-btn" class="btn btn-outline-secondary btn-sm" title="Dra korten för att ange manuell ordning (inom samma år/månad)">
+        <i class="bi bi-arrow-down-up"></i> Ordna
+    </button>
     <button id="export-btn" class="btn btn-outline-info btn-sm" title="Exportera granskade foton med inbäddad metadata">
         <i class="bi bi-box-arrow-up"></i> Exportera granskade
     </button>
@@ -274,7 +277,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     if (!selectBtn || !grid) return;
     const allFilter = document.getElementById("batch-all-filter");
     const selected = new Set();
-    let selecting = false;
+    let selecting = false, ordering = false, dragEl = null;
 
     // Autocomplete (native datalist) för tagg/person/plats i åtgärdsmenyn.
     // Fylls när menyn öppnas, så nya taggar/platser kommer med.
@@ -361,6 +364,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     });
 
     grid.addEventListener("click", (e) => {
+        if (ordering) { e.preventDefault(); return; }  // ordna-läge: dra, ej navigera
         if (!selecting) return;
         const card = e.target.closest(".photo-card");
         if (!card) return;
@@ -371,6 +375,46 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         allFilter.checked = false;
         count();
     });
+
+    // ---- Ordna-läge: dra korten för manuell ordning (seq) ----
+    const orderBtn = document.getElementById("order-btn");
+    if (orderBtn) {
+        orderBtn.addEventListener("click", () => {
+            if (!ordering && selecting) selectBtn.click();  // ömsesidigt uteslutande
+            ordering = !ordering;
+            grid.classList.toggle("ordering", ordering);
+            orderBtn.classList.toggle("active", ordering);
+            grid.querySelectorAll(".photo-card").forEach(c => c.draggable = ordering);
+            showToast(ordering ? "Ordna-läge: dra korten på plats" : "Ordna-läge av");
+        });
+        grid.addEventListener("dragstart", (e) => {
+            if (!ordering) return;
+            dragEl = e.target.closest(".photo-card");
+            if (dragEl) { e.dataTransfer.effectAllowed = "move"; dragEl.classList.add("dragging"); }
+        });
+        grid.addEventListener("dragover", (e) => {
+            if (!ordering || !dragEl) return;
+            e.preventDefault();
+            const card = e.target.closest(".photo-card");
+            if (!card || card === dragEl) return;
+            const r = card.getBoundingClientRect();
+            const after = (e.clientY - r.top) + (e.clientX - r.left) > (r.height + r.width) / 2;
+            grid.insertBefore(dragEl, after ? card.nextSibling : card);
+        });
+        grid.addEventListener("dragend", async () => {
+            if (!dragEl) return;
+            dragEl.classList.remove("dragging");
+            dragEl = null;
+            if (!ordering) return;
+            const ids = [...grid.querySelectorAll(".photo-card")].map(c => parseInt(c.dataset.id, 10));
+            try {
+                await apiFetch("/api/photos/reorder", { method: "POST", body: { ids } });
+                showToast("Ordning sparad");
+            } catch (err) {
+                showToast("Kunde inte spara ordning: " + err.message, true);
+            }
+        });
+    }
 
     document.getElementById("batch-page").addEventListener("click", () => {
         grid.querySelectorAll(".photo-card").forEach(c => {

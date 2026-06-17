@@ -97,6 +97,9 @@ class Photo(Base):
 
     # Perceptuell hash (dHash, 16 hex) för dubblett-/liknande-detektering.
     phash = Column(String, nullable=True, index=True)
+    # Manuell ordning (tiebreaker inom samma år/månad) för foton som skannats i
+    # oordning och bara har grovt datum. Sätts via dra-och-släpp i galleriet.
+    seq = Column(Integer, nullable=True, index=True)
 
     # Sätt när metadata bekräftats/redigerats av användaren.
     reviewed_at = Column(DateTime, nullable=True)
@@ -231,3 +234,5 @@ def init_db() -> None:
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN back_of_id INTEGER")
         if not _column_exists(conn, "photos", "phash"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN phash VARCHAR")
+        if not _column_exists(conn, "photos", "seq"):
+            conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN seq INTEGER")

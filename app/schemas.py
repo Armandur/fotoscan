@@ -101,3 +101,8 @@ class PairRequest(BaseModel):
 
 class BackLink(BaseModel):
     other_id: int
+
+
+class ReorderRequest(BaseModel):
+    # Foto-id i önskad ordning; seq sätts till listindex.
+    ids: list[int] = Field(default_factory=list)

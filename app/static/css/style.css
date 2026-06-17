@@ -29,6 +29,9 @@
 
 .gallery-grid.selecting .photo-card { cursor: pointer; }
 .gallery-grid.selecting .photo-card:hover { border-color: var(--bs-info); }
+.gallery-grid.ordering .photo-card { cursor: move; }
+.gallery-grid.ordering .photo-card:hover { border-color: var(--bs-warning); }
+.gallery-grid .photo-card.dragging { opacity: .4; }
 .photo-card.selected {
     outline: 3px solid var(--bs-info);
     outline-offset: -3px;

@@ -82,6 +82,12 @@ photos/                exempel/testbilder (gitignored)
   (`?reviewed=no&review=1`); detaljvyns "Spara & granska" går vidare via `/review`.
   Återanvänder detaljformuläret. Dashboard (`/dashboard`) ger översikt + `missing`-
   filter (date/place/person) i galleriet för att fylla luckor.
+- **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
+  -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),
+  för foton som skannats i oordning med grovt datum. Sätts via "Ordna"-läget i
+  galleriet (dra-och-släpp -> `POST /api/photos/reorder` sätter seq = listindex).
+  seq nollställs aldrig automatiskt; ett globalt heltal räcker då år/månad alltid
+  dominerar sorteringen.
 - **prev/next** i detaljvyn beräknas från samma sortering som galleriet
   (`_ordered_ids`) - OK för projektets skala (<1000 foton). Öppnas en bild från
   en annan vy bär kort-länken `?ctx=person|tag|place|timeline[&ctx_id=N]` (+ aktiva

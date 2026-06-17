@@ -10,9 +10,11 @@ def sort_order(sort: str):
 
     date_text ("YYYY-MM-DD") används som tiebreaker efter år/månad så att dagen
     sorteras rätt (vi lagrar inte dagen i en egen kolumn)."""
+    # seq = manuell ordning, tiebreaker inom samma år/månad (nulls sist).
     if sort == "date_desc":
         return [Photo.date_year.is_(None), Photo.date_year.desc(),
                 Photo.date_month.is_(None), Photo.date_month.desc(),
+                Photo.seq.is_(None), Photo.seq.desc(),
                 Photo.date_text.desc(), Photo.filename]
     if sort == "name":
         return [Photo.folder, Photo.filename]
@@ -20,6 +22,7 @@ def sort_order(sort: str):
         return [Photo.id]
     return [Photo.date_year.is_(None), Photo.date_year,
             Photo.date_month.is_(None), Photo.date_month,
+            Photo.seq.is_(None), Photo.seq,
             Photo.date_text, Photo.filename]
 
 

@@ -30,6 +30,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Manuell ordning (dra-och-släpp).** `Photo.seq` är en tiebreaker i datum-
+  sorteringen (år -> månad -> seq -> date_text -> filnamn), så foton som skannats
+  i oordning och bara har grovt datum (år/år+månad) kan ordnas manuellt. "Ordna"-
+  läge i galleriet: dra korten, seq sparas via `POST /api/photos/reorder`.
 - [x] **Dubblett-/liknande-detektering.** dHash (ren Pillow) på `Photo.phash`,
   beräknad från thumbnailen vid scan + backfill. /duplicates grupperar liknande
   foton (union-find på Hamming-avstånd, justerbar känslighet). `services/dupes.py`,

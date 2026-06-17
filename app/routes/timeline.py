@@ -31,6 +31,7 @@ def timeline(
         query.order_by(
             Photo.date_year.is_(None), Photo.date_year,
             Photo.date_month.is_(None), Photo.date_month,
+            Photo.seq.is_(None), Photo.seq,
             Photo.date_text, Photo.filename,
         )
         .all()

@@ -15,7 +15,7 @@ from app.config import BASE_DIR, THUMB_DIR, ASSET_V
 from app.database import Photo, Tag
 from app.database import _now
 from app.deps import get_db
-from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate
+from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate, ReorderRequest
 from app.services.adjust import apply_adjustments, has_adjustments, suggest_auto
 from app.services.context import (
     context_back, context_nav_qs, context_ordered_ids,
@@ -235,6 +235,19 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
             _sync_pair_metadata(db, p)
     db.commit()
     return JSONResponse({"ok": True, "count": len(photos)})
+
+
+@router.post("/api/photos/reorder")
+def reorder_photos(data: ReorderRequest, db: Session = Depends(get_db)):
+    """Sätt manuell ordning (seq) efter listans index. seq är en tiebreaker inom
+    samma år/månad - lämplig att sätta på en vy/sida med grovt daterade foton som
+    skannats i oordning."""
+    for i, pid in enumerate(data.ids):
+        photo = db.get(Photo, pid)
+        if photo:
+            photo.seq = i
+    db.commit()
+    return JSONResponse({"ok": True, "count": len(data.ids)})
 
 
 def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort, missing="") -> list[int]:

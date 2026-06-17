@@ -78,15 +78,19 @@ class BatchUpdate(BaseModel):
     # Applicera på alla foton i nuvarande filter i stället för en id-lista.
     use_filter: bool = False
     q: str = ""
-    reviewed: str = ""
+    reviewed: str = ""      # filter: ""|"yes"|"no"
     ptype: str = ""
     paired: str = ""
     folder: str = "*"
     recursive: bool = False
     separate: bool = False
-    # Åtgärder (None = lämna oförändrat).
-    is_negative: bool | None = None
-    reviewed: bool | None = None
+    # Åtgärder (None/tom = lämna oförändrat).
+    set_negative: bool | None = None
+    set_reviewed: bool | None = None
+    add_tags: list[TagItem] = Field(default_factory=list)
+    remove_tags: list[TagItem] = Field(default_factory=list)
+    set_date: str | None = None       # date_text (härleds till år/månad/precision)
+    set_location: str | None = None   # platsnamn (get_or_create_place)
 
 
 class PairRequest(BaseModel):

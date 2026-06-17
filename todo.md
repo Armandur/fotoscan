@@ -19,11 +19,6 @@
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
-- [ ] Fler massåtgärder: sätt datum/plats på flera markerade foton, samt
-  lägg till/ta bort en tagg (eller person) på urvalet (massåtgärder för
-  negativ/granskad finns redan).
-- [ ] Gruppera massåtgärderna i en liten meny/dropdown i batch-baren när de
-  blir fler (i stället för en rad knappar).
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
 - [ ] Backup/databasexport.
 
@@ -35,6 +30,11 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Fler massåtgärder + meny.** Batch-baren har nu en "Åtgärder"-dropdown:
+  markera/avmarkera negativ + granskad, lägg till/ta bort tagg eller person,
+  sätt datum, sätt plats - på urval eller hela filtret. Datum/plats/taggar är
+  delad metadata och speglas till hopparad partner. (Fixade även namnkrocken
+  reviewed/filter i BatchUpdate -> set_negative/set_reviewed.)
 - [x] **Lightbox-zoom.** Förstora-lightboxen: zoom med mushjul (mot pekaren),
   panorering genom att dra, dubbelklick växlar zoom, klick på bakgrunden/Esc
   stänger. Översiktskarta nere till höger med gul viewport-rektangel (klickbar

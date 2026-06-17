@@ -100,7 +100,12 @@ photos/                exempel/testbilder (gitignored)
   undermappar (`folder == X OR folder LIKE X/%`). `_filtered_query` delas av
   galleri och batch-åtgärder.
 - **Massåtgärder**: urvalsläge i galleriet + `POST /api/photos/batch` (id-lista
-  eller hela filtret). Just nu: markera/avmarkera negativ och granskad.
+  eller hela filtret), samlade i en "Åtgärder"-dropdown i batch-baren. Åtgärder
+  (alla None/tom = oförändrat): `set_negative`, `set_reviewed`, `add_tags`/
+  `remove_tags` (tagg el. person), `set_date` (date_text -> härledda fält),
+  `set_location` (get_or_create_place). Datum/plats/taggar speglas till hopparad
+  partner via `_sync_pair_metadata`. OBS: filterfältet heter `reviewed` (sträng),
+  åtgärden `set_reviewed` (bool) - tidigare krock fixad.
 - **Position/karta** (`Photo.gps_lat/gps_lon/gps_radius_m`): fotografens position
   sätts via en Leaflet/OSM-karta (självhostad under `static/vendor/leaflet/`,
   `map.js`). Adress-sök går via backend-proxyn `/api/geocode` (Nominatim, med

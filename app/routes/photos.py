@@ -189,11 +189,38 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
         return JSONResponse({"ok": True, "count": 0})
 
     now = _now()
+    # Förbered delade objekt en gång (tagg/person + plats).
+    add_tags = [
+        _get_or_create_tag(db, t.name, t.kind)
+        for t in data.add_tags if t.name.strip()
+    ]
+    remove_keys = {(t.name.strip(), t.kind) for t in data.remove_tags if t.name.strip()}
+    place = None
+    if data.set_location is not None and data.set_location.strip():
+        place = get_or_create_place(db, data.set_location.strip())
+    # Datum/plats/taggar är delad metadata -> speglas till hopparad partner.
+    shared_changed = bool(
+        add_tags or remove_keys or place is not None or data.set_date is not None
+    )
+
     for p in photos:
-        if data.is_negative is not None:
-            p.is_negative = 1 if data.is_negative else 0
-        if data.reviewed is not None:
-            p.reviewed_at = now if data.reviewed else None
+        if data.set_negative is not None:
+            p.is_negative = 1 if data.set_negative else 0
+        if data.set_reviewed is not None:
+            p.reviewed_at = now if data.set_reviewed else None
+        if data.set_date is not None:
+            p.date_text = data.set_date.strip()
+            p.date_year, p.date_month, p.date_precision = parse_date_text(p.date_text)
+        if place is not None:
+            p.place_id = place.id
+            p.location = place.name
+        for tag in add_tags:
+            if tag not in p.tags:
+                p.tags.append(tag)
+        if remove_keys:
+            p.tags = [t for t in p.tags if (t.name, t.kind) not in remove_keys]
+        if shared_changed:
+            _sync_pair_metadata(db, p)
     db.commit()
     return JSONResponse({"ok": True, "count": len(photos)})
 

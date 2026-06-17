@@ -110,10 +110,37 @@
             <label class="form-check-label small" for="batch-all-filter">Alla {{ total }} i filtret</label>
         </div>
         <span class="vr"></span>
-        <button class="btn btn-sm btn-outline-info" data-batch="neg-on">Markera negativ</button>
-        <button class="btn btn-sm btn-outline-secondary" data-batch="neg-off">Avmarkera negativ</button>
-        <button class="btn btn-sm btn-outline-success" data-batch="rev-on">Markera granskad</button>
-        <button class="btn btn-sm btn-outline-secondary" data-batch="rev-off">Avmarkera granskad</button>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-primary dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                <i class="bi bi-lightning-charge"></i> Åtgärder
+            </button>
+            <div class="dropdown-menu p-2" style="min-width:280px">
+                <button class="dropdown-item" type="button" data-batch="neg-on"><i class="bi bi-film"></i> Markera negativ</button>
+                <button class="dropdown-item" type="button" data-batch="neg-off">Avmarkera negativ</button>
+                <button class="dropdown-item" type="button" data-batch="rev-on"><i class="bi bi-check2-circle"></i> Markera granskad</button>
+                <button class="dropdown-item" type="button" data-batch="rev-off">Avmarkera granskad</button>
+                <div class="dropdown-divider"></div>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control" id="batch-tag-input" placeholder="Tagg..." autocomplete="off">
+                    <button class="btn btn-outline-success" type="button" data-batch="tag-add" title="Lägg till tagg"><i class="bi bi-plus-lg"></i></button>
+                    <button class="btn btn-outline-danger" type="button" data-batch="tag-remove" title="Ta bort tagg"><i class="bi bi-dash-lg"></i></button>
+                </div>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control" id="batch-person-input" placeholder="Person..." autocomplete="off">
+                    <button class="btn btn-outline-success" type="button" data-batch="person-add" title="Lägg till person"><i class="bi bi-plus-lg"></i></button>
+                    <button class="btn btn-outline-danger" type="button" data-batch="person-remove" title="Ta bort person"><i class="bi bi-dash-lg"></i></button>
+                </div>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control" id="batch-date-input" placeholder="Datum t.ex. 1975 / sommaren 1975" autocomplete="off">
+                    <button class="btn btn-outline-primary" type="button" data-batch="date-set">Sätt datum</button>
+                </div>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="batch-place-input" placeholder="Plats..." autocomplete="off">
+                    <button class="btn btn-outline-primary" type="button" data-batch="place-set">Sätt plats</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% set photo_qs = "?folder=" ~ (folder|urlencode) ~ ("&" ~ qbase if qbase else "") %}
@@ -281,13 +308,45 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     document.getElementById("batch-clear").addEventListener("click", clearSel);
     allFilter.addEventListener("change", count);
 
-    const OPS = {
-        "neg-on": { is_negative: true }, "neg-off": { is_negative: false },
-        "rev-on": { reviewed: true }, "rev-off": { reviewed: false },
-    };
+    // Bygg åtgärds-payload (op) för en knapp. Returnerar null om åtgärden kräver
+    // ett textfält som är tomt (och visar då en toast).
+    function buildOp(kind) {
+        const val = (id) => document.getElementById(id).value.trim();
+        switch (kind) {
+            case "neg-on": return { set_negative: true };
+            case "neg-off": return { set_negative: false };
+            case "rev-on": return { set_reviewed: true };
+            case "rev-off": return { set_reviewed: false };
+            case "tag-add": case "tag-remove": {
+                const name = val("batch-tag-input");
+                if (!name) { showToast("Ange en tagg", true); return null; }
+                const key = kind === "tag-add" ? "add_tags" : "remove_tags";
+                return { [key]: [{ name, kind: "tag" }] };
+            }
+            case "person-add": case "person-remove": {
+                const name = val("batch-person-input");
+                if (!name) { showToast("Ange en person", true); return null; }
+                const key = kind === "person-add" ? "add_tags" : "remove_tags";
+                return { [key]: [{ name, kind: "person" }] };
+            }
+            case "date-set": {
+                const d = val("batch-date-input");
+                if (!d) { showToast("Ange ett datum", true); return null; }
+                return { set_date: d };
+            }
+            case "place-set": {
+                const pl = val("batch-place-input");
+                if (!pl) { showToast("Ange en plats", true); return null; }
+                return { set_location: pl };
+            }
+        }
+        return null;
+    }
+
     bar.querySelectorAll("[data-batch]").forEach(btn => {
         btn.addEventListener("click", async () => {
-            const op = OPS[btn.dataset.batch];
+            const op = buildOp(btn.dataset.batch);
+            if (!op) return;
             const useFilter = allFilter.checked;
             let body;
             if (useFilter) {

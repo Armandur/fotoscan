@@ -37,12 +37,14 @@ PAGE_SIZE = 60
 def _filtered_query(
     db: Session, q: str, reviewed: str, ptype: str, paired: str,
     folder: str, recursive: bool = False, separate: bool = False,
+    missing: str = "",
 ):
     """Bygg Photo-query enligt galleriets sök/filter/mapp-parametrar.
 
     reviewed: ""|"yes"|"no", ptype: ""|"negative"|"photo", paired: ""|"yes"|"no".
-    Dimensionerna AND:as. recursive=True inkluderar undermappar till `folder`.
-    separate=False döljer sekundären i hopparade par (visar bara primären).
+    missing: ""|"date"|"place"|"person" - foton som saknar respektive metadata
+    (för dashboardens snabblänkar). Dimensionerna AND:as. recursive=True inkluderar
+    undermappar till `folder`. separate=False döljer sekundären i hopparade par.
     """
     query = db.query(Photo)
     if q:
@@ -58,6 +60,12 @@ def _filtered_query(
             )
         )
     query = apply_dimensions(query, reviewed, ptype, paired, separate)
+    if missing == "date":
+        query = query.filter(Photo.date_year.is_(None))
+    elif missing == "place":
+        query = query.filter(Photo.place_id.is_(None))
+    elif missing == "person":
+        query = query.filter(~Photo.tags.any(Tag.kind == "person"))
     # folder == "*" betyder alla mappar; "" är rotmappen.
     if folder != "*":
         if recursive:
@@ -71,7 +79,7 @@ def _filtered_query(
     return query
 
 
-def _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort) -> str:
+def _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort, missing="") -> str:
     """Urlencodad querystring (utan ledande &) med galleriets kontext, för
     länkar (mappträd, kort, paginering). Tomma/default utelämnas."""
     params = {}
@@ -83,6 +91,8 @@ def _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort) -> str:
         params["ptype"] = ptype
     if paired:
         params["paired"] = paired
+    if missing:
+        params["missing"] = missing
     if recursive:
         params["recursive"] = "1"
     if separate:
@@ -125,9 +135,10 @@ def index(
     recursive: bool = False,
     separate: bool = False,
     sort: str = "date",
+    missing: str = "",
     page: int = 1,
 ):
-    query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
+    query = _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate, missing)
 
     total = query.count()
     page = max(1, page)
@@ -164,7 +175,8 @@ def index(
             "recursive": recursive,
             "separate": separate,
             "sort": sort,
-            "qbase": _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort),
+            "missing": missing,
+            "qbase": _gallery_qs(q, reviewed, ptype, paired, recursive, separate, sort, missing),
             "folder_tree": folder_tree,
             "has_root_photos": has_root_photos,
             "page": page,
@@ -225,10 +237,10 @@ def batch_update(data: BatchUpdate, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True, "count": len(photos)})
 
 
-def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort) -> list[int]:
+def _ordered_ids(db, q, reviewed, ptype, paired, folder, recursive, separate, sort, missing="") -> list[int]:
     """Foto-id i galleriets ordning för given filtrering (för prev/next-nav)."""
     rows = (
-        _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate)
+        _filtered_query(db, q, reviewed, ptype, paired, folder, recursive, separate, missing)
         .with_entities(Photo.id)
         .order_by(*_sort_order(sort))
         .all()
@@ -241,7 +253,7 @@ def photo_detail(
     photo_id: int, request: Request,
     q: str = "", reviewed: str = "", ptype: str = "", paired: str = "",
     folder: str = "*", recursive: bool = False, separate: bool = False,
-    sort: str = "date", ctx: str = "", ctx_id: int | None = None,
+    sort: str = "date", missing: str = "", ctx: str = "", ctx_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     photo = db.get(Photo, photo_id)
@@ -260,7 +272,7 @@ def photo_detail(
         ids = ctx_ids
     else:
         ids = _ordered_ids(
-            db, q, reviewed, ptype, paired, folder, recursive, separate, sort
+            db, q, reviewed, ptype, paired, folder, recursive, separate, sort, missing
         )
     if photo_id not in ids:
         ids = _ordered_ids(db, "", "", "", "", "*", False, True, sort)
@@ -292,6 +304,8 @@ def photo_detail(
             params["ptype"] = ptype
         if paired:
             params["paired"] = paired
+        if missing:
+            params["missing"] = missing
         if folder and folder != "*":
             params["folder"] = folder
         if recursive:

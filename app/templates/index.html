@@ -15,6 +15,13 @@
 {% endblock %}
 
 {% block content %}
+{% if missing %}
+{% set _labels = {"date": "datum", "place": "plats", "person": "personer"} %}
+<div class="alert alert-info d-flex align-items-center justify-content-between py-2 px-3 mb-3">
+    <span><i class="bi bi-funnel"></i> Visar foton som saknar {{ _labels.get(missing, missing) }}.</span>
+    <a href="/" class="btn btn-sm btn-outline-light">Rensa filter</a>
+</div>
+{% endif %}
 {% macro foldernode(node) %}
 <li>
     {% set href = "?folder=" ~ (node.path|urlencode) ~ ("&" ~ qbase if qbase else "") %}

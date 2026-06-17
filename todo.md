@@ -1,6 +1,20 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Granskningsläge / triage.** Ett fokuserat flöde som stegar igenom
+  ogranskade foton ett i taget, tangentbordsdrivet (fyll datum/personer/plats ->
+  markera granskad -> nästa). Snabbar upp katalogiseringen jämfört med att bläddra
+  i galleriet.
+- [ ] **Baksides-koppling.** Koppla en skanning av fotots baksida (handskrivna
+  namn/datum) till framsidan, likt negativ-hopparningen men en egen relation.
+  Visa baksidan i detaljvyn; den delar inte metadata utan är ett stöd-foto.
+- [ ] **Att-göra-dashboard.** Översikt med siffror + snabblänkar: antal foton som
+  saknar datum/plats/personer, andel granskade, foton per decennium. Driver
+  katalogiseringen och visar var luckorna finns.
+- [ ] **Dubblett-/liknande-detektering.** Perceptuell hash (t.ex. pHash) för att
+  hitta foton som skannats två gånger eller är nära dubbletter.
+- [ ] **Kartöversikt.** En karta med alla foton som har GPS, klustrade; klicka en
+  plats -> se fotona därifrån. Återanvänder Leaflet/`map.js`.
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal

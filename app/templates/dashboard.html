@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Översikt - Fotoscan{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Översikt</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <a href="/" class="card text-decoration-none h-100">
+            <div class="card-body text-center">
+                <div class="display-6">{{ total }}</div>
+                <div class="text-secondary small">foton (kombinationer)</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="display-6 text-success">{{ pct }}%</div>
+                <div class="text-secondary small">{{ reviewed }} av {{ total }} granskade</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/?reviewed=no" class="card text-decoration-none h-100">
+            <div class="card-body text-center">
+                <div class="display-6 text-warning">{{ not_reviewed }}</div>
+                <div class="text-secondary small">ej granskade <i class="bi bi-arrow-right-short"></i></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/dashboard" class="card text-decoration-none h-100">
+            <div class="card-body text-center">
+                <div class="display-6"><i class="bi bi-clipboard-check"></i></div>
+                <div class="text-secondary small">uppdatera</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<h2 class="h6 text-secondary mb-2">Saknar metadata</h2>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+        <a href="/?missing=date" class="card text-decoration-none h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-calendar-x fs-3 text-info"></i>
+                <div><div class="h4 mb-0">{{ missing_date }}</div><div class="text-secondary small">saknar datum</div></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4">
+        <a href="/?missing=place" class="card text-decoration-none h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-geo fs-3 text-info"></i>
+                <div><div class="h4 mb-0">{{ missing_place }}</div><div class="text-secondary small">saknar plats</div></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4">
+        <a href="/?missing=person" class="card text-decoration-none h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-person-x fs-3 text-info"></i>
+                <div><div class="h4 mb-0">{{ missing_person }}</div><div class="text-secondary small">saknar personer</div></div>
+            </div>
+        </a>
+    </div>
+</div>
+
+{% if decades %}
+<h2 class="h6 text-secondary mb-2">Foton per decennium</h2>
+<div class="card">
+    <div class="card-body">
+        {% for d in decades %}
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="/timeline#year-{{ d.decade }}" class="text-decoration-none text-light small" style="width:60px">{{ d.decade }}-tal</a>
+            <div class="flex-grow-1">
+                <div class="bg-info" style="height:14px;border-radius:3px;width:{{ (100 * d.count / decade_max)|round(1) }}%"></div>
+            </div>
+            <span class="text-secondary small" style="width:36px;text-align:right">{{ d.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

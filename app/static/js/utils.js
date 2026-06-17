@@ -193,6 +193,27 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") _closeLightbox();
 });
 
+// Kortstorlek: sätter --card-min på gallery-grid, sparas i localStorage så
+// valet gäller i alla vyer (galleri, person/tagg/plats/tidslinje/dubbletter).
+function applyCardSize(px) {
+    document.documentElement.style.setProperty("--card-min", px + "px");
+    document.querySelectorAll("#card-size button").forEach((b) =>
+        b.classList.toggle("active", b.dataset.size === String(px)));
+}
+// Körs direkt (utils.js laddas sist i body -> #card-size finns redan).
+(() => {
+    applyCardSize(localStorage.getItem("cardSize") || "150");
+    const group = document.getElementById("card-size");
+    if (group) {
+        group.addEventListener("click", (e) => {
+            const b = e.target.closest("button[data-size]");
+            if (!b) return;
+            localStorage.setItem("cardSize", b.dataset.size);
+            applyCardSize(b.dataset.size);
+        });
+    }
+})();
+
 // Markera thumbnails som laddade så skeleton-shimmern stängs av.
 function initSkeletons() {
     document.querySelectorAll("img.card-img-top").forEach((img) => {

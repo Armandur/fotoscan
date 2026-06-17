@@ -36,6 +36,11 @@
                 <i class="bi bi-map"></i> Karta
             </a>
             <div class="d-flex align-items-center gap-2 ms-auto">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Kortstorlek" id="card-size" title="Kortstorlek">
+                    <button type="button" class="btn btn-outline-secondary" data-size="110">S</button>
+                    <button type="button" class="btn btn-outline-secondary" data-size="150">M</button>
+                    <button type="button" class="btn btn-outline-secondary" data-size="230">L</button>
+                </div>
                 {% block headeractions %}{% endblock %}
             </div>
         </div>

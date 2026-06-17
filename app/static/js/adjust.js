@@ -48,9 +48,17 @@
         });
     });
 
+    // Öppna färgpanelen (collapse) och scrolla in den - för kortkommandona.
+    const panel = document.getElementById("adjust-panel");
+    function openPanel() {
+        bootstrap.Collapse.getOrCreateInstance(panel).show();
+        card.scrollIntoView({ block: "nearest" });
+    }
+
     // Auto: hämta föreslagna värden och fyll slidrarna (användaren kan finjustera).
-    document.getElementById("adj-auto").addEventListener("click", async (e) => {
-        e.target.disabled = true;
+    const autoBtn = document.getElementById("adj-auto");
+    async function doAuto() {
+        autoBtn.disabled = true;
         try {
             const s = await apiFetch(`/api/photos/${photoId}/auto-suggest`);
             Object.entries(s).forEach(([field, v]) => setField(field, v, false));
@@ -59,17 +67,18 @@
         } catch (err) {
             showToast("Auto misslyckades: " + err.message, true);
         } finally {
-            e.target.disabled = false;
+            autoBtn.disabled = false;
         }
-    });
+    }
 
-    document.getElementById("adj-reset").addEventListener("click", () => {
+    function doReset() {
         sliders.forEach(s => setField(s.dataset.adj, 1.0, false));
         schedulePreview();
-    });
+    }
 
-    document.getElementById("adj-apply").addEventListener("click", async (e) => {
-        e.target.disabled = true;
+    const applyBtn = document.getElementById("adj-apply");
+    async function doApply() {
+        applyBtn.disabled = true;
         try {
             await apiFetch(`/api/photos/${photoId}/adjust`, {
                 method: "POST",
@@ -89,7 +98,17 @@
         } catch (err) {
             showToast("Kunde inte spara: " + err.message, true);
         } finally {
-            e.target.disabled = false;
+            applyBtn.disabled = false;
         }
-    });
+    }
+
+    autoBtn.addEventListener("click", doAuto);
+    document.getElementById("adj-reset").addEventListener("click", doReset);
+    applyBtn.addEventListener("click", doApply);
+
+    // Exponera för kortkommandon i photo.js (öppnar panelen vid behov).
+    window.adjToggle = () => bootstrap.Collapse.getOrCreateInstance(panel).toggle();
+    window.adjAuto = () => { openPanel(); doAuto(); };
+    window.adjReset = () => { openPanel(); doReset(); };
+    window.adjApply = () => { openPanel(); doApply(); };
 })();

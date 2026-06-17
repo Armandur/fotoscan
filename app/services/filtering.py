@@ -25,7 +25,9 @@ def sort_order(sort: str):
 
 def apply_dimensions(query, reviewed="", ptype="", paired="", separate=False):
     """Lägg på filterdimensionerna (granskat/typ/hopparat) + gruppering på en
-    befintlig Photo-query. separate=False döljer sekundären i hopparade par."""
+    befintlig Photo-query. separate=False döljer sekundären i hopparade par.
+    Baksides-skanningar (back_of_id satt) är stöd-foton och döljs alltid."""
+    query = query.filter(Photo.back_of_id.is_(None))
     if not separate:
         query = query.filter(
             or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1)

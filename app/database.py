@@ -60,6 +60,11 @@ class Photo(Base):
     # 1 = primär i hopparningen (fotot), 0 = sekundär (negativet). Primären
     # representerar paret i grupperad gallerivy.
     is_pair_primary = Column(Integer, default=0)
+    # Detta foto är en skanning av baksidan till foto back_of_id (handskrivna
+    # namn/datum). Stöd-foto - delar INTE metadata och döljs i listningarna.
+    back_of_id = Column(
+        Integer, ForeignKey("photos.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # Plats: normaliserad via Place (place_id). location är en synkad cache av
     # platsnamnet (för sök/visning). Fotots egen GPS nedan är frikopplad.
@@ -219,3 +224,5 @@ def init_db() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE tags ADD COLUMN thumb_face_id INTEGER"
             )
+        if not _column_exists(conn, "photos", "back_of_id"):
+            conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN back_of_id INTEGER")

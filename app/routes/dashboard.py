@@ -15,9 +15,10 @@ templates.env.globals["asset_v"] = ASSET_V
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    # Räkna kombinationer som galleriet visar dem (sekundär-negativet dolt).
+    # Räkna kombinationer som galleriet visar dem (sekundär-negativet + baksidor dolt).
     base = db.query(Photo).filter(
-        or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1)
+        Photo.back_of_id.is_(None),
+        or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1),
     )
     total = base.count()
     reviewed = base.filter(Photo.reviewed_at.isnot(None)).count()

@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from app.config import BASE_DIR
 from app.database import init_db
 from app.routes import (
-    dashboard, export, faces, geo, pairing, persons, photos, places, scan,
-    tags, timeline,
+    backside, dashboard, export, faces, geo, pairing, persons, photos, places,
+    scan, tags, timeline,
 )
 
 
@@ -36,3 +36,4 @@ app.include_router(geo.router)
 app.include_router(places.router)
 app.include_router(timeline.router)
 app.include_router(dashboard.router)
+app.include_router(backside.router)

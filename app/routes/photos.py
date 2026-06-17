@@ -336,6 +336,10 @@ def photo_detail(
         back_url, back_label = "/" + nav_qs, "Galleri"
 
     paired = db.get(Photo, photo.paired_with_id) if photo.paired_with_id else None
+    # Baksida: stöd-foto kopplat till detta foto. Och om DETTA foto självt är en
+    # baksida, vilket foto det hör till.
+    back = db.query(Photo).filter(Photo.back_of_id == photo.id).first()
+    back_of = db.get(Photo, photo.back_of_id) if photo.back_of_id else None
 
     # Representativ GPS från platsen, som kart-förslag när fotot saknar egen.
     place_gps = None
@@ -350,6 +354,8 @@ def photo_detail(
         {
             "photo": photo,
             "paired": paired,
+            "back": back,
+            "back_of": back_of,
             "place_gps": place_gps,
             "prev_id": prev_id,
             "next_id": next_id,

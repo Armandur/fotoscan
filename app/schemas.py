@@ -97,3 +97,7 @@ class PairRequest(BaseModel):
     other_id: int
     # Vid konflikt: {fältnamn: "a" | "b"} - vilket fotos värde som vinner.
     resolutions: dict[str, str] = Field(default_factory=dict)
+
+
+class BackLink(BaseModel):
+    other_id: int

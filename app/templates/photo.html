@@ -107,6 +107,31 @@
             </button>
             {% endif %}
         </div>
+
+        <div id="back-block" class="mt-2" data-id="{{ photo.id }}">
+            {% if back_of %}
+            <div class="alert alert-secondary py-2 px-3 mb-0 text-truncate">
+                <i class="bi bi-card-text"></i> Detta är baksidan till
+                <a href="/photo/{{ back_of.id }}">{{ back_of.filename }}</a>
+            </div>
+            {% elif back %}
+            <div class="alert alert-secondary py-2 px-3 d-flex justify-content-between align-items-center gap-2 mb-0 flex-wrap">
+                <span class="d-flex align-items-center gap-2 text-truncate">
+                    <img id="back-thumb" src="/thumb/{{ back.id }}?v={{ (back.updated_at.timestamp()|int) if back.updated_at else 0 }}"
+                         data-src="/image/{{ back.id }}" alt="Baksida"
+                         title="Klicka för att förstora och läsa"
+                         style="width:42px;height:42px;object-fit:cover;border-radius:4px;cursor:zoom-in">
+                    <span class="text-truncate"><i class="bi bi-card-text"></i> Baksida:
+                        <a href="/photo/{{ back.id }}">{{ back.filename }}</a></span>
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" id="back-unlink-btn">Ta bort koppling</button>
+            </div>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" id="back-link-btn">
+                <i class="bi bi-card-text"></i> Koppla baksida
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="col-lg-5">
@@ -282,6 +307,23 @@
     </div>
 </div>
 
+<div class="modal fade" id="back-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Koppla baksida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary small">Välj skanningen av det här fotots baksida (handskrivna namn/datum). Den döljs ur galleriet och delar inte metadata.</p>
+                <input id="back-search" class="form-control mb-2" placeholder="Sök filnamn eller mapp..." autocomplete="off">
+                <div id="back-candidates" class="gallery-grid" style="max-height:60vh;overflow-y:auto"></div>
+                <div id="back-empty" class="text-secondary small text-center py-2" hidden>Inga kandidater</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="map-modal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -319,6 +361,7 @@
 <script src="/static/js/faces.js?v={{ asset_v }}"></script>
 <script src="/static/js/adjust.js?v={{ asset_v }}"></script>
 <script src="/static/js/pairing.js?v={{ asset_v }}"></script>
+<script src="/static/js/backside.js?v={{ asset_v }}"></script>
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/js/map.js?v={{ asset_v }}"></script>
 {% endblock %}

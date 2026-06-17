@@ -31,6 +31,8 @@ app/
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
+    backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
+    dashboard.py       /dashboard: översikt + saknar-statistik; /review-flödet ligger i photos.py
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     filtering.py       apply_dimensions + sort_order (delas av galleri/person/tagg/plats/tidslinje)
@@ -68,6 +70,16 @@ photos/                exempel/testbilder (gitignored)
   frikopplad - grov plats vs exakt fotografposition.
 - **Rotation i DB** (`Photo.rotation`, grader medurs). `/image/{id}` roterar
   on-the-fly när rotation != 0; thumbnail regenereras vid rotation.
+- **Baksides-koppling** (`Photo.back_of_id`): en skanning av ett fotos baksida
+  (handskrivna namn/datum) kopplas till framsidan som ett stöd-foto. Delar INGEN
+  metadata och döljs i alla listningar (`apply_dimensions` filtrerar bort
+  `back_of_id != None` alltid). Hanteras i detaljvyn (`backside.py` + `backside.js`):
+  visa/förstora baksidan, koppla via kandidatsök, koppla loss. Andra själv-FK:n på
+  photos (efter `paired_with_id`) - inga ORM-relationer på dem, slås upp via query.
+- **Granskningsläge** (`/review` i `photos.py`): redirectar till första ogranskade
+  (`?reviewed=no&review=1`); detaljvyns "Spara & granska" går vidare via `/review`.
+  Återanvänder detaljformuläret. Dashboard (`/dashboard`) ger översikt + `missing`-
+  filter (date/place/person) i galleriet för att fylla luckor.
 - **prev/next** i detaljvyn beräknas från samma sortering som galleriet
   (`_ordered_ids`) - OK för projektets skala (<1000 foton). Öppnas en bild från
   en annan vy bär kort-länken `?ctx=person|tag|place|timeline[&ctx_id=N]` (+ aktiva

@@ -1,12 +1,6 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Baksides-koppling.** Koppla en skanning av fotots baksida (handskrivna
-  namn/datum) till framsidan, likt negativ-hopparningen men en egen relation.
-  Visa baksidan i detaljvyn; den delar inte metadata utan är ett stöd-foto.
-- [ ] **Att-göra-dashboard.** Översikt med siffror + snabblänkar: antal foton som
-  saknar datum/plats/personer, andel granskade, foton per decennium. Driver
-  katalogiseringen och visar var luckorna finns.
 - [ ] **Dubblett-/liknande-detektering.** Perceptuell hash (t.ex. pHash) för att
   hitta foton som skannats två gånger eller är nära dubbletter.
 - [ ] **Kartöversikt.** En karta med alla foton som har GPS, klustrade; klicka en
@@ -40,6 +34,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Baksides-koppling.** `Photo.back_of_id` -> ett stöd-foto (skanning av
+  baksidan) kopplas till framsidan. Döljs i alla listningar (apply_dimensions),
+  delar ingen metadata. Detaljvyn visar baksidan (klicka för lightbox/läs) +
+  koppla/koppla-loss; den egna sidan visar "baksidan till X". `routes/backside.py`.
 - [x] **Att-göra-dashboard.** /dashboard: antal foton, andel granskade, antal som
   saknar datum/plats/personer (med saknar-filter i galleriet), foton per decennium.
 - [x] **Granskningsläge / triage.** /review hoppar till första ogranskade

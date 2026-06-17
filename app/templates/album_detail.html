@@ -16,16 +16,26 @@
     <span class="text-secondary small ms-auto">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} - dra korten för att ändra ordning</span>
 </div>
 
-{% if not photos %}
+{% if not entries %}
 <div class="alert alert-secondary">Inga foton i albumet än. Lägg till foton via "Lägg till i album" i galleriets åtgärdsmeny.</div>
 {% endif %}
 
 <div class="gallery-grid ordering" id="album-grid">
-    {% for photo in photos %}
+    {% for e in entries %}
+    {% set photo = e.photo %}
     <div class="card photo-card position-relative" data-id="{{ photo.id }}" draggable="true">
-        <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
-                title="Ta bort ur album"
-                style="position:absolute;top:4px;right:4px;z-index:2;padding:0 .4rem;line-height:1.4">&times;</button>
+        {% if e.section_heading %}
+        <div class="album-section-banner" title="Avsnittsstart">
+            <i class="bi bi-bookmark-fill"></i> {{ e.section_heading }}{% if e.section_layout %} ({{ e.section_layout }}/sida){% endif %}
+        </div>
+        {% endif %}
+        <div style="position:absolute;top:4px;right:4px;z-index:2;display:flex;gap:3px">
+            <button type="button" class="btn btn-sm btn-secondary album-section" data-id="{{ photo.id }}"
+                    data-heading="{{ e.section_heading or '' }}" data-layout="{{ e.section_layout or '' }}"
+                    title="Avsnittsstart här" style="padding:0 .35rem;line-height:1.4"><i class="bi bi-bookmark"></i></button>
+            <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
+                    title="Ta bort ur album" style="padding:0 .4rem;line-height:1.4">&times;</button>
+        </div>
         <a href="/photo/{{ photo.id }}" class="text-decoration-none" draggable="false">
             <img loading="lazy" class="card-img-top" draggable="false"
                  src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
@@ -36,6 +46,39 @@
         </a>
     </div>
     {% endfor %}
+</div>
+
+<div class="modal fade" id="section-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Avsnitt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary small">Detta foto inleder ett avsnitt med rubriken nedan (i PDF:en). Avsnittet börjar på ny sida och löper till nästa rubrik. Töm rubriken för att ta bort avsnittsstarten.</p>
+                <input type="hidden" id="section-photo-id">
+                <div class="mb-2">
+                    <label class="form-label small text-secondary" for="section-heading-input">Rubrik</label>
+                    <input type="text" class="form-control" id="section-heading-input" placeholder="t.ex. Sommaren 1975">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary" for="section-layout-input">Layout för avsnittet</label>
+                    <select class="form-select" id="section-layout-input">
+                        <option value="">Albumets standard</option>
+                        <option value="1">1 per sida</option>
+                        <option value="2">2 per sida</option>
+                        <option value="4">4 per sida</option>
+                        <option value="6">6 per sida</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Avbryt</button>
+                <button type="button" class="btn btn-primary" id="section-save">Spara</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="pdf-modal" tabindex="-1">
@@ -120,6 +163,31 @@
             btn.closest(".photo-card").remove();
             showToast("Borttaget ur albumet");
         } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
+    });
+
+    // Avsnitt: sätt/ta bort avsnittsstart på ett foto
+    const sectionModal = bootstrap.Modal.getOrCreateInstance("#section-modal");
+    grid.addEventListener("click", (e) => {
+        const btn = e.target.closest(".album-section");
+        if (!btn) return;
+        e.preventDefault();
+        document.getElementById("section-photo-id").value = btn.dataset.id;
+        document.getElementById("section-heading-input").value = btn.dataset.heading || "";
+        document.getElementById("section-layout-input").value = btn.dataset.layout || "";
+        sectionModal.show();
+    });
+    document.getElementById("section-save").addEventListener("click", async () => {
+        const pid = document.getElementById("section-photo-id").value;
+        const heading = document.getElementById("section-heading-input").value.trim();
+        const lv = document.getElementById("section-layout-input").value;
+        try {
+            await apiFetch(`/api/albums/${albumId}/photos/${pid}/section`, {
+                method: "POST", body: { heading, layout: lv ? parseInt(lv, 10) : null },
+            });
+            showToast(heading ? "Avsnitt sparat" : "Avsnittsstart borttagen");
+            sectionModal.hide();
+            setTimeout(() => location.reload(), 400);
+        } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
     });
 
     // Exportera PDF

@@ -16,10 +16,16 @@
     .page {
         height: 27.5cm;
         page-break-after: always;
-        display: grid;
-        gap: 0.5cm;
+        display: flex;
+        flex-direction: column;
     }
     .page:last-child { page-break-after: auto; }
+    .section-heading {
+        font-size: 18pt; font-weight: bold;
+        border-bottom: 2px solid #333;
+        padding-bottom: 4pt; margin-bottom: 0.4cm;
+    }
+    .grid { flex: 1 1 auto; display: grid; gap: 0.5cm; min-height: 0; }
     .cell { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
     .cell img { width: 100%; flex: 1 1 auto; object-fit: contain; min-height: 0; }
     .cap { margin-top: 4pt; font-size: 9pt; line-height: 1.25; text-align: center; }
@@ -37,15 +43,18 @@
         {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}
     </div>
     {% for page in pages %}
-    <div class="page layout-{{ layout }}">
-        {% for item in page %}
-        <div class="cell">
-            <img src="{{ item.src }}">
-            {% if item.lines %}
-            <div class="cap">{% for ln in item.lines %}<span class="l">{{ ln }}</span>{% endfor %}</div>
-            {% endif %}
+    <div class="page">
+        {% if page.heading %}<div class="section-heading">{{ page.heading }}</div>{% endif %}
+        <div class="grid layout-{{ page.layout }}">
+            {% for item in page.cells %}
+            <div class="cell">
+                <img src="{{ item.src }}">
+                {% if item.lines %}
+                <div class="cap">{% for ln in item.lines %}<span class="l">{{ ln }}</span>{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% endfor %}
 </body>

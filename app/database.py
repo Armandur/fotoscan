@@ -197,6 +197,10 @@ class AlbumPhoto(Base):
         Integer, ForeignKey("photos.id", ondelete="CASCADE"), primary_key=True
     )
     position = Column(Integer, nullable=False, default=0)
+    # Om satt: detta foto INLEDER ett avsnitt med denna rubrik (avsnittet löper
+    # till nästa rubrik). section_layout kan överstyra albumets layout för avsnittet.
+    section_heading = Column(String, nullable=True)
+    section_layout = Column(Integer, nullable=True)
 
     album = relationship("Album", back_populates="entries")
     photo = relationship("Photo")
@@ -266,3 +270,11 @@ def init_db() -> None:
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN phash VARCHAR")
         if not _column_exists(conn, "photos", "seq"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN seq INTEGER")
+        if not _column_exists(conn, "album_photos", "section_heading"):
+            conn.exec_driver_sql(
+                "ALTER TABLE album_photos ADD COLUMN section_heading VARCHAR"
+            )
+        if not _column_exists(conn, "album_photos", "section_layout"):
+            conn.exec_driver_sql(
+                "ALTER TABLE album_photos ADD COLUMN section_layout INTEGER"
+            )

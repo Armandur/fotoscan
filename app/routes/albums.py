@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import Album, AlbumPhoto, Photo
 from app.deps import get_db
-from app.schemas import AlbumPhotosIn, NameIn, ReorderRequest
+from app.schemas import AlbumPhotosIn, NameIn, ReorderRequest, SectionIn
 from app.services.pdf_album import render_album_pdf
 
 router = APIRouter()
@@ -45,9 +45,9 @@ def album_detail(album_id: int, request: Request, db: Session = Depends(get_db))
     album = db.get(Album, album_id)
     if not album:
         raise HTTPException(404, "Albumet hittades inte")
-    photos = [e.photo for e in album.entries]  # entries är ordnade på position
+    # entries är ordnade på position; bär foto + ev. avsnittsstart.
     return templates.TemplateResponse(
-        request, "album_detail.html", {"album": album, "photos": photos},
+        request, "album_detail.html", {"album": album, "entries": album.entries},
     )
 
 
@@ -137,6 +137,21 @@ def remove_photo(album_id: int, photo_id: int, db: Session = Depends(get_db)):
     if entry:
         db.delete(entry)
         db.commit()
+    return JSONResponse({"ok": True})
+
+
+@router.post("/api/albums/{album_id}/photos/{photo_id}/section")
+def set_section(
+    album_id: int, photo_id: int, data: SectionIn, db: Session = Depends(get_db)
+):
+    """Sätt/ta bort en avsnittsstart på ett foto i albumet. Tom rubrik tar bort."""
+    entry = db.get(AlbumPhoto, (album_id, photo_id))
+    if not entry:
+        raise HTTPException(404, "Fotot finns inte i albumet")
+    heading = data.heading.strip()
+    entry.section_heading = heading or None
+    entry.section_layout = data.layout if heading else None
+    db.commit()
     return JSONResponse({"ok": True})
 
 

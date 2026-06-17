@@ -112,3 +112,9 @@ class ReorderRequest(BaseModel):
 
 class AlbumPhotosIn(BaseModel):
     photo_ids: list[int] = Field(default_factory=list)
+
+
+class SectionIn(BaseModel):
+    # Tom rubrik = ta bort avsnittsstarten. layout None = använd albumets standard.
+    heading: str = ""
+    layout: int | None = None

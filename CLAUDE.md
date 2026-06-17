@@ -91,9 +91,12 @@ photos/                exempel/testbilder (gitignored)
   åtgärdsmeny ("Lägg till i album", markerade foton). `routes/albums.py`.
 - **PDF-album** (`services/pdf_album.py`, `GET /albums/{id}/pdf`): weasyprint
   renderar en Jinja-mall (`album_pdf.html`, `@page A4`) till PDF. Titelsida +
-  global layout (1/2/4/6 bilder per A4, foton chunkas i sidor) + valbara
-  bildtextfält. Varje foto renderas till en temp-JPEG (~1600px, orienterad +
-  justerad) som bäddas in. Kräver libpango/cairo (i Docker-imagen).
+  global layout (1/2/4/6 bilder per A4) + valbara bildtextfält. **Avsnitt**:
+  `AlbumPhoto.section_heading` (+ valfri `section_layout`) gör att fotot inleder
+  ett avsnitt - rubrik överst på ny sida, egen layout för avsnittet. Foton chunkas
+  per avsnitt. Varje foto renderas till en temp-JPEG (~1600px) som bäddas in.
+  Kräver libpango/cairo (i Docker-imagen). OBS: i mallen heter sid-cellerna
+  `page.cells` (inte `items` - krockar med dict.items i Jinja).
 - **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
   -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),
   för foton som skannats i oordning med grovt datum. Sätts via "Ordna"-läget i

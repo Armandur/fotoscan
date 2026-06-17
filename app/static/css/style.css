@@ -32,6 +32,16 @@
 .gallery-grid.ordering .photo-card { cursor: move; }
 .gallery-grid.ordering .photo-card:hover { border-color: var(--bs-warning); }
 .gallery-grid .photo-card.dragging { opacity: .4; }
+.album-section-banner {
+    background: var(--bs-warning);
+    color: #000;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .photo-card.selected {
     outline: 3px solid var(--bs-info);
     outline-offset: -3px;

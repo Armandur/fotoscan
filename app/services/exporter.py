@@ -1,3 +1,4 @@
+import logging
 import shutil
 import subprocess
 from pathlib import Path
@@ -9,6 +10,8 @@ from app.database import Photo
 from app.services.adjust import has_adjustments
 from app.services.dates import iso_date_for_export
 from app.services.scanner import load_oriented, render_photo
+
+logger = logging.getLogger("fotoscan.exporter")
 
 # Vår rotation (grader medurs) -> EXIF Orientation-värde. Antar att originalet
 # saknar egen Orientation (vanligt for scans/negativ), vilket är vårt huvudfall.
@@ -213,6 +216,8 @@ def export_many(db: Session, only_reviewed: bool = True) -> dict:
             export_photo(photo, partner=partner)
             exported += 1
         except Exception:
+            logger.exception("Export misslyckades för foto %s (%s)",
+                             photo.id, photo.filename)
             errors += 1
 
     return {"exported": exported, "errors": errors, "dir": str(EXPORT_DIR)}

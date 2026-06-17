@@ -5,14 +5,17 @@ from sqlalchemy.orm import Session
 
 from app.database import Photo
 from app.deps import get_db
+from app.routes.places import get_or_create_place
 from app.schemas import PairRequest
+from app.services.dates import parse_date_text
 
 router = APIRouter()
 
-# Skalärfält som slås samman vid hopparning.
+# Skalärfält som slås samman vid hopparning. date_year/month/precision härleds ur
+# date_text efteråt, och place_id normaliseras ur location - så de hålls
+# konsekventa i stället för att slås samman var för sig.
 _MERGE_FIELDS = [
     ("date_text", "Fotodatum"),
-    ("date_year", "År"),
     ("location", "Plats"),
     ("source", "Källa"),
     ("notes", "Anteckningar"),
@@ -104,6 +107,15 @@ def pair_photos(
     for field, val in merged.items():
         setattr(a, field, val)
         setattr(b, field, val)
+
+    # Härled datumfälten ur (ev. sammanslagen) date_text så de blir konsekventa.
+    y, m, prec = parse_date_text(a.date_text)
+    # Normalisera platsen till en Place; location-strängen är bara en cache.
+    place = get_or_create_place(db, a.location) if a.location else None
+    for p in (a, b):
+        p.date_year, p.date_month, p.date_precision = y, m, prec
+        p.place_id = place.id if place else None
+        p.location = place.name if place else ""
 
     # Taggar/personer: union på båda.
     union = list({t.id: t for t in (a.tags + b.tags)}.values())

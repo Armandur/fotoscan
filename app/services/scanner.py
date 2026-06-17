@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from PIL import Image, ImageOps
@@ -9,6 +10,8 @@ from app.config import (
 from app.database import Photo
 from app.services.adjust import apply_adjustments, has_adjustments
 from app.services.dates import parse_date_text
+
+logger = logging.getLogger("fotoscan.scanner")
 
 _DATETIME_ORIGINAL = 0x9003  # DateTimeOriginal, ligger i Exif-sub-IFD
 _DATETIME = 0x0132           # DateTime (ModifyDate) i IFD0, fallback
@@ -145,6 +148,7 @@ def scan_directory(db: Session) -> dict:
             added += 1
         except Exception:
             db.rollback()
+            logger.exception("Kunde inte skanna in %s", path)
             errors += 1
 
     return {"added": added, "skipped": skipped, "errors": errors, "missing_dir": False}

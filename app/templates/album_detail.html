@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ album.name }} - Fotoscan{% endblock %}
+
+{% block headeractions %}
+    <a class="btn btn-outline-secondary btn-sm" href="/albums">Alla album</a>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap" data-album-id="{{ album.id }}">
+    <div class="input-group" style="max-width:360px">
+        <input type="text" class="form-control" id="album-name" value="{{ album.name }}">
+        <button class="btn btn-primary" id="rename-album-btn">Spara namn</button>
+    </div>
+    <button class="btn btn-outline-danger btn-sm" id="delete-album-btn"><i class="bi bi-trash"></i> Ta bort album</button>
+    <span class="text-secondary small ms-auto">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} - dra korten för att ändra ordning</span>
+</div>
+
+{% if not photos %}
+<div class="alert alert-secondary">Inga foton i albumet än. Lägg till foton via "Lägg till i album" i galleriets åtgärdsmeny.</div>
+{% endif %}
+
+<div class="gallery-grid ordering" id="album-grid">
+    {% for photo in photos %}
+    <div class="card photo-card position-relative" data-id="{{ photo.id }}" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
+                title="Ta bort ur album"
+                style="position:absolute;top:4px;right:4px;z-index:2;padding:0 .4rem;line-height:1.4">&times;</button>
+        <a href="/photo/{{ photo.id }}" class="text-decoration-none" draggable="false">
+            <img loading="lazy" class="card-img-top" draggable="false"
+                 src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
+            <div class="card-body p-2">
+                <div class="text-info small text-truncate">{{ photo.date_text or photo.date_year or "?" }}</div>
+                <div class="text-secondary small text-truncate">{{ photo.filename }}</div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const wrap = document.querySelector("[data-album-id]");
+    const albumId = wrap.dataset.albumId;
+    const grid = document.getElementById("album-grid");
+
+    // Byt namn
+    document.getElementById("rename-album-btn").addEventListener("click", async (e) => {
+        const name = document.getElementById("album-name").value.trim();
+        if (!name) { showToast("Ange ett namn", true); return; }
+        e.target.disabled = true;
+        try {
+            await apiFetch(`/api/albums/${albumId}/rename`, { method: "POST", body: { name } });
+            showToast("Namn sparat");
+        } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
+        finally { e.target.disabled = false; }
+    });
+
+    // Ta bort album
+    document.getElementById("delete-album-btn").addEventListener("click", async () => {
+        const ok = await showConfirm("Ta bort albumet? Fotona finns kvar, bara albumet tas bort.",
+            { okLabel: "Ta bort", okClass: "btn-danger" });
+        if (!ok) return;
+        try {
+            await apiFetch(`/api/albums/${albumId}`, { method: "DELETE" });
+            showToast("Album borttaget");
+            setTimeout(() => { location.href = "/albums"; }, 500);
+        } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
+    });
+
+    // Ta bort foto ur album
+    grid.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".album-remove");
+        if (!btn) return;
+        e.preventDefault();
+        const id = btn.dataset.id;
+        try {
+            await apiFetch(`/api/albums/${albumId}/photos/${id}`, { method: "DELETE" });
+            btn.closest(".photo-card").remove();
+            showToast("Borttaget ur albumet");
+        } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
+    });
+
+    // Dra-och-släpp för ordning
+    let dragEl = null;
+    grid.addEventListener("dragstart", (e) => {
+        dragEl = e.target.closest(".photo-card");
+        if (dragEl) { e.dataTransfer.effectAllowed = "move"; dragEl.classList.add("dragging"); }
+    });
+    grid.addEventListener("dragover", (e) => {
+        if (!dragEl) return;
+        e.preventDefault();
+        const card = e.target.closest(".photo-card");
+        if (!card || card === dragEl) return;
+        const r = card.getBoundingClientRect();
+        const after = (e.clientY - r.top) + (e.clientX - r.left) > (r.height + r.width) / 2;
+        grid.insertBefore(dragEl, after ? card.nextSibling : card);
+    });
+    grid.addEventListener("dragend", async () => {
+        if (!dragEl) return;
+        dragEl.classList.remove("dragging");
+        dragEl = null;
+        const ids = [...grid.querySelectorAll(".photo-card")].map(c => parseInt(c.dataset.id, 10));
+        try {
+            await apiFetch(`/api/albums/${albumId}/reorder`, { method: "POST", body: { ids } });
+            showToast("Ordning sparad");
+        } catch (err) { showToast("Kunde inte spara ordning: " + err.message, true); }
+    });
+})();
+</script>
+{% endblock %}

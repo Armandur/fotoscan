@@ -172,6 +172,36 @@ class FaceRegion(Base):
     tag = relationship("Tag", foreign_keys=[tag_id])
 
 
+class Album(Base):
+    """Kurerad, ordnad samling foton från flera källor. Egen ordning (position)
+    oberoende av datum - skild från taggar (beskrivande) och seq (kronologisk)."""
+    __tablename__ = "albums"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+    entries = relationship(
+        "AlbumPhoto", back_populates="album",
+        cascade="all, delete-orphan", order_by="AlbumPhoto.position",
+    )
+
+
+class AlbumPhoto(Base):
+    __tablename__ = "album_photos"
+
+    album_id = Column(
+        Integer, ForeignKey("albums.id", ondelete="CASCADE"), primary_key=True
+    )
+    photo_id = Column(
+        Integer, ForeignKey("photos.id", ondelete="CASCADE"), primary_key=True
+    )
+    position = Column(Integer, nullable=False, default=0)
+
+    album = relationship("Album", back_populates="entries")
+    photo = relationship("Photo")
+
+
 def _column_exists(conn, table: str, column: str) -> bool:
     rows = conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
     return any(r[1] == column for r in rows)

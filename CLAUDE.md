@@ -29,6 +29,7 @@ app/
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
+    albums.py          Album + AlbumPhoto: vy (lista/detalj), skapa/byt namn/ta bort, lägg till/ta bort foton, ordna (position)
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
@@ -82,6 +83,11 @@ photos/                exempel/testbilder (gitignored)
   (`?reviewed=no&review=1`); detaljvyns "Spara & granska" går vidare via `/review`.
   Återanvänder detaljformuläret. Dashboard (`/dashboard`) ger översikt + `missing`-
   filter (date/place/person) i galleriet för att fylla luckor.
+- **Album** (`Album` + `AlbumPhoto` med `position`): kurerad, ordnad samling foton
+  från flera källor, visad i egen ordning oberoende av datum. Skild från taggar
+  (beskrivande) och `seq` (kronologisk). Ett foto kan ligga i flera album. Vy med
+  dra-och-släpp-ordning (`/api/albums/{id}/reorder`), lägg till via galleriets
+  åtgärdsmeny ("Lägg till i album", markerade foton). `routes/albums.py`.
 - **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
   -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),
   för foton som skannats i oordning med grovt datum. Sätts via "Ordna"-läget i

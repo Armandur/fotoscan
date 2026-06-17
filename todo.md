@@ -30,6 +30,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Album (kurerade, ordnade samlingar).** Egen Album-/AlbumPhoto-modell med
+  position; foton från flera källor, egen ordning oavsett datum, ett foto kan
+  ligga i flera album. /albums + /albums/{id} med dra-och-släpp-ordning, lägg
+  till via galleriets åtgärdsmeny. Skild från taggar och seq. `routes/albums.py`.
 - [x] **Manuell ordning (dra-och-släpp).** `Photo.seq` är en tiebreaker i datum-
   sorteringen (år -> månad -> seq -> date_text -> filnamn), så foton som skannats
   i oordning och bara har grovt datum (år/år+månad) kan ordnas manuellt. "Ordna"-

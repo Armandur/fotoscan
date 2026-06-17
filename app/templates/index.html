@@ -148,9 +148,13 @@
                     <input type="text" class="form-control" id="batch-date-input" placeholder="Datum t.ex. 1975 / sommaren 1975" autocomplete="off">
                     <button class="btn btn-outline-primary" type="button" data-batch="date-set">Sätt datum</button>
                 </div>
-                <div class="input-group input-group-sm">
+                <div class="input-group input-group-sm mb-2">
                     <input type="text" class="form-control" id="batch-place-input" placeholder="Plats..." list="batch-places-list">
                     <button class="btn btn-outline-primary" type="button" data-batch="place-set">Sätt plats</button>
+                </div>
+                <div class="input-group input-group-sm">
+                    <select class="form-select" id="batch-album-select"><option value="">Välj album...</option></select>
+                    <button class="btn btn-outline-primary" type="button" id="batch-album-add">Lägg till i album</button>
                 </div>
                 <datalist id="batch-tags-list"></datalist>
                 <datalist id="batch-places-list"></datalist>
@@ -294,10 +298,39 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         } catch (e) { /* tyst - autocomplete är valfritt */ }
     }
     const dd = bar.querySelector(".dropdown");
+    async function fillAlbums() {
+        try {
+            const albums = await apiFetch("/api/albums");
+            const sel = document.getElementById("batch-album-select");
+            const cur = sel.value;
+            sel.replaceChildren();
+            sel.append(new Option("Välj album...", ""));
+            albums.forEach(a => sel.append(new Option(`${a.name} (${a.count})`, a.id)));
+            sel.value = cur;
+        } catch (e) { /* tyst */ }
+    }
     if (dd) {
         dd.addEventListener("show.bs.dropdown", () => {
             fillList("batch-tags-list", "/api/tags?kind=tag");
             fillList("batch-places-list", "/api/places");
+            fillAlbums();
+        });
+    }
+
+    // Lägg till markerade foton i ett album.
+    const albumAddBtn = document.getElementById("batch-album-add");
+    if (albumAddBtn) {
+        albumAddBtn.addEventListener("click", async () => {
+            const albumId = document.getElementById("batch-album-select").value;
+            if (!albumId) { showToast("Välj ett album", true); return; }
+            if (allFilter.checked) { showToast("Album-tillägg stöder bara markerade foton", true); return; }
+            if (!selected.size) { showToast("Inget valt", true); return; }
+            try {
+                const res = await apiFetch(`/api/albums/${albumId}/photos`, {
+                    method: "POST", body: { photo_ids: [...selected] },
+                });
+                showToast(`${res.added} foton tillagda i albumet`);
+            } catch (err) { showToast("Kunde inte lägga till: " + err.message, true); }
         });
     }
 

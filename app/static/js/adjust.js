@@ -16,10 +16,25 @@
         return Math.max(parseFloat(s.min), Math.min(parseFloat(s.max), v));
     }
 
+    // Förhandsvisningen är nedskalad (1200px). Lås den visade storleken till
+    // fullbildens, annars krymper bilden i fönstret medan preview visas (den
+    // mindre naturliga bilden skalas inte upp av sig själv). Låses upp när den
+    // skarpa fullbilden laddats igen.
+    function lockSize() {
+        if (img.style.width) return;
+        img.style.width = img.clientWidth + "px";
+        img.style.height = img.clientHeight + "px";
+    }
+    function unlockSize() {
+        img.style.width = "";
+        img.style.height = "";
+    }
+
     // Live-preview: nedskalad server-rendering med aktuella värden (debounce:ad),
     // så alla reglage syns korrekt - även gamma och per-kanal (CSS klarar dem ej).
     let previewTimer = null;
     function schedulePreview() {
+        lockSize();
         clearTimeout(previewTimer);
         previewTimer = setTimeout(() => {
             const p = new URLSearchParams();
@@ -38,7 +53,7 @@
     // Auto-spar (debounce:at) - inget Tillämpa-knapptryck behövs. changeSeq
     // används för att bara byta till skarp fullupplösning om inget nytt hänt
     // medan sparningen pågick.
-    let saveTimer = null, changeSeq = 0;
+    let saveTimer = null, changeSeq = 0, dirty = false;
     const status = document.getElementById("adj-status");
     function setStatus(text, isErr = false) {
         if (!status) return;
@@ -47,24 +62,27 @@
         status.classList.toggle("text-success", text === "Sparat");
     }
 
+    function payload() {
+        return {
+            auto_tone: false,
+            adj_brightness: val("adj_brightness"), adj_contrast: val("adj_contrast"),
+            adj_gamma: val("adj_gamma"), adj_saturation: val("adj_saturation"),
+            adj_red: val("adj_red"), adj_green: val("adj_green"), adj_blue: val("adj_blue"),
+        };
+    }
+
     async function doSave() {
         const gen = changeSeq;
         setStatus("Sparar…");
         try {
             await apiFetch(`/api/photos/${photoId}/adjust`, {
-                method: "POST",
-                body: {
-                    auto_tone: false,
-                    adj_brightness: val("adj_brightness"),
-                    adj_contrast: val("adj_contrast"),
-                    adj_gamma: val("adj_gamma"),
-                    adj_saturation: val("adj_saturation"),
-                    adj_red: val("adj_red"),
-                    adj_green: val("adj_green"),
-                    adj_blue: val("adj_blue"),
-                },
+                method: "POST", body: payload(),
             });
-            if (gen === changeSeq) img.src = `/image/${photoId}?t=${Date.now()}`;
+            dirty = false;
+            if (gen === changeSeq) {
+                img.addEventListener("load", unlockSize, { once: true });
+                img.src = `/image/${photoId}?t=${Date.now()}`;  // skarp fullbild
+            }
             setStatus("Sparat");
         } catch (err) {
             setStatus("Kunde inte spara", true);
@@ -77,9 +95,21 @@
         saveTimer = setTimeout(doSave, 700);
     }
 
+    // Byter man bild innan debouncen hunnit spara: flusha den väntande
+    // ändringen via sendBeacon (når servern även när sidan lämnas - täcker
+    // j/k, prev/next-länkar, Galleri och stängd flik).
+    window.addEventListener("pagehide", () => {
+        if (!dirty) return;
+        clearTimeout(saveTimer);
+        const blob = new Blob([JSON.stringify(payload())], { type: "application/json" });
+        navigator.sendBeacon(`/api/photos/${photoId}/adjust`, blob);
+        dirty = false;
+    });
+
     // Vid varje ändring: snabb förhandsvisning + debounce:ad sparning.
     function onChange() {
         changeSeq++;
+        dirty = true;
         schedulePreview();
         scheduleSave();
     }
@@ -97,11 +127,10 @@
         });
     });
 
-    // Öppna färgpanelen (collapse) och scrolla in den - för kortkommandona.
+    // Öppna färgpanelen (collapse) - för kortkommandona. Scrollar inte.
     const panel = document.getElementById("adjust-panel");
     function openPanel() {
         bootstrap.Collapse.getOrCreateInstance(panel).show();
-        card.scrollIntoView({ block: "nearest" });
     }
 
     // Auto: hämta föreslagna värden, fyll slidrarna och spara.
@@ -127,6 +156,44 @@
 
     autoBtn.addEventListener("click", doAuto);
     document.getElementById("adj-reset").addEventListener("click", doReset);
+
+    // Håll för att se bilden UTAN färgjustering (raw=1 = orienterad/roterad men
+    // utan justeringar) - för att jämföra med originalet. Knapp + tangent O.
+    const origBtn = document.getElementById("adj-original");
+    const rawSrc = `/image/${photoId}?raw=1`;
+    new Image().src = rawSrc;  // förladda för direkt växling
+    let peekingRaw = false, peekRestore = null;
+    function rawOn() {
+        if (peekingRaw) return;
+        peekingRaw = true;
+        peekRestore = img.src;
+        img.src = rawSrc;
+        if (origBtn) origBtn.classList.add("active");
+    }
+    function rawOff() {
+        if (!peekingRaw) return;
+        peekingRaw = false;
+        if (peekRestore) img.src = peekRestore;
+        if (origBtn) origBtn.classList.remove("active");
+    }
+    if (origBtn) {
+        origBtn.addEventListener("mousedown", (e) => { e.preventDefault(); rawOn(); });
+        origBtn.addEventListener("mouseup", rawOff);
+        origBtn.addEventListener("mouseleave", rawOff);
+        origBtn.addEventListener("touchstart", (e) => { e.preventDefault(); rawOn(); }, { passive: false });
+        origBtn.addEventListener("touchend", rawOff);
+    }
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "o" && e.key !== "O") return;
+        const el = document.activeElement;
+        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+        if (document.body.classList.contains("modal-open")) return;
+        e.preventDefault();
+        rawOn();
+    });
+    document.addEventListener("keyup", (e) => {
+        if (e.key === "o" || e.key === "O") rawOff();
+    });
 
     // Exponera för kortkommandon i photo.js (öppnar panelen vid behov).
     window.adjToggle = () => bootstrap.Collapse.getOrCreateInstance(panel).toggle();

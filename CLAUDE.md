@@ -109,8 +109,12 @@ photos/                exempel/testbilder (gitignored)
   inte gör. Sparas AUTOMATISKT (debounce 700 ms i `adjust.js`) via
   `POST /adjust` - ingen Tillämpa-knapp; en statusrad visar Ändrat/Sparar/Sparat.
   Auto fyller bara reglagen (förslag), Återställ nollar till 1.0. Kortkommandon
-  C/A/X. Bakas in vid export (då re-kodas filen; utan justeringar behålls
-  bit-kopian). OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
+  C/A/X, samt O (håll) = visa bilden utan justering (`/image?raw=1`) för jämförelse.
+  Byter man bild innan debouncen sparat flushas ändringen via `navigator.sendBeacon`
+  på `pagehide`. Den visade bildstorleken låses under preview (den nedskalade
+  1200px-bilden skulle annars krympa i fönstret), låses upp när fullbilden laddats.
+  Bakas in vid export (då re-kodas filen; utan justeringar behålls bit-kopian).
+  OBS: `Image.point()` på RGB kräver lut med 256*bands poster.
 - **Mappnavigering**: galleriet har en trädvy (`_build_folder_tree` av distinkta
   `Photo.folder`-sökvägar) med expanderbara noder. `recursive`-toggle inkluderar
   undermappar (`folder == X OR folder LIKE X/%`). `_filtered_query` delas av

@@ -58,6 +58,9 @@
                         <i class="bi bi-magic"></i> Auto <kbd class="kbd-hint">A</kbd>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-reset">Återställ <kbd class="kbd-hint">X</kbd></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-original" title="Håll inne för att se bilden utan färgjustering">
+                        <i class="bi bi-eye"></i> Håll för original <kbd class="kbd-hint">O</kbd>
+                    </button>
                     <span id="adj-status" class="small text-secondary ms-auto">Sparas automatiskt</span>
                 </div>
                 {% set sliders = [
@@ -241,6 +244,7 @@
                         <tr><td><kbd>F</kbd></td><td>Tagga ansikte (rita ruta)</td></tr>
                         <tr><td><kbd>M</kbd></td><td>Para ihop med negativ</td></tr>
                         <tr><td><kbd>C</kbd> <kbd>A</kbd> <kbd>X</kbd></td><td>Justera färg: panel / Auto / Återställ (sparas automatiskt)</td></tr>
+                        <tr><td><kbd>O</kbd> (håll)</td><td>Visa bilden utan färgjustering (jämför)</td></tr>
                         <tr><td><kbd>V</kbd> (håll)</td><td>Visa hopparat foto (jämför)</td></tr>
                         <tr><td><kbd>Ctrl+S</kbd></td><td>Spara</td></tr>
                         <tr><td><kbd>Ctrl+Enter</kbd></td><td>Spara och markera granskad</td></tr>

@@ -129,12 +129,12 @@
                 <button class="dropdown-item" type="button" data-batch="rev-off">Avmarkera granskad</button>
                 <div class="dropdown-divider"></div>
                 <div class="input-group input-group-sm mb-2">
-                    <input type="text" class="form-control" id="batch-tag-input" placeholder="Tagg..." autocomplete="off">
+                    <input type="text" class="form-control" id="batch-tag-input" placeholder="Tagg..." list="batch-tags-list">
                     <button class="btn btn-outline-success" type="button" data-batch="tag-add" title="Lägg till tagg"><i class="bi bi-plus-lg"></i></button>
                     <button class="btn btn-outline-danger" type="button" data-batch="tag-remove" title="Ta bort tagg"><i class="bi bi-dash-lg"></i></button>
                 </div>
                 <div class="input-group input-group-sm mb-2">
-                    <input type="text" class="form-control" id="batch-person-input" placeholder="Person..." autocomplete="off">
+                    <input type="text" class="form-control" id="batch-person-input" placeholder="Person..." list="batch-persons-list">
                     <button class="btn btn-outline-success" type="button" data-batch="person-add" title="Lägg till person"><i class="bi bi-plus-lg"></i></button>
                     <button class="btn btn-outline-danger" type="button" data-batch="person-remove" title="Ta bort person"><i class="bi bi-dash-lg"></i></button>
                 </div>
@@ -143,9 +143,12 @@
                     <button class="btn btn-outline-primary" type="button" data-batch="date-set">Sätt datum</button>
                 </div>
                 <div class="input-group input-group-sm">
-                    <input type="text" class="form-control" id="batch-place-input" placeholder="Plats..." autocomplete="off">
+                    <input type="text" class="form-control" id="batch-place-input" placeholder="Plats..." list="batch-places-list">
                     <button class="btn btn-outline-primary" type="button" data-batch="place-set">Sätt plats</button>
                 </div>
+                <datalist id="batch-tags-list"></datalist>
+                <datalist id="batch-persons-list"></datalist>
+                <datalist id="batch-places-list"></datalist>
             </div>
         </div>
     </div>
@@ -259,6 +262,29 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
     const allFilter = document.getElementById("batch-all-filter");
     const selected = new Set();
     let selecting = false;
+
+    // Autocomplete (native datalist) för tagg/person/plats i åtgärdsmenyn.
+    // Fylls när menyn öppnas, så nya taggar/platser kommer med.
+    async function fillList(id, url) {
+        try {
+            const items = await apiFetch(url);
+            const dl = document.getElementById(id);
+            dl.replaceChildren();
+            items.forEach(it => {
+                const o = document.createElement("option");
+                o.value = it.name;
+                dl.append(o);
+            });
+        } catch (e) { /* tyst - autocomplete är valfritt */ }
+    }
+    const dd = bar.querySelector(".dropdown");
+    if (dd) {
+        dd.addEventListener("show.bs.dropdown", () => {
+            fillList("batch-tags-list", "/api/tags?kind=tag");
+            fillList("batch-persons-list", "/api/tags?kind=person");
+            fillList("batch-places-list", "/api/places");
+        });
+    }
 
     // Rekursiv-toggle: ladda om med/utan undermappar, behåll mapp/sök/filter
     const recToggle = document.getElementById("recursive-toggle");

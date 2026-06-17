@@ -125,9 +125,11 @@ photos/                exempel/testbilder (gitignored)
   eller hela filtret), samlade i en "Åtgärder"-dropdown i batch-baren. Åtgärder
   (alla None/tom = oförändrat): `set_negative`, `set_reviewed`, `add_tags`/
   `remove_tags` (tagg el. person), `set_date` (date_text -> härledda fält),
-  `set_location` (get_or_create_place). Datum/plats/taggar speglas till hopparad
-  partner via `_sync_pair_metadata`. OBS: filterfältet heter `reviewed` (sträng),
-  åtgärden `set_reviewed` (bool) - tidigare krock fixad.
+  `set_location` (get_or_create_place). Tagg-/person-/plats-fälten har
+  autocomplete via native `<datalist>` som fylls från `/api/tags`/`/api/places`
+  när menyn öppnas. Datum/plats/taggar speglas till hopparad partner via
+  `_sync_pair_metadata`. OBS: filterfältet heter `reviewed` (sträng), åtgärden
+  `set_reviewed` (bool) - tidigare krock fixad.
 - **Position/karta** (`Photo.gps_lat/gps_lon/gps_radius_m`): fotografens position
   sätts via en Leaflet/OSM-karta (självhostad under `static/vendor/leaflet/`,
   `map.js`). Adress-sök går via backend-proxyn `/api/geocode` (Nominatim, med

@@ -39,7 +39,15 @@
     </main>
 
     <div id="lightbox" class="lightbox" hidden>
-        <img id="lightbox-img" src="" alt="">
+        <div id="lightbox-stage" class="lightbox-stage">
+            <img id="lightbox-img" src="" alt="" draggable="false">
+        </div>
+        <div id="lightbox-minimap" class="lightbox-minimap" hidden>
+            <img id="lightbox-minimap-img" src="" alt="" draggable="false">
+            <div id="lightbox-minimap-view" class="lightbox-minimap-view"></div>
+        </div>
+        <button type="button" id="lightbox-close" class="lightbox-close" title="Stäng (Esc)">&times;</button>
+        <div class="lightbox-hint">Scrolla = zoom · dra = panorera · dubbelklick = växla · Esc</div>
     </div>
 
     <div class="modal fade" id="confirm-modal" tabindex="-1">

@@ -53,23 +53,142 @@ function showConfirm(message, { okLabel = "OK", okClass = "btn-primary" } = {}) 
     });
 }
 
-// Lightbox: visa en bild i helskärmsoverlay. Klick eller Esc stänger.
+// Lightbox med zoom (mushjul), panorering (dra) och översiktskarta.
+// Esc/stäng-knapp/klick på bakgrunden stänger. Dubbelklick växlar zoom.
+const _lb = {
+    scale: 1, tx: 0, ty: 0,
+    dragging: false, sx: 0, sy: 0, stx: 0, sty: 0, moved: false,
+};
+const _LB_MAX = 8;
+
+function _lbEls() {
+    return {
+        box: document.getElementById("lightbox"),
+        stage: document.getElementById("lightbox-stage"),
+        img: document.getElementById("lightbox-img"),
+        mm: document.getElementById("lightbox-minimap"),
+        mmImg: document.getElementById("lightbox-minimap-img"),
+        mmView: document.getElementById("lightbox-minimap-view"),
+    };
+}
+
+function _lbApply() {
+    const { stage, img, mm } = _lbEls();
+    if (_lb.scale <= 1) { _lb.scale = 1; _lb.tx = 0; _lb.ty = 0; }
+    // Begränsa panorering så bilden inte kan dras helt utanför vyn.
+    const maxX = Math.max(0, (img.clientWidth * _lb.scale - stage.clientWidth) / 2);
+    const maxY = Math.max(0, (img.clientHeight * _lb.scale - stage.clientHeight) / 2);
+    _lb.tx = Math.min(maxX, Math.max(-maxX, _lb.tx));
+    _lb.ty = Math.min(maxY, Math.max(-maxY, _lb.ty));
+    img.style.transform = `translate(${_lb.tx}px, ${_lb.ty}px) scale(${_lb.scale})`;
+    img.style.cursor = _lb.scale > 1 ? (_lb.dragging ? "grabbing" : "grab") : "zoom-out";
+
+    const zoomed = _lb.scale > 1.001;
+    mm.hidden = !zoomed;
+    if (zoomed) _lbMinimap();
+}
+
+function _lbMinimap() {
+    const { stage, img, mm, mmView } = _lbEls();
+    const w = img.clientWidth * _lb.scale, h = img.clientHeight * _lb.scale;
+    const left = stage.clientWidth / 2 + _lb.tx - w / 2;
+    const top = stage.clientHeight / 2 + _lb.ty - h / 2;
+    const clamp = (n) => Math.max(0, Math.min(1, n));
+    const u0 = clamp(-left / w), u1 = clamp((stage.clientWidth - left) / w);
+    const v0 = clamp(-top / h), v1 = clamp((stage.clientHeight - top) / h);
+    const mmW = mm.clientWidth, mmH = mm.clientHeight;
+    mmView.style.left = (u0 * mmW) + "px";
+    mmView.style.top = (v0 * mmH) + "px";
+    mmView.style.width = ((u1 - u0) * mmW) + "px";
+    mmView.style.height = ((v1 - v0) * mmH) + "px";
+}
+
+function _lbZoomAt(clientX, clientY, newScale) {
+    const { stage } = _lbEls();
+    const rect = stage.getBoundingClientRect();
+    const cx = clientX - rect.left - rect.width / 2;
+    const cy = clientY - rect.top - rect.height / 2;
+    newScale = Math.min(_LB_MAX, Math.max(1, newScale));
+    if (newScale === _lb.scale) return;
+    _lb.tx = cx - (cx - _lb.tx) * (newScale / _lb.scale);
+    _lb.ty = cy - (cy - _lb.ty) * (newScale / _lb.scale);
+    _lb.scale = newScale;
+    _lbApply();
+}
+
 function showLightbox(src) {
-    const lb = document.getElementById("lightbox");
-    if (!lb) return;
-    document.getElementById("lightbox-img").src = src;
-    lb.hidden = false;
+    const { box, img, mmImg } = _lbEls();
+    if (!box) return;
+    _lb.scale = 1; _lb.tx = 0; _lb.ty = 0; _lb.dragging = false; _lb.moved = false;
+    img.src = src;
+    if (mmImg) mmImg.src = src;
+    box.hidden = false;
+    if (img.complete && img.naturalWidth) _lbApply();
+    else img.addEventListener("load", _lbApply, { once: true });
 }
+
 function _closeLightbox() {
-    const lb = document.getElementById("lightbox");
-    if (!lb || lb.hidden) return;
-    lb.hidden = true;
-    document.getElementById("lightbox-img").src = "";
+    const { box, img, mmImg } = _lbEls();
+    if (!box || box.hidden) return;
+    box.hidden = true;
+    img.src = "";
+    if (mmImg) mmImg.src = "";
 }
+
 document.addEventListener("DOMContentLoaded", () => {
-    const lb = document.getElementById("lightbox");
-    if (lb) lb.addEventListener("click", _closeLightbox);
+    const { box, stage, img, mm } = _lbEls();
+    if (!box) return;
+
+    stage.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        _lbZoomAt(e.clientX, e.clientY, _lb.scale * (e.deltaY < 0 ? 1.2 : 1 / 1.2));
+    }, { passive: false });
+
+    img.addEventListener("mousedown", (e) => {
+        if (_lb.scale <= 1) return;
+        _lb.dragging = true; _lb.moved = false;
+        _lb.sx = e.clientX; _lb.sy = e.clientY; _lb.stx = _lb.tx; _lb.sty = _lb.ty;
+        e.preventDefault();
+        _lbApply();
+    });
+    window.addEventListener("mousemove", (e) => {
+        if (!_lb.dragging) return;
+        _lb.tx = _lb.stx + (e.clientX - _lb.sx);
+        _lb.ty = _lb.sty + (e.clientY - _lb.sy);
+        if (Math.abs(e.clientX - _lb.sx) > 3 || Math.abs(e.clientY - _lb.sy) > 3) _lb.moved = true;
+        _lbApply();
+    });
+    window.addEventListener("mouseup", () => {
+        if (_lb.dragging) { _lb.dragging = false; _lbApply(); }
+    });
+
+    stage.addEventListener("dblclick", (e) => {
+        if (_lb.scale > 1) { _lb.scale = 1; _lb.tx = 0; _lb.ty = 0; _lbApply(); }
+        else _lbZoomAt(e.clientX, e.clientY, 2.5);
+    });
+
+    // Klick på bakgrunden (eller på bilden i ozoomat läge) stänger; en panorering
+    // räknas inte som klick.
+    stage.addEventListener("click", (e) => {
+        if (_lb.moved) { _lb.moved = false; return; }
+        if (e.target === img && _lb.scale > 1) return;
+        _closeLightbox();
+    });
+
+    document.getElementById("lightbox-close").addEventListener("click", _closeLightbox);
+
+    // Klick i översiktskartan centrerar vyn där.
+    mm.addEventListener("mousedown", (e) => {
+        const rect = mm.getBoundingClientRect();
+        const u = (e.clientX - rect.left) / rect.width;
+        const v = (e.clientY - rect.top) / rect.height;
+        _lb.tx = -(u - 0.5) * img.clientWidth * _lb.scale;
+        _lb.ty = -(v - 0.5) * img.clientHeight * _lb.scale;
+        e.stopPropagation();
+        _lbApply();
+    });
 });
+
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") _closeLightbox();
 });

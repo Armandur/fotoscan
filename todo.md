@@ -5,9 +5,6 @@
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
   vid export i stället för dagens 00:00:00.
-- [ ] **Lightbox-zoom.** I Förstora-lightboxen: zooma med mushjul och panorera
-  (mushjul-skroll och/eller click-and-drag). Visa en liten översiktstumnagel av
-  hela bilden med en rektangel som markerar aktuellt visat område.
 - [ ] **Mer metadata på personer.** Idag är en person bara en tagg (namn). I
   framtiden: födelse-/dödsår, relation, alias/smeknamn, anteckningar, ev. länk
   mellan personer (familj). Kräver en egen Person-modell (eller utökad Tag) -
@@ -38,6 +35,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Lightbox-zoom.** Förstora-lightboxen: zoom med mushjul (mot pekaren),
+  panorering genom att dra, dubbelklick växlar zoom, klick på bakgrunden/Esc
+  stänger. Översiktskarta nere till höger med gul viewport-rektangel (klickbar
+  för att panorera). Allt i `utils.js` + base.html-markup + style.css.
 - [x] **Välj tumnagel för en person.** `Tag.thumb_face_id` pekar ut en vald
   ansiktsregion; annars auto (senaste ansiktet). Väljare i personvyn (ansikts-
   strip + Auto), endpoint `POST /api/persons/{id}/thumb`.

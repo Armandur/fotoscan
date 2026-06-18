@@ -18,7 +18,8 @@
 <div class="d-flex align-items-center gap-3 mb-3" data-person-id="{{ person.id }}">
     {% if region_id %}
     <img src="/api/faces/{{ region_id }}/thumb" alt="{{ person.name }}"
-         style="width:64px;height:64px;object-fit:cover;border-radius:8px">
+         class="flex-shrink-0"
+         style="width:160px;height:160px;object-fit:cover;border-radius:10px">
     {% endif %}
     <div class="flex-grow-1">
         <div class="input-group" style="max-width:420px">

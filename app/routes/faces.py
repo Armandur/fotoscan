@@ -169,6 +169,6 @@ def face_thumb(region_id: int, db: Session = Depends(get_db)):
         max(int((face.y + face.h) * h), int(face.y * h) + 1),
     )
     crop = img.crop(box)
-    crop.thumbnail((96, 96))
-    crop.save(cache, "JPEG", quality=80)
+    crop.thumbnail((256, 256))
+    crop.save(cache, "JPEG", quality=82)
     return FileResponse(cache)

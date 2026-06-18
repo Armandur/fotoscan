@@ -398,27 +398,27 @@ def init_db() -> None:
 def _make_face_tag_id_nullable(conn) -> None:
     """Gör face_regions.tag_id nullbar (för obekräftade AI-ansikten utan namn).
     SQLite kan inte släppa NOT NULL via ALTER - bygg om tabellen om den gamla
-    har NOT NULL. Idempotent (hoppar över om redan nullbar)."""
+    har NOT NULL. **Bevarar alla nuvarande kolumner** (läses dynamiskt) så att
+    senare tillagda kolumner inte tappas. Idempotent (hoppar över om nullbar)."""
     info = conn.exec_driver_sql("PRAGMA table_info(face_regions)").fetchall()
     tag_col = next((r for r in info if r[1] == "tag_id"), None)
     if tag_col is None or tag_col[3] == 0:  # saknas eller redan nullbar
         return
-    cols = "id, photo_id, tag_id, x, y, w, h, created_at, source, confirmed, embedding, suggested_tag_id"
-    conn.exec_driver_sql("""
-        CREATE TABLE face_regions_new (
-            id INTEGER PRIMARY KEY,
-            photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
-            tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
-            x FLOAT NOT NULL, y FLOAT NOT NULL, w FLOAT NOT NULL, h FLOAT NOT NULL,
-            created_at DATETIME,
-            source VARCHAR DEFAULT 'manual',
-            confirmed INTEGER DEFAULT 1,
-            embedding BLOB,
-            suggested_tag_id INTEGER REFERENCES tags(id) ON DELETE SET NULL
-        )
-    """)
+    # info-rader: (cid, name, type, notnull, dflt_value, pk)
+    defs = []
+    for _cid, name, ctype, notnull, dflt, pk in info:
+        d = f'"{name}" {ctype or ""}'.rstrip()
+        if pk:
+            d += " PRIMARY KEY"
+        elif notnull and name != "tag_id":
+            d += " NOT NULL"
+        if dflt is not None:
+            d += f" DEFAULT {dflt}"
+        defs.append(d)
+    collist = ", ".join(f'"{r[1]}"' for r in info)
+    conn.exec_driver_sql(f"CREATE TABLE face_regions_new ({', '.join(defs)})")
     conn.exec_driver_sql(
-        f"INSERT INTO face_regions_new ({cols}) SELECT {cols} FROM face_regions"
+        f"INSERT INTO face_regions_new ({collist}) SELECT {collist} FROM face_regions"
     )
     conn.exec_driver_sql("DROP TABLE face_regions")
     conn.exec_driver_sql("ALTER TABLE face_regions_new RENAME TO face_regions")

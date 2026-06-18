@@ -1,12 +1,10 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Avsnitt per bild + dra-om i layoutvyn.** I layoutvyn: (1) kunna dra om
-  bildernas ordning direkt där (idag bara i fotovyn). (2) Låta ett avsnitt börja
-  vid en SPECIFIK bild, inte bara vid en sidas första bild - så att t.ex. bild 4
-  på en sida flyttas till att bli bild 1 på en ny sida när den inleder ett avsnitt.
-  (Datamodellen stödjer redan section_heading per foto; UI:t sätter idag bara på
-  sidans första foto.)
+- [ ] **Fler album-format + uppslag + tomma sidor.** Stödja fler sidformat än
+  stående A4: först liggande A4, kanske även stående A5. Kunna visa som uppslag
+  (två sidor sida vid sida) både i huvudvyn och i bläddermenyn till vänster. Kunna
+  lägga in tomma sidor så att häftes-/uppslagslayouten går jämnt ut.
 - [ ] **Personer i bildtext sorterade efter ansiktets position.** Utred om
   personer som markerats med ansiktsrutor kan skrivas ut i ordning vänster->höger
   (lägsta x först) i bildtexten/listan, i stället för t.ex. namnordning.
@@ -42,6 +40,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Avsnitt per bild + dra-om i layoutvyn.** Avsnitt sätts nu per foto i
+  layoutvyn (knapp på varje bild) - ett avsnitt kan börja vid valfri bild och
+  bryter då till ny sida vid just den (resten av föregående sida lämnas). Bilderna
+  kan dras om direkt i layoutvyn (över sidgränser) -> reorder + omräkning.
 - [x] **PDF-album-export.** weasyprint (HTML/CSS -> PDF). Titelsida + global
   layout (1/2/4/6 bilder per A4) + valbara bildtextfält (datum/plats/personer/
   taggar/källa/anteckning/filnamn) + undertitel. **Avsnitt med rubriker**

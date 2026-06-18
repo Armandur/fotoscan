@@ -30,7 +30,8 @@
     .lv-grid.l2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
     .lv-grid.l4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
     .lv-grid.l6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
-    .lv-cell { display: flex; flex-direction: column; min-height: 0; text-align: center; }
+    .lv-cell { display: flex; flex-direction: column; min-height: 0; text-align: center; cursor: grab; }
+    .lv-cell.dragging { opacity: .4; }
     .lv-cell img { width: 100%; flex: 1 1 auto; object-fit: contain; object-position: center bottom; min-height: 0; }
     /* Bildtext: nära fotot, vänsterställd text men blocket centrerat. */
     .lv-cap { display: inline-block; margin-top: 3pt; font-size: 9pt; line-height: 1.25; text-align: left; color: #333; }
@@ -115,25 +116,26 @@
         {% for p in pages %}
         <div class="lv-pagebar">
             <span class="small text-secondary">Sida {{ loop.index }}</span>
-            <button class="btn btn-sm btn-outline-secondary lv-section" data-first="{{ p.first_id }}"
-                    data-heading="{{ p.heading or '' }}" data-layout="{{ p.layout }}">
-                <i class="bi bi-bookmark{{ '-fill' if p.heading else '' }}"></i>
-                {{ 'Redigera avsnitt' if p.heading else 'Avsnitt börjar här' }}
-            </button>
         </div>
         <div class="lv-page" id="lv-page-{{ loop.index }}">
             {% if p.heading %}<div class="sec-head">{{ p.heading }}</div>{% endif %}
             <div class="lv-grid l{{ p.layout }}">
                 {% for c in p.cells %}
-                <div class="lv-cell position-relative">
+                <div class="lv-cell position-relative" data-id="{{ c.id }}" draggable="true">
                     <button type="button" class="btn btn-sm btn-light lv-cover-btn"
                             data-id="{{ c.id }}" title="Använd som titelbild"
                             style="position:absolute;top:2px;left:2px;z-index:2;padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-star{{ '-fill' if c.id == album.cover_photo_id else '' }}"></i></button>
-                    <button type="button" class="btn btn-sm btn-light lv-caption-btn"
-                            data-id="{{ c.id }}" data-default="{{ 1 if c.uses_default else 0 }}"
-                            data-fields="{{ c.fields|join(',') }}" title="Bildtext för detta foto"
-                            style="position:absolute;top:2px;right:2px;z-index:2;padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-card-text"></i></button>
-                    <img src="/thumb/{{ c.id }}" alt="">
+                    <div style="position:absolute;top:2px;right:2px;z-index:2;display:flex;gap:3px">
+                        <button type="button" class="btn btn-sm btn-light lv-section-btn"
+                                data-id="{{ c.id }}" data-heading="{{ c.section_heading or '' }}"
+                                data-layout="{{ c.section_layout or '' }}" title="Avsnitt börjar med detta foto"
+                                style="padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-bookmark{{ '-fill' if c.section_heading else '' }}"></i></button>
+                        <button type="button" class="btn btn-sm btn-light lv-caption-btn"
+                                data-id="{{ c.id }}" data-default="{{ 1 if c.uses_default else 0 }}"
+                                data-fields="{{ c.fields|join(',') }}" title="Bildtext för detta foto"
+                                style="padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-card-text"></i></button>
+                    </div>
+                    <img src="/thumb/{{ c.id }}" alt="" draggable="false">
                     {% if c.lines %}<div class="lv-cap">{% for ln in c.lines %}<span class="l{% if ln.key == 'notes' %} note{% endif %}">{% if ln.key == 'place' %}<i class="bi bi-geo-alt"></i> {% elif ln.key == 'persons' %}<i class="bi bi-people"></i> {% elif ln.key == 'tags' %}<i class="bi bi-tags"></i> {% endif %}{{ ln.text }}</span>{% endfor %}</div>{% endif %}
                 </div>
                 {% endfor %}
@@ -272,14 +274,44 @@
 
     // Avsnitt
     const sectionModal = bootstrap.Modal.getOrCreateInstance("#section-modal");
-    document.querySelectorAll(".lv-section").forEach(btn => {
+    document.querySelectorAll(".lv-section-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-            document.getElementById("section-first-id").value = btn.dataset.first;
+            document.getElementById("section-first-id").value = btn.dataset.id;
             document.getElementById("section-heading-input").value = btn.dataset.heading || "";
             document.getElementById("section-layout-input").value = btn.dataset.layout && btn.dataset.heading ? btn.dataset.layout : "";
             sectionModal.show();
         });
     });
+
+    // Dra-om bildernas ordning direkt i layoutvyn (över sidgränser). Reorder
+    // sparas och sidorna räknas om vid omladdning.
+    let dragEl = null;
+    if (main) {
+        main.addEventListener("dragstart", (e) => {
+            dragEl = e.target.closest(".lv-cell");
+            if (dragEl) { e.dataTransfer.effectAllowed = "move"; dragEl.classList.add("dragging"); }
+        });
+        main.addEventListener("dragover", (e) => {
+            if (!dragEl) return;
+            const cell = e.target.closest(".lv-cell");
+            if (!cell || cell === dragEl) return;
+            e.preventDefault();
+            const r = cell.getBoundingClientRect();
+            const after = (e.clientY - r.top) + (e.clientX - r.left) > (r.height + r.width) / 2;
+            cell.parentNode.insertBefore(dragEl, after ? cell.nextSibling : cell);
+        });
+        main.addEventListener("drop", (e) => { if (dragEl) e.preventDefault(); });
+        main.addEventListener("dragend", async () => {
+            if (!dragEl) return;
+            dragEl.classList.remove("dragging");
+            dragEl = null;
+            const ids = [...main.querySelectorAll(".lv-cell")].map(c => parseInt(c.dataset.id, 10));
+            try {
+                await apiFetch(`/api/albums/${albumId}/reorder`, { method: "POST", body: { ids } });
+                setTimeout(() => location.reload(), 300);
+            } catch (err) { showToast("Kunde inte spara ordning: " + err.message, true); }
+        });
+    }
     document.getElementById("section-save").addEventListener("click", async () => {
         const pid = document.getElementById("section-first-id").value;
         const heading = document.getElementById("section-heading-input").value.trim();

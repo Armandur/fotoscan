@@ -73,6 +73,8 @@ def album_layout(album_id: int, request: Request, db: Session = Depends(get_db))
                 "lines": caption_lines(e.photo, ef),
                 "uses_default": e.caption_fields is None,
                 "fields": ef,
+                "section_heading": e.section_heading,
+                "section_layout": e.section_layout,
             })
         pages.append({
             "heading": p["heading"],

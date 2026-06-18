@@ -108,8 +108,11 @@ def _relations(db: Session, tag: Tag) -> dict:
     return {"parents": parents, "children": children, "partners": partners}
 
 
+_PERSONS_PAGE = 60
+
+
 @router.get("/persons", response_class=HTMLResponse)
-def persons_page(request: Request, db: Session = Depends(get_db)):
+def persons_page(request: Request, ip: int = 1, up: int = 1, db: Session = Depends(get_db)):
     persons = db.query(Tag).filter(Tag.kind == "person").order_by(Tag.name).all()
     rows = []
     for tag in persons:
@@ -128,8 +131,20 @@ def persons_page(request: Request, db: Session = Depends(get_db)):
         m = re.search(r"(\d+)$", r["name"])
         return int(m.group(1)) if m else 10 ** 9
     unknown = sorted((r for r in rows if r["placeholder"]), key=_uk)
+
+    def _page(items, page):
+        pages = max(1, (len(items) + _PERSONS_PAGE - 1) // _PERSONS_PAGE)
+        page = max(1, min(page, pages))
+        start = (page - 1) * _PERSONS_PAGE
+        return items[start:start + _PERSONS_PAGE], page, pages
+
+    id_items, ip, i_pages = _page(identified, ip)
+    uk_items, up, u_pages = _page(unknown, up)
     return templates.TemplateResponse(
-        request, "persons.html", {"identified": identified, "unknown": unknown},
+        request, "persons.html",
+        {"identified": id_items, "unknown": uk_items,
+         "i_total": len(identified), "u_total": len(unknown),
+         "ip": ip, "up": up, "i_pages": i_pages, "u_pages": u_pages},
     )
 
 

@@ -63,7 +63,8 @@ photos/                exempel/testbilder (gitignored)
 - **Oidentifierade personer** (`Tag.placeholder`=1): sätts när en ansiktsruta
   skapas utan namn ("Okänd-N"), nollställs vid namnbyte. Skrivs INTE ut med namn i
   album-bildtexten, och /persons visar dem i en egen "Oidentifierade"-sektion
-  (skild från "Identifierade"). Flaggan ersätter att tolka namnet "Okänd-N".
+  (skild från "Identifierade"). Sektionerna pagineras var för sig (`ip`/`up`-
+  param, 60/sida). Flaggan ersätter att tolka namnet "Okänd-N".
 - **Personmetadata** (på `Tag`, används när kind=person): `born`/`died` (fritext),
   `aliases` (kommaseparerade, sökbara i `/api/persons`), `bio`. Familjelänkar i
   `PersonLink` (person<->person, relation "parent"/"partner"; barn = omvänd parent).

@@ -27,17 +27,29 @@
     </div>
 {% endif %}
 
-{% if identified %}
-<h2 class="h6 text-secondary mb-2">Identifierade <span class="badge text-bg-secondary">{{ identified|length }}</span></h2>
-<div class="gallery-grid mb-4">
+{% macro pager(cur, pages, param, other_param, other_val) %}
+{% if pages > 1 %}
+<nav class="mb-4"><ul class="pagination pagination-sm justify-content-center mb-0">
+    <li class="page-item {% if cur <= 1 %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur - 1 }}&{{ other_param }}={{ other_val }}">Föregående</a></li>
+    <li class="page-item disabled"><span class="page-link">Sida {{ cur }} / {{ pages }}</span></li>
+    <li class="page-item {% if cur >= pages %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur + 1 }}&{{ other_param }}={{ other_val }}">Nästa</a></li>
+</ul></nav>
+{% endif %}
+{% endmacro %}
+
+{% if i_total %}
+<h2 class="h6 text-secondary mb-2">Identifierade <span class="badge text-bg-secondary">{{ i_total }}</span></h2>
+<div class="gallery-grid mb-3">
     {% for p in identified %}{{ personcard(p) }}{% endfor %}
 </div>
+{{ pager(ip, i_pages, "ip", "up", up) }}
 {% endif %}
 
-{% if unknown %}
-<h2 class="h6 text-secondary mb-2"><i class="bi bi-person-dash"></i> Oidentifierade <span class="badge text-bg-secondary">{{ unknown|length }}</span></h2>
-<div class="gallery-grid">
+{% if u_total %}
+<h2 class="h6 text-secondary mb-2"><i class="bi bi-person-dash"></i> Oidentifierade <span class="badge text-bg-secondary">{{ u_total }}</span></h2>
+<div class="gallery-grid mb-3">
     {% for p in unknown %}{{ personcard(p) }}{% endfor %}
 </div>
+{{ pager(up, u_pages, "up", "ip", ip) }}
 {% endif %}
 {% endblock %}

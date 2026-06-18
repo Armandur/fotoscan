@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -119,9 +121,15 @@ def persons_page(request: Request, db: Session = Depends(get_db)):
             "sample_photo": min(ids) if ids else None,
             "placeholder": bool(tag.placeholder),
         })
-    # Identifierade först, oidentifierade ("Okänd") sist.
-    rows.sort(key=lambda r: (r["placeholder"], r["name"].lower()))
-    return templates.TemplateResponse(request, "persons.html", {"persons": rows})
+    identified = sorted((r for r in rows if not r["placeholder"]), key=lambda r: r["name"].lower())
+    # Oidentifierade ("Okänd-N") sorteras på sitt nummer.
+    def _uk(r):
+        m = re.search(r"(\d+)$", r["name"])
+        return int(m.group(1)) if m else 10 ** 9
+    unknown = sorted((r for r in rows if r["placeholder"]), key=_uk)
+    return templates.TemplateResponse(
+        request, "persons.html", {"identified": identified, "unknown": unknown},
+    )
 
 
 @router.get("/persons/{tag_id}", response_class=HTMLResponse)

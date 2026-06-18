@@ -29,7 +29,7 @@ _env = Environment(
 )
 
 
-def _caption_lines(photo, fields: list[str]) -> list[str]:
+def caption_lines(photo, fields: list[str]) -> list[str]:
     lines = []
     for key in CAPTION_FIELDS:  # fast ordning
         if key not in fields:
@@ -41,60 +41,59 @@ def _caption_lines(photo, fields: list[str]) -> list[str]:
     return lines
 
 
-def _build_sections(album: Album, default_layout: int) -> list[dict]:
-    """Dela albumets entries i avsnitt. Ett foto med section_heading inleder ett
-    nytt avsnitt (med ev. egen layout). Foton före första rubriken = ett avsnitt
-    utan rubrik."""
+def build_pages(album: Album, default_layout: int) -> list[dict]:
+    """Dela albumet i sidor (samma modell för layoutvyn och PDF:en). Ett foto med
+    section_heading inleder ett avsnitt (ny sida, ev. egen layout); foton chunkas
+    per avsnitt. Returnerar [{heading, layout, photos:[Photo,...]}]."""
+    if default_layout not in (1, 2, 4, 6):
+        default_layout = 4
+    # Bygg avsnitt.
     sections: list[dict] = []
-    cur = {"heading": None, "layout": default_layout, "entries": []}
+    cur = {"heading": None, "layout": default_layout, "photos": []}
     for e in album.entries:  # ordnade på position
         if e.section_heading:
-            if cur["entries"]:
+            if cur["photos"]:
                 sections.append(cur)
-            cur = {
-                "heading": e.section_heading,
-                "layout": e.section_layout or default_layout,
-                "entries": [],
-            }
-        cur["entries"].append(e)
-    if cur["entries"]:
+            lay = e.section_layout if e.section_layout in (1, 2, 4, 6) else default_layout
+            cur = {"heading": e.section_heading, "layout": lay, "photos": []}
+        cur["photos"].append(e.photo)
+    if cur["photos"]:
         sections.append(cur)
-    return sections
+    # Chunka varje avsnitt i sidor; rubriken på avsnittets första sida.
+    pages: list[dict] = []
+    for sec in sections:
+        lay = sec["layout"]
+        chunks = [sec["photos"][i:i + lay] for i in range(0, len(sec["photos"]), lay)]
+        for k, chunk in enumerate(chunks):
+            pages.append({
+                "heading": sec["heading"] if k == 0 else None,
+                "layout": lay,
+                "photos": chunk,
+            })
+    return pages
 
 
 def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str = "") -> bytes:
     """Returnerar PDF-bytes för albumet. layout = antal bilder per A4-sida (1/2/4/6).
     Avsnitt (section_heading) bryts till nya sidor med egen layout."""
-    if layout not in (1, 2, 4, 6):
-        layout = 4
-
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
-
-        def make_item(idx: int, photo) -> dict:
-            img = render_photo(photo)
-            img.thumbnail((_PRINT_MAX, _PRINT_MAX))
-            dest = tmpdir / f"{idx}.jpg"
-            img.save(dest, "JPEG", quality=88)
-            return {"src": dest.as_uri(), "lines": _caption_lines(photo, fields)}
-
-        # Bygg sidor: varje avsnitt chunkas på sin layout; rubriken visas överst
-        # på avsnittets första sida.
-        pages: list[dict] = []
         idx = 0
-        for sec in _build_sections(album, layout):
-            lay = sec["layout"] if sec["layout"] in (1, 2, 4, 6) else layout
-            items = [make_item(idx + j, e.photo) for j, e in enumerate(sec["entries"])]
-            idx += len(items)
-            chunks = [items[i:i + lay] for i in range(0, len(items), lay)]
-            for k, chunk in enumerate(chunks):
-                pages.append({
-                    "heading": sec["heading"] if k == 0 else None,
-                    "layout": lay,
-                    "cells": chunk,
-                })
+        out_pages: list[dict] = []
+        for page in build_pages(album, layout):
+            cells = []
+            for photo in page["photos"]:
+                img = render_photo(photo)
+                img.thumbnail((_PRINT_MAX, _PRINT_MAX))
+                dest = tmpdir / f"{idx}.jpg"
+                img.save(dest, "JPEG", quality=88)
+                idx += 1
+                cells.append({"src": dest.as_uri(), "lines": caption_lines(photo, fields)})
+            out_pages.append({
+                "heading": page["heading"], "layout": page["layout"], "cells": cells,
+            })
 
         html = _env.get_template("album_pdf.html").render(
-            title=album.name, subtitle=subtitle, pages=pages,
+            title=album.name, subtitle=subtitle, pages=out_pages,
         )
         return HTML(string=html, base_url=str(tmpdir)).write_pdf()

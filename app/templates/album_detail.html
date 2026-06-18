@@ -2,7 +2,7 @@
 {% block title %}{{ album.name }} - Fotoscan{% endblock %}
 
 {% block headeractions %}
-    {% if photos %}<button class="btn btn-outline-info btn-sm" id="pdf-btn"><i class="bi bi-file-earmark-pdf"></i> Exportera PDF</button>{% endif %}
+    {% if entries %}<a class="btn btn-outline-info btn-sm" href="/albums/{{ album.id }}/layout"><i class="bi bi-easel"></i> Layout &amp; PDF</a>{% endif %}
     <a class="btn btn-outline-secondary btn-sm" href="/albums">Alla album</a>
 {% endblock %}
 
@@ -13,7 +13,7 @@
         <button class="btn btn-primary" id="rename-album-btn">Spara namn</button>
     </div>
     <button class="btn btn-outline-danger btn-sm" id="delete-album-btn"><i class="bi bi-trash"></i> Ta bort album</button>
-    <span class="text-secondary small ms-auto">{{ photos|length }} foto{{ 'n' if photos|length != 1 else '' }} - dra korten för att ändra ordning</span>
+    <span class="text-secondary small ms-auto">{{ entries|length }} foto{{ 'n' if entries|length != 1 else '' }} - dra korten för att ändra ordning. Avsnitt &amp; PDF i Layout-vyn.</span>
 </div>
 
 {% if not entries %}
@@ -24,18 +24,9 @@
     {% for e in entries %}
     {% set photo = e.photo %}
     <div class="card photo-card position-relative" data-id="{{ photo.id }}" draggable="true">
-        {% if e.section_heading %}
-        <div class="album-section-banner" title="Avsnittsstart">
-            <i class="bi bi-bookmark-fill"></i> {{ e.section_heading }}{% if e.section_layout %} ({{ e.section_layout }}/sida){% endif %}
-        </div>
-        {% endif %}
-        <div style="position:absolute;top:4px;right:4px;z-index:2;display:flex;gap:3px">
-            <button type="button" class="btn btn-sm btn-secondary album-section" data-id="{{ photo.id }}"
-                    data-heading="{{ e.section_heading or '' }}" data-layout="{{ e.section_layout or '' }}"
-                    title="Avsnittsstart här" style="padding:0 .35rem;line-height:1.4"><i class="bi bi-bookmark"></i></button>
-            <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
-                    title="Ta bort ur album" style="padding:0 .4rem;line-height:1.4">&times;</button>
-        </div>
+        <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
+                title="Ta bort ur album"
+                style="position:absolute;top:4px;right:4px;z-index:2;padding:0 .4rem;line-height:1.4">&times;</button>
         <a href="/photo/{{ photo.id }}" class="text-decoration-none" draggable="false">
             <img loading="lazy" class="card-img-top" draggable="false"
                  src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
@@ -47,78 +38,6 @@
     </div>
     {% endfor %}
 </div>
-
-<div class="modal fade" id="section-modal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Avsnitt</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-secondary small">Detta foto inleder ett avsnitt med rubriken nedan (i PDF:en). Avsnittet börjar på ny sida och löper till nästa rubrik. Töm rubriken för att ta bort avsnittsstarten.</p>
-                <input type="hidden" id="section-photo-id">
-                <div class="mb-2">
-                    <label class="form-label small text-secondary" for="section-heading-input">Rubrik</label>
-                    <input type="text" class="form-control" id="section-heading-input" placeholder="t.ex. Sommaren 1975">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small text-secondary" for="section-layout-input">Layout för avsnittet</label>
-                    <select class="form-select" id="section-layout-input">
-                        <option value="">Albumets standard</option>
-                        <option value="1">1 per sida</option>
-                        <option value="2">2 per sida</option>
-                        <option value="4">4 per sida</option>
-                        <option value="6">6 per sida</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Avbryt</button>
-                <button type="button" class="btn btn-primary" id="section-save">Spara</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="pdf-modal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Exportera PDF</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label small text-secondary">Layout (bilder per A4-sida)</label>
-                    <div class="btn-group w-100" role="group" id="pdf-layout">
-                        <input type="radio" class="btn-check" name="pdf-layout" id="pl1" value="1"><label class="btn btn-outline-secondary" for="pl1">1</label>
-                        <input type="radio" class="btn-check" name="pdf-layout" id="pl2" value="2"><label class="btn btn-outline-secondary" for="pl2">2</label>
-                        <input type="radio" class="btn-check" name="pdf-layout" id="pl4" value="4" checked><label class="btn btn-outline-secondary" for="pl4">4</label>
-                        <input type="radio" class="btn-check" name="pdf-layout" id="pl6" value="6"><label class="btn btn-outline-secondary" for="pl6">6</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small text-secondary">Bildtext under varje foto</label>
-                    {% for key, label in [("date","Datum"),("place","Plats"),("persons","Personer"),("tags","Taggar"),("source","Källa"),("notes","Anteckning"),("filename","Filnamn")] %}
-                    <div class="form-check">
-                        <input class="form-check-input pdf-field" type="checkbox" value="{{ key }}" id="pf-{{ key }}" {{ 'checked' if key in ['date','place','persons'] else '' }}>
-                        <label class="form-check-label" for="pf-{{ key }}">{{ label }}</label>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small text-secondary" for="pdf-subtitle">Undertitel (valfri)</label>
-                    <input type="text" class="form-control" id="pdf-subtitle" placeholder="t.ex. årtal eller plats">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Avbryt</button>
-                <button type="button" class="btn btn-primary" id="pdf-download"><i class="bi bi-download"></i> Ladda ner</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -128,7 +47,6 @@
     const albumId = wrap.dataset.albumId;
     const grid = document.getElementById("album-grid");
 
-    // Byt namn
     document.getElementById("rename-album-btn").addEventListener("click", async (e) => {
         const name = document.getElementById("album-name").value.trim();
         if (!name) { showToast("Ange ett namn", true); return; }
@@ -140,7 +58,6 @@
         finally { e.target.disabled = false; }
     });
 
-    // Ta bort album
     document.getElementById("delete-album-btn").addEventListener("click", async () => {
         const ok = await showConfirm("Ta bort albumet? Fotona finns kvar, bara albumet tas bort.",
             { okLabel: "Ta bort", okClass: "btn-danger" });
@@ -157,53 +74,12 @@
         const btn = e.target.closest(".album-remove");
         if (!btn) return;
         e.preventDefault();
-        const id = btn.dataset.id;
         try {
-            await apiFetch(`/api/albums/${albumId}/photos/${id}`, { method: "DELETE" });
+            await apiFetch(`/api/albums/${albumId}/photos/${btn.dataset.id}`, { method: "DELETE" });
             btn.closest(".photo-card").remove();
             showToast("Borttaget ur albumet");
         } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
     });
-
-    // Avsnitt: sätt/ta bort avsnittsstart på ett foto
-    const sectionModal = bootstrap.Modal.getOrCreateInstance("#section-modal");
-    grid.addEventListener("click", (e) => {
-        const btn = e.target.closest(".album-section");
-        if (!btn) return;
-        e.preventDefault();
-        document.getElementById("section-photo-id").value = btn.dataset.id;
-        document.getElementById("section-heading-input").value = btn.dataset.heading || "";
-        document.getElementById("section-layout-input").value = btn.dataset.layout || "";
-        sectionModal.show();
-    });
-    document.getElementById("section-save").addEventListener("click", async () => {
-        const pid = document.getElementById("section-photo-id").value;
-        const heading = document.getElementById("section-heading-input").value.trim();
-        const lv = document.getElementById("section-layout-input").value;
-        try {
-            await apiFetch(`/api/albums/${albumId}/photos/${pid}/section`, {
-                method: "POST", body: { heading, layout: lv ? parseInt(lv, 10) : null },
-            });
-            showToast(heading ? "Avsnitt sparat" : "Avsnittsstart borttagen");
-            sectionModal.hide();
-            setTimeout(() => location.reload(), 400);
-        } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
-    });
-
-    // Exportera PDF
-    const pdfBtn = document.getElementById("pdf-btn");
-    if (pdfBtn) {
-        const pdfModal = bootstrap.Modal.getOrCreateInstance("#pdf-modal");
-        pdfBtn.addEventListener("click", () => pdfModal.show());
-        document.getElementById("pdf-download").addEventListener("click", () => {
-            const layout = document.querySelector("input[name='pdf-layout']:checked").value;
-            const fields = [...document.querySelectorAll(".pdf-field:checked")].map(c => c.value).join(",");
-            const subtitle = document.getElementById("pdf-subtitle").value.trim();
-            const qs = new URLSearchParams({ layout, fields, subtitle });
-            window.location.href = `/albums/${albumId}/pdf?${qs}`;
-            pdfModal.hide();
-        });
-    }
 
     // Dra-och-släpp för ordning
     let dragEl = null;

@@ -29,7 +29,7 @@ app/
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
-    albums.py          Album + AlbumPhoto: vy (lista/detalj), skapa/byt namn/ta bort, lägg till/ta bort foton, ordna (position)
+    albums.py          Album + AlbumPhoto: vy (lista/detalj=foto-ordning), layoutvy (WYSIWYG-sidor + avsnitt), inställningar, PDF
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
@@ -88,9 +88,15 @@ photos/                exempel/testbilder (gitignored)
   från flera källor, visad i egen ordning oberoende av datum. Skild från taggar
   (beskrivande) och `seq` (kronologisk). Ett foto kan ligga i flera album. Vy med
   dra-och-släpp-ordning (`/api/albums/{id}/reorder`), lägg till via galleriets
-  åtgärdsmeny ("Lägg till i album", markerade foton). `routes/albums.py`.
+  åtgärdsmeny ("Lägg till i album", markerade foton). `routes/albums.py`. Två vyer:
+  **/albums/{id}** = fotovy (bara ordning/ta bort/byt namn), **/albums/{id}/layout**
+  = WYSIWYG-layoutvy (sidlista + stora A4-sidor; avsnitt, layout, bildtext, undertitel
+  hanteras här). Inställningar persisteras på albumet (`layout`/`subtitle`/
+  `caption_fields`) via `POST /api/albums/{id}/settings` så vyn och PDF:en matchar.
 - **PDF-album** (`services/pdf_album.py`, `GET /albums/{id}/pdf`): weasyprint
-  renderar en Jinja-mall (`album_pdf.html`, `@page A4`) till PDF. Titelsida +
+  renderar en Jinja-mall (`album_pdf.html`, `@page A4`) till PDF. `build_pages`
+  delar albumet i sidor (delas av layoutvyn och PDF:en -> äkta WYSIWYG). PDF:en
+  defaultar från albumets sparade inställningar. Titelsida +
   global layout (1/2/4/6 bilder per A4) + valbara bildtextfält. **Avsnitt**:
   `AlbumPhoto.section_heading` (+ valfri `section_layout`) gör att fotot inleder
   ett avsnitt - rubrik överst på ny sida, egen layout för avsnittet. Foton chunkas

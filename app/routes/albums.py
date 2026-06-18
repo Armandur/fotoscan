@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import Album, AlbumPhoto, Photo
 from app.deps import get_db
-from app.schemas import AlbumPhotosIn, NameIn, ReorderRequest, SectionIn
-from app.services.pdf_album import render_album_pdf
+from app.schemas import (
+    AlbumPhotosIn, AlbumSettingsIn, NameIn, ReorderRequest, SectionIn,
+)
+from app.services.pdf_album import build_pages, caption_lines, render_album_pdf
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -51,18 +53,57 @@ def album_detail(album_id: int, request: Request, db: Session = Depends(get_db))
     )
 
 
-@router.get("/albums/{album_id}/pdf")
-def album_pdf(
-    album_id: int, layout: int = 4, fields: str = "date,place,persons",
-    subtitle: str = "", db: Session = Depends(get_db),
-):
-    """Generera och ladda ner albumet som PDF. layout = bilder per A4 (1/2/4/6),
-    fields = kommaseparerade bildtextfält."""
+@router.get("/albums/{album_id}/layout", response_class=HTMLResponse)
+def album_layout(album_id: int, request: Request, db: Session = Depends(get_db)):
+    """WYSIWYG-layoutvy: sidor löpande (som PDF:en) + avsnittshantering."""
     album = db.get(Album, album_id)
     if not album:
         raise HTTPException(404, "Albumet hittades inte")
-    field_list = [f for f in fields.split(",") if f]
-    pdf = render_album_pdf(album, layout, field_list, subtitle.strip())
+    fields = [f for f in (album.caption_fields or "").split(",") if f]
+    pages = []
+    for p in build_pages(album, album.layout or 4):
+        pages.append({
+            "heading": p["heading"],
+            "layout": p["layout"],
+            "first_id": p["photos"][0].id if p["photos"] else None,
+            "cells": [{"id": ph.id, "lines": caption_lines(ph, fields)} for ph in p["photos"]],
+        })
+    return templates.TemplateResponse(
+        request, "album_layout.html",
+        {"album": album, "pages": pages, "fields": fields},
+    )
+
+
+@router.post("/api/albums/{album_id}/settings")
+def album_settings(album_id: int, data: AlbumSettingsIn, db: Session = Depends(get_db)):
+    album = db.get(Album, album_id)
+    if not album:
+        raise HTTPException(404, "Albumet hittades inte")
+    if data.layout in (1, 2, 4, 6):
+        album.layout = data.layout
+    album.subtitle = data.subtitle.strip()
+    album.caption_fields = ",".join(
+        f for f in data.caption_fields.split(",") if f
+    )
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
+@router.get("/albums/{album_id}/pdf")
+def album_pdf(
+    album_id: int, layout: int | None = None, fields: str | None = None,
+    subtitle: str | None = None, db: Session = Depends(get_db),
+):
+    """Generera och ladda ner albumet som PDF. Saknade parametrar tas från
+    albumets sparade inställningar (så PDF:en matchar layoutvyn)."""
+    album = db.get(Album, album_id)
+    if not album:
+        raise HTTPException(404, "Albumet hittades inte")
+    lay = layout if layout in (1, 2, 4, 6) else (album.layout or 4)
+    fields_str = fields if fields is not None else (album.caption_fields or "")
+    field_list = [f for f in fields_str.split(",") if f]
+    sub = (subtitle if subtitle is not None else (album.subtitle or "")).strip()
+    pdf = render_album_pdf(album, lay, field_list, sub)
     fname = quote(f"{album.name}.pdf")
     return Response(
         content=pdf, media_type="application/pdf",

@@ -118,3 +118,9 @@ class SectionIn(BaseModel):
     # Tom rubrik = ta bort avsnittsstarten. layout None = använd albumets standard.
     heading: str = ""
     layout: int | None = None
+
+
+class AlbumSettingsIn(BaseModel):
+    layout: int = 4
+    subtitle: str = ""
+    caption_fields: str = "date,place,persons"

@@ -1,9 +1,9 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **PDF-album: full per-sida-kontroll.** En sidbyggare där varje enskild
-  A4-sida får egen layout (utöver dagens global + per-avsnitt-layout). Bygger på
-  nuvarande avsnitts-stöd.
+- [ ] **PDF-album: full per-sida-kontroll.** I layoutvyn: låt varje enskild A4-sida
+  få egen layout (utöver dagens global + per-avsnitt-layout), och ev. live-redigering
+  i stället för spara-och-ladda-om. Bygger på WYSIWYG-layoutvyn.
 - [ ] **Manuellt klockslagsfält (om behov).** Idag finns inget fält för att
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
@@ -39,7 +39,10 @@
   (`AlbumPhoto.section_heading`) som börjar på ny sida med **egen layout per
   avsnitt** (`section_layout`); sätts via flagg-knapp i albumvyn. Konfig-modal +
   `GET /albums/{id}/pdf`. `services/pdf_album.py` + `templates/album_pdf.html`.
-  Docker-imagen har libpango/cairo. (Full per-sida-layout = framtida steg.)
+  Docker-imagen har libpango/cairo. **WYSIWYG-layoutvy** (`/albums/{id}/layout`):
+  sidlista + stora A4-sidor, avsnitt/layout/bildtext/undertitel hanteras där och
+  persisteras på albumet; fotovyn (`/albums/{id}`) är bara foto-ordning. (Full
+  per-sida-layout = framtida steg.)
 - [x] **Album (kurerade, ordnade samlingar).** Egen Album-/AlbumPhoto-modell med
   position; foton från flera källor, egen ordning oavsett datum, ett foto kan
   ligga i flera album. /albums + /albums/{id} med dra-och-släpp-ordning, lägg

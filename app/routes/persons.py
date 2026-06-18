@@ -87,6 +87,22 @@ def _person_regions(db: Session, tag: Tag) -> list[dict]:
     return [{"id": r.id, "photo_id": r.photo_id} for r in regions]
 
 
+def _section_ids(db: Session, placeholder: bool) -> list[int]:
+    """Person-id i samma ordning som /persons-sektionen (identifierade på namn,
+    oidentifierade på Okänd-nummer)."""
+    persons = db.query(Tag).filter(
+        Tag.kind == "person", Tag.placeholder == (1 if placeholder else 0)
+    ).all()
+    if placeholder:
+        def _k(t):
+            m = re.search(r"(\d+)$", t.name)
+            return int(m.group(1)) if m else 10 ** 9
+        persons.sort(key=_k)
+    else:
+        persons.sort(key=lambda t: t.name.lower())
+    return [t.id for t in persons]
+
+
 def _relations(db: Session, tag: Tag) -> dict:
     """Familjelänkar för en person, grupperade: föräldrar/barn/partner.
     Varje post: {link_id, id, name}."""
@@ -167,6 +183,15 @@ def person_detail(
     card_qs = context_card_qs(
         "person", tag.id, reviewed, ptype, paired, separate, sort
     )
+    # Prev/next inom personens sektion (identifierad/oidentifierad).
+    sec = _section_ids(db, bool(tag.placeholder))
+    prev_id = next_id = None
+    pos = total = len(sec)
+    if tag.id in sec:
+        i = sec.index(tag.id)
+        pos = i + 1
+        prev_id = sec[i - 1] if i > 0 else None
+        next_id = sec[i + 1] if i < len(sec) - 1 else None
     return templates.TemplateResponse(
         request, "person_detail.html",
         {"person": tag, "photos": photos,
@@ -174,6 +199,8 @@ def person_detail(
          "regions": _person_regions(db, tag),
          "relations": _relations(db, tag),
          "all_persons": db.query(Tag).filter(Tag.kind == "person").order_by(Tag.name).all(),
+         "prev_id": prev_id, "next_id": next_id, "pos": pos, "total": total,
+         "section": "Oidentifierade" if tag.placeholder else "Identifierade",
          "reviewed": reviewed, "ptype": ptype, "paired": paired,
          "separate": separate, "sort": sort, "card_qs": card_qs},
     )

@@ -4,7 +4,14 @@
 {% block title %}{{ person.name }} - Fotoscan{% endblock %}
 
 {% block headeractions %}
-    <a class="btn btn-outline-secondary btn-sm" href="/persons">Alla personer</a>
+    <span class="text-secondary small d-none d-sm-inline">{{ section }} {{ pos }}/{{ total }}</span>
+    <div class="btn-group btn-group-sm">
+        {% if prev_id %}<a class="btn btn-outline-secondary" href="/persons/{{ prev_id }}" title="Föregående (K)"><i class="bi bi-arrow-left"></i> <kbd class="kbd-hint">K</kbd></a>
+        {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-left"></i></button>{% endif %}
+        {% if next_id %}<a class="btn btn-outline-secondary" href="/persons/{{ next_id }}" title="Nästa (J)"><kbd class="kbd-hint">J</kbd> <i class="bi bi-arrow-right"></i></a>
+        {% else %}<button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>{% endif %}
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="/persons"><i class="bi bi-people"></i> Alla <kbd class="kbd-hint">G</kbd></a>
 {% endblock %}
 
 {% block content %}
@@ -20,7 +27,7 @@
         </div>
         <div class="mt-2 position-relative" style="max-width:420px">
             <div class="input-group">
-                <span class="input-group-text">Slå ihop med</span>
+                <span class="input-group-text">Slå ihop med <kbd class="kbd-hint ms-1">M</kbd></span>
                 <input type="text" class="form-control" id="merge-search"
                        placeholder="Sök person..." autocomplete="off">
             </div>
@@ -41,19 +48,19 @@
             <h2 class="h6 text-secondary mb-2">Om personen</h2>
             <div class="row g-2">
                 <div class="col-6">
-                    <label class="form-label small mb-1" for="pm-born">Född</label>
+                    <label class="form-label small mb-1" for="pm-born">Född <kbd class="kbd-hint">F</kbd></label>
                     <input type="text" class="form-control form-control-sm" id="pm-born" value="{{ person.born or '' }}" placeholder="t.ex. 1918 / ca 1920">
                 </div>
                 <div class="col-6">
-                    <label class="form-label small mb-1" for="pm-died">Död</label>
+                    <label class="form-label small mb-1" for="pm-died">Död <kbd class="kbd-hint">D</kbd></label>
                     <input type="text" class="form-control form-control-sm" id="pm-died" value="{{ person.died or '' }}" placeholder="t.ex. 2003">
                 </div>
                 <div class="col-12">
-                    <label class="form-label small mb-1" for="pm-aliases">Alias/smeknamn (komma)</label>
+                    <label class="form-label small mb-1" for="pm-aliases">Alias/smeknamn (komma) <kbd class="kbd-hint">A</kbd></label>
                     <input type="text" class="form-control form-control-sm" id="pm-aliases" value="{{ person.aliases or '' }}" placeholder="t.ex. Lasse, Karlsson (flicknamn)">
                 </div>
                 <div class="col-12">
-                    <label class="form-label small mb-1" for="pm-bio">Anteckningar</label>
+                    <label class="form-label small mb-1" for="pm-bio">Anteckningar <kbd class="kbd-hint">B</kbd></label>
                     <textarea class="form-control form-control-sm" id="pm-bio" rows="3">{{ person.bio or '' }}</textarea>
                 </div>
                 <div class="col-12"><button class="btn btn-primary btn-sm" id="pm-save">Spara</button></div>
@@ -275,6 +282,30 @@ document.getElementById("rename-btn").addEventListener("click", async (e) => {
         showToast("Kunde inte spara: " + err.message, true);
     } finally {
         e.target.disabled = false;
+    }
+});
+
+// Kortkommandon (som foto-editorn): bläddra person + hoppa till fält.
+const prevPid = "{{ prev_id or '' }}";
+const nextPid = "{{ next_id or '' }}";
+const _fieldKeys = { n: "person-name", f: "pm-born", d: "pm-died", a: "pm-aliases", b: "pm-bio", m: "merge-search" };
+document.addEventListener("keydown", (e) => {
+    const el = document.activeElement;
+    const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    if (e.key === "Escape" && typing) { el.blur(); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.body.classList.contains("modal-open")) return;
+    if ((e.key === "j" || e.key === "ArrowRight") && nextPid) { e.preventDefault(); location.href = `/persons/${nextPid}`; return; }
+    if ((e.key === "k" || e.key === "ArrowLeft") && prevPid) { e.preventDefault(); location.href = `/persons/${prevPid}`; return; }
+    if (e.key === "g") { e.preventDefault(); location.href = "/persons"; return; }
+    const f = _fieldKeys[e.key.toLowerCase()];
+    if (f) {
+        const target = document.getElementById(f);
+        if (target) {
+            e.preventDefault();
+            target.focus();
+            if (target.setSelectionRange) { const v = target.value.length; target.setSelectionRange(v, v); }
+        }
     }
 });
 </script>

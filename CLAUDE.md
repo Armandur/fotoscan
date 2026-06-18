@@ -83,11 +83,18 @@ photos/                exempel/testbilder (gitignored)
   Personer förblir platta.
 - **Metadatafält:** date_text, date_year, plats (Place), source (vem fotot kommer
   från), notes, taggar/personer. (Arkivnummer fanns tidigare men togs bort.)
-  Personer i detaljvyn är **klickbara chips** (länk till `/persons/{id}`, ta-bort-×)
-  i ansiktenas x-ordning (`_ordered_people`, samma princip som album-bildtexten,
-  inkl. Okänd-N), med en autocomplete för att lägga till (välj/skapa); manuellt
-  markerade ansikten lägger sin person som chip live (`window.addPersonChip`).
-  `collect()` läser personer från chipsen. Taggar är fortfarande kommaseparerad text.
+  Personer OCH taggar i detaljvyn är **token-fält** (`static/js/tokenfield.js`):
+  ett `contenteditable`-formulärfält med chips; skriv -> förslag -> Enter/komma/
+  klick blir chip, Backspace tar bort chip vid pekaren (pekaren kan stå mellan
+  chips), fältet växer på höjden. Person-chips länkar till `/persons/{id}` och
+  visas i ansiktenas x-ordning (`_ordered_people`, inkl. Okänd-N). Förslag:
+  personer mot `/api/persons` (tumnaglar), taggar mot cachad `/api/tags`. Manuellt
+  markerade ansikten lägger sin person som chip live (`window.addPersonChip` ->
+  `peopleTF.addToken`; `_serialize` ger `person_id`). `collect()` läser från
+  `peopleTF.tokens()`/`tagsTF.tokens()`. **Fallgrop:** token-fälten är `<div
+  contenteditable>`, inte INPUT/TEXTAREA - alla kortkommando-hanterare (photo.js,
+  faces.js H, adjust.js O) måste kolla `el.isContentEditable` i sin typing-guard,
+  annars triggas genvägar medan man skriver.
 - **Plats normaliserad** (`Place`-tabell, `Photo.place_id`): plats är en egen
   återanvändbar entitet. `Photo.location` är en synkad namn-cache (för sök/kort).
   `update_photo` gör get_or_create_place. Fotots egen GPS (`gps_lat/lon`) är

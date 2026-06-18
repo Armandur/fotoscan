@@ -186,7 +186,7 @@
     document.addEventListener("keydown", (e) => {
         if (e.key !== "o" && e.key !== "O") return;
         const el = document.activeElement;
-        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
         if (document.body.classList.contains("modal-open")) return;
         e.preventDefault();
         rawOn();

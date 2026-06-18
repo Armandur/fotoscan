@@ -9,15 +9,11 @@
     const field = (name) => form.querySelector(`[name="${name}"]`);
 
     // ---- Spara ----
-    function splitList(value) {
-        return value.split(",").map(s => s.trim()).filter(Boolean);
-    }
-
-    const peopleChips = document.getElementById("people-chips");
+    let peopleTF = null, tagsTF = null;  // sätts i token-fält-setup nedan
     function collect(markReviewed) {
         const tags = [
-            ...[...peopleChips.querySelectorAll(".person-chip")].map(c => ({ name: c.dataset.name, kind: "person" })),
-            ...splitList(field("tags").value).map(name => ({ name, kind: "tag" })),
+            ...peopleTF.tokens().map(t => ({ name: t.name, kind: "person" })),
+            ...tagsTF.tokens().map(t => ({ name: t.name, kind: "tag" })),
         ];
         return {
             date_text: field("date_text").value,
@@ -197,129 +193,26 @@
     const helpModal = bootstrap.Modal.getOrCreateInstance("#help-modal");
     document.getElementById("help-btn").addEventListener("click", () => helpModal.toggle());
 
-    // ---- Autocomplete för personer/taggar ----
-    let tagCache = { person: [], tag: [] };
+    // ---- Taggnamn för token-fältets förslag ----
+    let tagCache = { tag: [] };
     async function loadTags() {
-        try {
-            tagCache.person = (await apiFetch("/api/tags?kind=person")).map(t => t.name);
-            tagCache.tag = (await apiFetch("/api/tags?kind=tag")).map(t => t.name);
-        } catch (e) {}
+        try { tagCache.tag = (await apiFetch("/api/tags?kind=tag")).map(t => t.name); }
+        catch (e) {}
     }
     loadTags();
 
-    function attachAutocomplete(input, kind) {
-        const box = document.createElement("div");
-        box.className = "ac-box";
-        box.hidden = true;
-        input.parentElement.style.position = "relative";
-        input.parentElement.appendChild(box);
-        let active = -1;
-
-        function currentTerm() {
-            const parts = input.value.split(",");
-            return parts[parts.length - 1].trim().toLowerCase();
-        }
-        function applyChoice(name) {
-            const parts = input.value.split(",");
-            parts[parts.length - 1] = " " + name;
-            input.value = parts.join(",").replace(/^\s+/, "");
-            box.hidden = true;
-        }
-        function render() {
-            const term = currentTerm();
-            const chosen = new Set(
-                input.value.split(",").map(s => s.trim().toLowerCase())
-            );
-            const matches = tagCache[kind].filter(n =>
-                n.toLowerCase().includes(term) && !chosen.has(n.toLowerCase())
-            ).slice(0, 8);
-            if (!term || matches.length === 0) { box.hidden = true; return; }
-            box.innerHTML = matches.map((n, i) =>
-                `<div class="ac-item${i === active ? " active" : ""}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
-            ).join("");
-            box.hidden = false;
-        }
-        input.addEventListener("input", () => { active = -1; render(); });
-        input.addEventListener("focus", render);
-        input.addEventListener("blur", () => setTimeout(() => { box.hidden = true; }, 150));
-        box.addEventListener("mousedown", (e) => {
-            const item = e.target.closest(".ac-item");
-            if (item) { e.preventDefault(); applyChoice(item.dataset.name); input.focus(); }
-        });
-        input.addEventListener("keydown", (e) => {
-            if (box.hidden) return;
-            const items = [...box.querySelectorAll(".ac-item")];
-            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
-            else if ((e.key === "Enter" || e.key === "Tab") && active >= 0) {
-                e.preventDefault(); applyChoice(items[active].dataset.name);
-            }
-        });
-    }
-    attachAutocomplete(field("tags"), "tag");
-
-    // ---- Personer som klickbara chips + add-autocomplete (tumnaglar) ----
-    function addPersonChip(name, id) {
-        name = (name || "").trim();
-        if (!name) return;
-        if ([...peopleChips.querySelectorAll(".person-chip")]
-            .some(c => c.dataset.name.toLowerCase() === name.toLowerCase())) return;
-        const chip = document.createElement("span");
-        chip.className = "person-chip badge text-bg-secondary d-inline-flex align-items-center gap-1";
-        chip.dataset.name = name;
-        const label = document.createElement(id ? "a" : "span");
-        label.textContent = name;
-        label.className = "text-white text-decoration-none";
-        if (id) { chip.dataset.id = id; label.href = `/persons/${id}`; }
-        const x = document.createElement("a");
-        x.href = "#"; x.className = "chip-x text-white text-decoration-none";
-        x.title = "Ta bort"; x.innerHTML = "&times;";
-        chip.append(label, x);
-        peopleChips.appendChild(chip);
-    }
-    peopleChips.addEventListener("click", (e) => {
-        const x = e.target.closest(".chip-x");
-        if (x) { e.preventDefault(); x.closest(".person-chip").remove(); }
+    // ---- Token-fält: personer (med länkar) + taggar ----
+    peopleTF = window.tokenField(document.getElementById("people-field"), {
+        linkBase: "/persons/",
+        suggest: (term) => apiFetch(`/api/persons?q=${encodeURIComponent(term)}`),
     });
-    // Manuellt markerade ansikten lägger sin person här direkt (faces.js anropar).
-    window.addPersonChip = addPersonChip;
-
-    const addInput = document.getElementById("people-add");
-    const addAc = document.getElementById("people-ac");
-    let pItems = [], pActive = -1;
-    const pRender = () => {
-        addAc.innerHTML = pItems.map((p, i) => {
-            const thumb = p.region_id
-                ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
-                : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
-            return `<div class="face-ac-item${i === pActive ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
-                + thumb + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
-                + `<span class="face-ac-count">${p.count}</span></div>`;
-        }).join("");
-        addAc.classList.toggle("show", pItems.length > 0);
-    };
-    const pSearch = async () => {
-        try { pItems = await apiFetch(`/api/persons?q=${encodeURIComponent(addInput.value.trim())}`); }
-        catch (e) { pItems = []; }
-        pActive = -1; pRender();
-    };
-    const pPick = (item) => { addPersonChip(item.name, item.id); addInput.value = ""; pItems = []; pRender(); };
-    addAc.addEventListener("mousedown", (e) => {
-        const it = e.target.closest(".face-ac-item");
-        if (it) { e.preventDefault(); pPick({ id: +it.dataset.id, name: it.dataset.name }); }
+    tagsTF = window.tokenField(document.getElementById("tags-field"), {
+        suggest: (term) => (tagCache.tag || [])
+            .filter(n => n.toLowerCase().includes(term.toLowerCase()))
+            .map(n => ({ name: n })),
     });
-    addInput.addEventListener("input", pSearch);
-    addInput.addEventListener("focus", pSearch);
-    addInput.addEventListener("blur", () => setTimeout(() => addAc.classList.remove("show"), 150));
-    addInput.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowDown") { e.preventDefault(); pActive = Math.min(pActive + 1, pItems.length - 1); pRender(); }
-        else if (e.key === "ArrowUp") { e.preventDefault(); pActive = Math.max(pActive - 1, 0); pRender(); }
-        else if (e.key === "Enter") {
-            e.preventDefault();
-            if (pActive >= 0) pPick(pItems[pActive]);
-            else if (addInput.value.trim()) { addPersonChip(addInput.value.trim(), null); addInput.value = ""; addAc.classList.remove("show"); }
-        } else if (e.key === "Escape") { addAc.classList.remove("show"); }
-    });
+    // Manuellt markerade ansikten lägger sin person som chip direkt (faces.js anropar).
+    window.addPersonChip = (name, id) => peopleTF.addToken(name, id);
 
     // Enkelvärdes-autocomplete för Plats mot redan registrerade platser.
     function attachPlaceAutocomplete(input) {
@@ -364,12 +257,11 @@
 
     // ---- Globala kortkommandon ----
     const fieldKeys = {
-        d: "date_text", l: "location", p: "people-add",
-        t: "tags", n: "notes",
+        d: "date_text", l: "location", n: "notes",
     };
     document.addEventListener("keydown", (e) => {
         const el = document.activeElement;
-        const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+        const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
         // Spara fungerar även när man skriver.
         if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(false); return; }
@@ -387,6 +279,8 @@
         if (e.key === "f") { e.preventDefault(); window.toggleFaceDraw && window.toggleFaceDraw(); return; }
         if (e.key === "m") { e.preventDefault(); window.openPairModal && window.openPairModal(); return; }
         if (e.key === "g") { e.preventDefault(); location.href = "/" + navQs; return; }
+        if (e.key === "p") { e.preventDefault(); peopleTF && peopleTF.focus(); return; }
+        if (e.key === "t") { e.preventDefault(); tagsTF && tagsTF.focus(); return; }
         // Färgjustering
         if (e.key === "c") { e.preventDefault(); window.adjToggle && window.adjToggle(); return; }
         if (e.key === "a") { e.preventDefault(); window.adjAuto && window.adjAuto(); return; }

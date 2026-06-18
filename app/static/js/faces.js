@@ -129,7 +129,7 @@
     document.addEventListener("keydown", (e) => {
         if (e.key !== "h" && e.key !== "H") return;
         const el = document.activeElement;
-        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         facesHide(true);
     });

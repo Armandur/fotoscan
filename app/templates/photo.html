@@ -184,28 +184,19 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Personer <kbd class="kbd-hint">P</kbd></label>
-                <div id="people-chips" class="d-flex flex-wrap gap-1 mb-1">
-                    {% for p in people %}
-                    <span class="person-chip badge text-bg-secondary d-inline-flex align-items-center gap-1"
-                          data-name="{{ p.name }}" data-id="{{ p.id }}">
-                        <a href="/persons/{{ p.id }}" class="text-white text-decoration-none">{{ p.name }}</a>
-                        <a href="#" class="chip-x text-white text-decoration-none" title="Ta bort">&times;</a>
-                    </span>
-                    {% endfor %}
-                </div>
+                <label class="form-label" for="people-field">Personer <kbd class="kbd-hint">P</kbd></label>
                 <div class="position-relative">
-                    <input type="text" class="form-control" id="people-add" name="people-add" autocomplete="off"
-                           placeholder="Lägg till person (sök eller skriv nytt namn)">
-                    <div class="face-ac" id="people-ac" style="position:absolute;left:0;right:0;z-index:30"></div>
+                    <div class="token-field form-control" id="people-field" contenteditable="true"
+                         >{% for p in people %}<span class="tok" contenteditable="false" data-name="{{ p.name }}" data-id="{{ p.id }}"><a class="tok-label" href="/persons/{{ p.id }}">{{ p.name }}</a><span class="tok-x" title="Ta bort">&times;</span></span>{% endfor %}</div>
                 </div>
             </div>
 
-            <div class="mb-3 autocomplete-wrap">
-                <label class="form-label">Taggar <span class="text-secondary">(kommaseparerat)</span> <kbd class="kbd-hint">T</kbd></label>
-                <input type="text" class="form-control" name="tags" autocomplete="off"
-                       value="{{ photo.tags | selectattr('kind', 'equalto', 'tag') | map(attribute='name') | join(', ') }}"
-                       placeholder="bil, bröllop, semester">
+            <div class="mb-3">
+                <label class="form-label" for="tags-field">Taggar <kbd class="kbd-hint">T</kbd></label>
+                <div class="position-relative">
+                    <div class="token-field form-control" id="tags-field" contenteditable="true"
+                         >{% for t in photo.tags if t.kind == 'tag' %}<span class="tok" contenteditable="false" data-name="{{ t.name }}"><span class="tok-label">{{ t.name }}</span><span class="tok-x" title="Ta bort">&times;</span></span>{% endfor %}</div>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -386,6 +377,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/tokenfield.js?v={{ asset_v }}"></script>
 <script src="/static/js/photo.js?v={{ asset_v }}"></script>
 <script src="/static/js/faces.js?v={{ asset_v }}"></script>
 <script src="/static/js/adjust.js?v={{ asset_v }}"></script>

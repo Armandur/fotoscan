@@ -11,7 +11,8 @@
     font-size: .7rem; font-weight: 700; padding: 0 4px; line-height: 1.3; }
 .fr-box.active .fr-num { background: var(--bs-success); color: #fff; }
 /* Redan namngivna (manuella/bekräftade) rutor: blå, ej åtgärdbara. */
-.fr-box.named { border-color: var(--bs-info); border-style: dashed; }
+.fr-box.named { border-color: var(--bs-info); border-style: dashed; pointer-events: auto; cursor: pointer; }
+.fr-box.named:hover { border-style: solid; }
 .fr-box .fr-name { position: absolute; bottom: -1px; left: -1px; background: var(--bs-info); color: #000;
     font-size: .7rem; font-weight: 600; padding: 0 4px; line-height: 1.3; white-space: nowrap; }
 .fr-stage.hide-boxes .fr-box { display: none; }
@@ -101,11 +102,14 @@
     function drawNamedBox(f) {
         const box = document.createElement("div");
         box.className = "fr-box named";
+        box.dataset.faceId = f.id;
+        box.title = "Klicka för att byta person";
         box.style.left = (f.x * 100) + "%";
         box.style.top = (f.y * 100) + "%";
         box.style.width = (f.w * 100) + "%";
         box.style.height = (f.h * 100) + "%";
         box.innerHTML = `<span class="fr-name">${escapeHtml(f.name)}</span>`;
+        box.addEventListener("click", () => openNamedEditor(f));
         stage.appendChild(box);
     }
 
@@ -186,39 +190,89 @@
             } catch (e) { showToast("Misslyckades: " + e.message, true); }
         });
 
-        // Personsök med tumnaglar (som vid manuell ansiktsmarkering).
-        const input = item.querySelector(".fr-search");
-        const ac = item.querySelector(".fr-ac");
-        let acItems = [], active = -1;
-        const renderAc = () => {
-            ac.innerHTML = acItems.map((p, i) =>
+        // Personsök med tumnaglar (samma som vid manuell ansiktsmarkering).
+        attachPersonAC(item.querySelector(".fr-search"), item.querySelector(".fr-ac"), (p) => {
+            if (!p) return;
+            if (p.id) confirm({ tag_id: p.id }, p.name);
+            else if (p.name) confirm({ name: p.name }, p.name);
+        });
+    }
+
+    // Delad personsök-autocomplete (tumnaglar). onChoose(person|null):
+    // {id,name} vid val, {name} vid fritext, null vid Esc.
+    function attachPersonAC(input, ac, onChoose) {
+        let items = [], active = -1;
+        const render = () => {
+            ac.innerHTML = items.map((p, i) =>
                 `<div class="face-ac-item${i === active ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
                 + personThumb(p.region_id, "face-ac-thumb")
                 + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
                 + `<span class="face-ac-count">${p.count}</span></div>`).join("");
-            ac.classList.toggle("show", acItems.length > 0);
+            ac.classList.toggle("show", items.length > 0);
         };
         const search = async () => {
-            try { acItems = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`); }
-            catch (e) { acItems = []; }
-            active = -1; renderAc();
+            try { items = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`); }
+            catch (e) { items = []; }
+            active = -1; render();
         };
         ac.addEventListener("mousedown", (e) => {
             const it = e.target.closest(".face-ac-item");
-            if (it) { e.preventDefault(); confirm({ tag_id: +it.dataset.id }, it.dataset.name); }
+            if (it) { e.preventDefault(); onChoose({ id: +it.dataset.id, name: it.dataset.name }); }
         });
         input.addEventListener("input", search);
         input.addEventListener("focus", search);
         input.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, acItems.length - 1); renderAc(); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); renderAc(); }
+            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
             else if (e.key === "Enter") {
                 e.preventDefault();
-                if (active >= 0) confirm({ tag_id: acItems[active].id }, acItems[active].name);
-                else if (input.value.trim()) confirm({ name: input.value.trim() }, input.value.trim());
-            } else if (e.key === "Escape") { ac.classList.remove("show"); }
+                onChoose(active >= 0 ? { id: items[active].id, name: items[active].name } : { name: input.value.trim() });
+            } else if (e.key === "Escape") { ac.classList.remove("show"); onChoose(null); }
         });
         input.addEventListener("blur", () => setTimeout(() => ac.classList.remove("show"), 150));
+    }
+
+    // Byt person på en redan namngiven (blå) ruta - editor överst i listan.
+    function openNamedEditor(f) {
+        const old = document.getElementById("fr-named-editor");
+        if (old) old.remove();
+        const card = document.createElement("div");
+        card.className = "card mb-2 border-info";
+        card.id = "fr-named-editor";
+        list.prepend(card);
+        card.innerHTML =
+            `<div class="card-body p-2">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <img class="fr-crop" src="/api/faces/${f.id}/thumb" alt="">
+                    <div class="min-w-0"><div class="small text-secondary">Byt person för</div>
+                        <strong class="text-truncate d-block">${escapeHtml(f.name)}</strong></div>
+                    <button class="btn-close ms-auto" data-act="close" title="Stäng"></button>
+                </div>
+                <div class="position-relative mb-1">
+                    <input type="text" class="form-control form-control-sm fr-ed-search" placeholder="Sök eller skapa person..." autocomplete="off">
+                    <div class="face-ac fr-ac"></div>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm py-0" data-act="unknown"><i class="bi bi-person-dash"></i> Oidentifierad</button>
+             </div>`;
+        const close = () => card.remove();
+        card.querySelector('[data-act="close"]').addEventListener("click", close);
+        const apply = async (body) => {
+            try {
+                const res = await apiFetch(`/api/faces/${f.id}/person`, { method: "POST", body });
+                const lbl = stage.querySelector(`.fr-box.named[data-face-id="${f.id}"] .fr-name`);
+                if (lbl) lbl.textContent = res.person.name;
+                f.name = res.person.name;
+                showToast("Person ändrad: " + res.person.name);
+                close();
+            } catch (e) { showToast("Kunde inte byta person: " + e.message, true); }
+        };
+        card.querySelector('[data-act="unknown"]').addEventListener("click", () => apply({ unidentified: true }));
+        attachPersonAC(card.querySelector(".fr-ed-search"), card.querySelector(".fr-ac"), (p) => {
+            if (!p) return;
+            if (p.id) apply({ tag_id: p.id });
+            else if (p.name) apply({ name: p.name });
+        });
+        card.querySelector(".fr-ed-search").focus();
     }
 
     async function load() {

@@ -360,28 +360,29 @@
     pointer-events: none;
 }
 
-/* Token-fält: chips inuti ett contenteditable formulärfält (personer/taggar). */
+/* Token-fält: chips inuti ett contenteditable formulärfält (personer/taggar).
+   Blockflöde (inte flex) -> caret-strecket hamnar rätt vertikalt även i tomt
+   fält; chips är inline och radbryts naturligt så fältet växer på höjden. */
 .token-field {
     min-height: calc(1.5em + .75rem + 2px);
     height: auto;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
     cursor: text;
-    line-height: 1.4;
+    line-height: 1.9;
 }
 .token-field:focus { outline: 0; border-color: var(--bs-primary);
     box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25); }
 .token-field .tok {
     display: inline-flex;
     align-items: center;
+    vertical-align: middle;
     gap: 4px;
+    margin: 1px 4px 1px 0;
     background: var(--bs-secondary-bg);
     border: 1px solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
     padding: 0 2px 0 6px;
     font-size: .9rem;
+    line-height: 1.4;
     white-space: nowrap;
     user-select: none;
 }

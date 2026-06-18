@@ -62,7 +62,7 @@
         </button>
         <button type="button" class="btn btn-outline-warning btn-sm" id="fr-exclude"
                 title="Uteslut fotot från AI-detektering (t.ex. målade dockor som tolkas som ansikten)">
-            <i class="bi bi-slash-circle"></i> Uteslut från AI
+            <i class="bi bi-slash-circle"></i> Uteslut från AI <kbd class="kbd-hint">X</kbd>
         </button>
         <a href="/photo/{{ photo.id }}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Öppna foto</a>
         <a href="/faces/review" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Lista <kbd class="kbd-hint">G</kbd></a>
@@ -350,6 +350,7 @@
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         if (e.key === "h" && !e.repeat) { hideOn(); return; }
         if (e.key === "f") { e.preventDefault(); setDraw(!drawMode); return; }
+        if (e.key === "x") { e.preventDefault(); document.getElementById("fr-exclude").click(); return; }
         if ((e.key === "j" || e.key === "ArrowRight") && nextUrl) { e.preventDefault(); location.href = nextUrl; return; }
         if ((e.key === "k" || e.key === "ArrowLeft") && prevUrl) { e.preventDefault(); location.href = prevUrl; return; }
         if (e.key === "g") { e.preventDefault(); location.href = "/faces/review"; return; }

@@ -12,6 +12,10 @@
                 title="Kör om alla foton, även redan behandlade">
             <i class="bi bi-arrow-repeat"></i> Kör om alla
         </button>
+        <button class="btn btn-warning btn-sm d-none" id="scan-cancel-btn"
+                title="Stanna jobbet vid nästa foto (klart arbete behålls)">
+            <i class="bi bi-stop-circle"></i> Avbryt
+        </button>
     </div>
 </div>
 
@@ -70,9 +74,12 @@
         root.appendChild(grid);
     }
 
+    const cancelBtn = document.getElementById("scan-cancel-btn");
     let poll = null;
     function startPolling() {
         progress.classList.remove("d-none");
+        cancelBtn.classList.remove("d-none");
+        cancelBtn.disabled = false;
         if (poll) clearInterval(poll);
         poll = setInterval(async () => {
             let s;
@@ -83,12 +90,19 @@
             if (!s.running) {
                 clearInterval(poll); poll = null;
                 bar.classList.remove("progress-bar-animated");
+                cancelBtn.classList.add("d-none");
                 if (s.error) showToast("Fel: " + s.error, true);
                 else showToast(s.message || "Klart");
                 loadPhotos();
             }
         }, 1500);
     }
+
+    cancelBtn.addEventListener("click", async () => {
+        cancelBtn.disabled = true;
+        try { await apiFetch("/api/faces/ai/cancel", { method: "POST" }); showToast("Avbryter vid nästa foto..."); }
+        catch (e) { showToast("Kunde inte avbryta: " + e.message, true); cancelBtn.disabled = false; }
+    });
 
     async function scan(force) {
         try {

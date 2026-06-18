@@ -37,7 +37,7 @@ _IOU_DUP_AI = 0.50    # detektering överlappar befintligt AI-förslag -> dubble
 _job_lock = threading.Lock()
 JOB = {
     "running": False, "total": 0, "done": 0, "added": 0,
-    "message": "", "error": "",
+    "message": "", "error": "", "cancel": False,
 }
 
 
@@ -60,6 +60,9 @@ def _run_job(force: bool) -> None:
         # ett avbrutet jobb behåller allt som hunnit bli klart.
         added = 0
         for photo in photos:
+            if JOB["cancel"]:
+                JOB["message"] = f"Avbrutet: {JOB['done']}/{JOB['total']} foton klara, {added} förslag."
+                return
             pid = photo.id
             if not Path(photo.path).exists():
                 photo.ai_faces_at = _now()
@@ -131,8 +134,18 @@ def start_scan(force: bool = False):
         if JOB["running"]:
             raise HTTPException(409, "Ett jobb körs redan")
         JOB.update(running=True, total=0, done=0, added=0, error="",
-                   message="Startar...")
+                   message="Startar...", cancel=False)
     threading.Thread(target=_run_job, args=(force,), daemon=True).start()
+    return JSONResponse({"ok": True})
+
+
+@router.post("/api/faces/ai/cancel")
+def cancel_scan():
+    """Begär att ett pågående jobb stannar vid nästa foto (kraschsäkert -
+    allt klart behålls)."""
+    if JOB["running"]:
+        JOB["cancel"] = True
+        JOB["message"] = "Avbryter vid nästa foto..."
     return JSONResponse({"ok": True})
 
 

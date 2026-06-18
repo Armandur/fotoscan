@@ -49,10 +49,19 @@ def duplicates_page(request: Request, dist: int = 10, db: Session = Depends(get_
     )
     by_id = {p.id: p for p in rows}
     groups_ids = group_similar([(p.id, p.phash) for p in rows], dist)
-    groups = [
-        [by_id[i] for i in ids]
-        for ids in sorted(groups_ids, key=len, reverse=True)
-    ]
+
+    def _pair_key(p: Photo) -> int:
+        # Ett foto och dess hopparade negativ är samma logiska bild.
+        return min(p.id, p.paired_with_id) if p.paired_with_id else p.id
+
+    groups = []
+    for ids in sorted(groups_ids, key=len, reverse=True):
+        members = [by_id[i] for i in ids]
+        # Hoppa över grupper som bara är ett foto + dess negativ (avsiktligt par,
+        # inte en dubblett att åtgärda).
+        if len({_pair_key(m) for m in members}) < 2:
+            continue
+        groups.append(members)
     return templates.TemplateResponse(
         request, "duplicates.html",
         {"groups": groups, "dist": dist, "total": len(rows)},

@@ -38,7 +38,7 @@ app/
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
     dashboard.py       /dashboard: översikt + saknar-statistik; /review-flödet ligger i photos.py
-    duplicates.py      /duplicates: grupperar liknande foton via phash (services/dupes.py)
+    duplicates.py      /duplicates: grupperar liknande foton via phash (services/dupes.py); rena foto+negativ-par utesluts
     backup.py          GET /api/backup: konsekvent SQLite-snapshot (VACUUM INTO) som zip
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/

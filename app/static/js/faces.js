@@ -117,18 +117,26 @@
     loadFaces();
     window.reloadFaces = loadFaces;  // anropas efter rotation
 
-    // ---- Håll H för att tillfälligt dölja ansiktsrutorna (momentant) ----
+    // ---- Håll (knapp eller H) för att tillfälligt dölja ansiktsrutorna ----
+    const facesHide = (on) => { layer.style.visibility = on ? "hidden" : ""; };
+    const hideBtn = document.getElementById("face-hide-btn");
+    if (hideBtn) {
+        hideBtn.addEventListener("mousedown", () => facesHide(true));
+        hideBtn.addEventListener("touchstart", (e) => { e.preventDefault(); facesHide(true); });
+        ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach(ev =>
+            hideBtn.addEventListener(ev, () => facesHide(false)));
+    }
     document.addEventListener("keydown", (e) => {
         if (e.key !== "h" && e.key !== "H") return;
         const el = document.activeElement;
         if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        layer.style.visibility = "hidden";
+        facesHide(true);
     });
     document.addEventListener("keyup", (e) => {
-        if (e.key === "h" || e.key === "H") layer.style.visibility = "";
+        if (e.key === "h" || e.key === "H") facesHide(false);
     });
-    window.addEventListener("blur", () => { layer.style.visibility = ""; });
+    window.addEventListener("blur", () => facesHide(false));
 
     // ---- Ritläge ----
     function setDrawMode(on) {

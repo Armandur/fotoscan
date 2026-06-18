@@ -23,6 +23,17 @@
     </div>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <select id="sort-mode" class="form-select form-select-sm" style="width:auto" title="Sortering">
+        <option value="filename">Sortera: filnamn</option>
+        <option value="suggestion">Sortera: förslag (samma person nära)</option>
+    </select>
+    <button class="btn btn-outline-secondary btn-sm" id="refresh-sugg"
+            title="Räkna om namnförslagen mot nuvarande personer (utan att detektera om)">
+        <i class="bi bi-arrow-clockwise"></i> Uppdatera förslag
+    </button>
+</div>
+
 <div class="text-secondary small mb-2" id="scan-info">
     {{ scanned }}/{{ total_photos }} foton behandlade. {{ pending }} ansikten väntar på granskning.
 </div>
@@ -51,36 +62,62 @@
         const crops = p.face_ids.slice(0, 5).map(
             id => `<img src="/api/faces/${id}/thumb" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px">`
         ).join("");
+        const suggHtml = (p.suggestions || []).map(s => {
+            const thumb = s.region_id
+                ? `<img src="/api/faces/${s.region_id}/thumb" alt="" style="width:18px;height:18px;object-fit:cover;border-radius:3px">` : "";
+            return `<span class="badge text-bg-success d-inline-flex align-items-center gap-1">${thumb}${escapeHtml(s.name)}${s.count > 1 ? " ×" + s.count : ""}</span>`;
+        }).join(" ");
         a.innerHTML =
             `<img loading="lazy" class="card-img-top" src="/thumb/${p.photo_id}" alt="">
              <div class="card-body p-2">
                 <div class="d-flex flex-wrap gap-1 mb-1">${crops}</div>
                 <div class="text-truncate small" title="${escapeHtml(p.filename)}">${escapeHtml(p.filename)}</div>
                 <span class="badge text-bg-primary">${p.face_ids.length} ansikte${p.face_ids.length !== 1 ? "n" : ""}</span>
+                ${suggHtml ? `<div class="d-flex flex-wrap gap-1 mt-1">${suggHtml}</div>` : ""}
              </div>`;
         return a;
     }
 
-    let lastSig = null;
+    const sortSel = document.getElementById("sort-mode");
+    let currentPhotos = [], lastSig = null;
+    function render() {
+        if (!currentPhotos.length) {
+            root.innerHTML = '<div class="alert alert-secondary">Inga ansikten att granska. Kör AI-detektering för att hitta fler.</div>';
+            return;
+        }
+        const photos = currentPhotos.slice();
+        if (sortSel.value === "suggestion") {
+            photos.sort((a, b) =>
+                (a.top || "￿").localeCompare(b.top || "￿", "sv")
+                || a.filename.localeCompare(b.filename, "sv"));
+        }
+        const grid = document.createElement("div");
+        grid.className = "gallery-grid";
+        for (const p of photos) grid.appendChild(photoCard(p));
+        root.innerHTML = "";
+        root.appendChild(grid);
+    }
     async function loadPhotos() {
         let data;
         try { data = await apiFetch("/api/faces/ai/photos"); }
         catch (e) { return; }  // tyst vid pollning; behåll befintlig vy
-        // Signatur: rendera bara om listan faktiskt ändrats (undviker flimmer
-        // och bevarar scroll vid löpande pollning under ett jobb).
-        const sig = data.photos.map(p => `${p.photo_id}:${p.face_ids.length}`).join("|");
+        // Signatur (inkl. toppförslag) -> rendera bara om listan ändrats.
+        const sig = data.photos.map(p => `${p.photo_id}:${p.face_ids.length}:${p.top || ""}`).join("|");
         if (sig === lastSig) return;
         lastSig = sig;
-        if (!data.total) {
-            root.innerHTML = '<div class="alert alert-secondary">Inga ansikten att granska. Kör AI-detektering för att hitta fler.</div>';
-            return;
-        }
-        const grid = document.createElement("div");
-        grid.className = "gallery-grid";
-        for (const p of data.photos) grid.appendChild(photoCard(p));
-        root.innerHTML = "";
-        root.appendChild(grid);
+        currentPhotos = data.photos;
+        render();
     }
+    sortSel.addEventListener("change", render);
+    document.getElementById("refresh-sugg").addEventListener("click", async (e) => {
+        e.currentTarget.disabled = true;
+        try {
+            const r = await apiFetch("/api/faces/ai/refresh-suggestions", { method: "POST" });
+            showToast(`Förslag uppdaterade (${r.updated} ändrade)`);
+            lastSig = null; await loadPhotos();
+        } catch (err) { showToast("Misslyckades: " + err.message, true); }
+        finally { e.currentTarget.disabled = false; }
+    });
 
     const cancelBtn = document.getElementById("scan-cancel-btn");
     let poll = null;

@@ -10,12 +10,12 @@
   (med tumnagel) via matchning mot kända personer, crops lyder S/M/L + hover-zoom.
 - [ ] **Auto-/massbekräfta höga träffar.** "Bekräfta alla förslag över likhet X"
   (t.ex. 0.6), eller per person, för att snabba upp granskningen.
-- [ ] **Förslag i fotolistan.** Visa toppförslag per foto i `/faces/review` +
-  sortera/gruppera listan på föreslagen person.
-- [ ] **Minsta ansiktsstorlek + konfidensgolv.** Filtrera bort pyttesmå/lågkonfidenta
-  detekteringar automatiskt (fångar en del dock-/mönster-falsklarm).
-- [ ] **"Uppdatera förslag"-pass.** Billig omräkning av `suggested_tag_id` för
-  kvarvarande pending efter fler bekräftelser, utan att detektera om.
+- [x] **Förslag i fotolistan.** `/faces/review`-korten visar namnförslag per foto
+  (badges med tumnagel + antal, från lagrade `suggested_tag_id`), och listan kan
+  sorteras "efter förslag" så samma person hamnar nära.
+- [x] **"Uppdatera förslag"-pass.** `POST /api/faces/ai/refresh-suggestions` räknar
+  om `suggested_tag_id` för alla pending mot nuvarande modell utan omdetektering;
+  knapp "Uppdatera förslag" i listvyn.
 - [ ] **"Hitta fler foton med denna person".** Omvänd sökning från `/persons/{id}`:
   kör personens centroid mot obekräftade/odetekterade ansikten.
 - [x] **Auto-välj bästa tumnagel** för person: `_best_region_id` väljer störst

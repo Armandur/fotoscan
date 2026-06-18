@@ -316,11 +316,14 @@ def _pending_faces_query(db: Session):
     )
 
 
-def _pending_photos(db: Session) -> list[dict]:
+def _pending_photos(db: Session, with_suggestions: bool = False) -> list[dict]:
     """Foton med obekräftade AI-ansikten i filnamnsordning (delas av listvy +
-    prev/next-navigeringen)."""
+    prev/next-navigeringen). Med `with_suggestions` läggs per-foto namnförslag
+    till (distinkta personer från lagrade `suggested_tag_id`, mest frekvent
+    först) + `top` för sortering."""
     faces = _pending_faces_query(db).order_by(FaceRegion.id).all()
     by_photo: dict[int, dict] = {}
+    sugg: dict[int, dict[int, int]] = {}
     for f in faces:
         p = f.photo
         if not p:
@@ -329,15 +332,47 @@ def _pending_photos(db: Session) -> list[dict]:
             "photo_id": p.id, "filename": p.filename, "face_ids": [],
         })
         d["face_ids"].append(f.id)
+        if with_suggestions and f.suggested_tag_id:
+            sugg.setdefault(p.id, {})
+            sugg[p.id][f.suggested_tag_id] = sugg[p.id].get(f.suggested_tag_id, 0) + 1
+    if with_suggestions:
+        info: dict[int, dict] = {}
+        for tid in {t for m in sugg.values() for t in m}:
+            tag = db.get(Tag, tid)
+            if tag:
+                info[tid] = {"tag_id": tid, "name": tag.name,
+                             "region_id": _avatar_region_id(db, tag)}
+        for pid, d in by_photo.items():
+            ss = sorted(
+                ({**info[tid], "count": c} for tid, c in sugg.get(pid, {}).items() if tid in info),
+                key=lambda s: -s["count"])
+            d["suggestions"] = ss
+            d["top"] = ss[0]["name"] if ss else ""
     return sorted(by_photo.values(), key=lambda d: d["filename"])
 
 
 @router.get("/api/faces/ai/photos")
 def pending_photos(db: Session = Depends(get_db)):
-    """Foton med obekräftade AI-ansikten, med foto-thumb + ansikts-crops."""
-    photos = _pending_photos(db)
+    """Foton med obekräftade AI-ansikten, med foto-thumb + ansikts-crops + förslag."""
+    photos = _pending_photos(db, with_suggestions=True)
     total = sum(len(p["face_ids"]) for p in photos)
     return JSONResponse({"photos": photos, "total": total})
+
+
+@router.post("/api/faces/ai/refresh-suggestions")
+def refresh_suggestions(db: Session = Depends(get_db)):
+    """Räkna om lagrade namnförslag (suggested_tag_id) för alla obekräftade
+    AI-ansikten mot nuvarande referensmodell - utan att detektera om."""
+    matcher = _build_db_matcher(db)
+    faces = _pending_faces_query(db).filter(FaceRegion.embedding.isnot(None)).all()
+    changed = 0
+    for f in faces:
+        tag_id, _score = matcher.suggest(faces_ai.bytes_to_emb(f.embedding))
+        if f.suggested_tag_id != tag_id:
+            f.suggested_tag_id = tag_id
+            changed += 1
+    db.commit()
+    return JSONResponse({"ok": True, "updated": changed, "total": len(faces)})
 
 
 def _build_db_matcher(db: Session) -> faces_ai.Matcher:

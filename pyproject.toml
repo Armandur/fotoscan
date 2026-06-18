@@ -12,6 +12,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "python-dotenv>=1.0",
     "weasyprint>=69.0",
+    "pillow-heif>=1.4.0",
 ]
 
 [tool.uv]

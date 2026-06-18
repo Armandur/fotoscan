@@ -16,7 +16,9 @@
   färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
-- [ ] Hantera HEIC ordentligt (kräver pillow-heif).
+- [x] **Hantera HEIC/HEIF.** `pillow-heif` registreras i `scanner.py` så Pillow
+  kan öppna iPhone-foton; `.heic`/`.heif` i SUPPORTED_EXTENSIONS. Scan, EXIF-datum,
+  thumbnail, `/image` (renderas till JPEG) och export verifierade.
 
 ## Deployment
 - [x] **CI/CD.** `.github/workflows/docker-publish.yml` bygger och pushar imagen

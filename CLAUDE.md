@@ -9,7 +9,8 @@ läses orörda på plats (flyttas/döps/skrivs aldrig till).
   **självhostade** under `static/vendor/` (inte CDN - undviker FOUC/vit bakgrund
   och funkar offline). Ingen bundler. `static/css/style.css` kompletterar bara
   Bootstrap (galleri-grid, autocomplete-dropdown, detaljvyns bild).
-- Pillow för thumbnails och EXIF-datum
+- Pillow för thumbnails och EXIF-datum; `pillow-heif` (registreras i
+  `scanner.py`) ger HEIC/HEIF-stöd (iPhone-foton)
 - `uv` för beroenden/körning
 
 ## Filstruktur
@@ -84,6 +85,10 @@ photos/                exempel/testbilder (gitignored)
   frikopplad - grov plats vs exakt fotografposition.
 - **Rotation i DB** (`Photo.rotation`, grader medurs). `/image/{id}` roterar
   on-the-fly när rotation != 0; thumbnail regenereras vid rotation.
+- **Icke-webb-native format** (TIFF/BMP/HEIC/HEIF ...): `/image` renderar dem
+  till JPEG on-the-fly (cachas i RENDER_DIR), eftersom webbläsare inte visar dem
+  inline. `_WEB_NATIVE` i `photos.py` listar de format som serveras orörda
+  (jpg/jpeg/png/gif/webp). HEIC kräver `pillow-heif` (registrerad i `scanner.py`).
 - **Baksides-koppling** (`Photo.back_of_id`): en skanning av ett fotos baksida
   (handskrivna namn/datum) kopplas till framsidan som ett stöd-foto. Delar INGEN
   metadata och döljs i alla listningar (`apply_dimensions` filtrerar bort

@@ -2,7 +2,12 @@ import logging
 from pathlib import Path
 
 from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
+
+# Gör att Pillow kan öppna HEIC/HEIF (iPhone-foton). Måste köras innan
+# Image.open på sådana filer; all bildöppning går via den här modulen.
+register_heif_opener()
 
 from app.config import (
     PHOTO_DIR, THUMB_DIR, THUMB_SIZE, RENDER_DIR, SUPPORTED_EXTENSIONS,

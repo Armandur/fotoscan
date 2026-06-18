@@ -40,7 +40,7 @@ THUMB_SIZE = (400, 400)
 # Filändelser som behandlas som bilder vid scanning
 SUPPORTED_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".tif", ".tiff",
-    ".bmp", ".gif", ".webp", ".heic",
+    ".bmp", ".gif", ".webp", ".heic", ".heif",
 }
 
 # Taggtyper. "person" och "tag" lagras i samma tabell, åtskilda av kind.

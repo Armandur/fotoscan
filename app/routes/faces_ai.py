@@ -20,7 +20,7 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, Photo, Tag, SessionLocal, _now
 from app.deps import get_db
 from app.routes.photos import _get_or_create_tag
-from app.schemas import ConfirmFace, ConfirmGroup
+from app.schemas import ConfirmFace
 from app.services import faces_ai
 from app.services.scanner import invalidate_face_thumb
 
@@ -156,29 +156,77 @@ def _pending_count(db: Session) -> int:
     )
 
 
-@router.get("/api/faces/ai/pending")
-def pending(db: Session = Depends(get_db)):
-    """Obekräftade AI-ansikten grupperade efter namnförslag (förslag först,
-    'inget förslag' sist)."""
-    faces = (
-        db.query(FaceRegion)
-        .filter(FaceRegion.source == "ai", FaceRegion.confirmed == 0)
-        .order_by(FaceRegion.suggested_tag_id, FaceRegion.id)
+def _pending_faces_query(db: Session):
+    return db.query(FaceRegion).filter(
+        FaceRegion.source == "ai", FaceRegion.confirmed == 0
+    )
+
+
+@router.get("/api/faces/ai/photos")
+def pending_photos(db: Session = Depends(get_db)):
+    """Foton med obekräftade AI-ansikten, med foto-thumb + ansikts-crops."""
+    faces = _pending_faces_query(db).order_by(FaceRegion.id).all()
+    by_photo: dict[int, dict] = {}
+    for f in faces:
+        p = f.photo
+        if not p:
+            continue
+        d = by_photo.setdefault(p.id, {
+            "photo_id": p.id, "filename": p.filename, "face_ids": [],
+        })
+        d["face_ids"].append(f.id)
+    photos = sorted(by_photo.values(), key=lambda d: d["filename"])
+    return JSONResponse({"photos": photos, "total": len(faces)})
+
+
+def _build_db_matcher(db: Session) -> faces_ai.Matcher:
+    rows = (
+        db.query(FaceRegion.tag_id, FaceRegion.embedding)
+        .join(Tag, Tag.id == FaceRegion.tag_id)
+        .filter(
+            FaceRegion.confirmed == 1,
+            FaceRegion.embedding.isnot(None),
+            Tag.placeholder == 0,
+        )
         .all()
     )
-    groups: dict[int | None, dict] = {}
+    return faces_ai.build_matcher(rows)
+
+
+@router.get("/api/faces/ai/photo/{photo_id}")
+def photo_faces(photo_id: int, db: Session = Depends(get_db)):
+    """Obekräftade AI-ansikten på ett foto, med rutor + topp-namnförslag (live-
+    beräknade mot bekräftade personer)."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    faces = (
+        _pending_faces_query(db)
+        .filter(FaceRegion.photo_id == photo_id)
+        .order_by(FaceRegion.id)
+        .all()
+    )
+    matcher = _build_db_matcher(db)
+    out = []
     for f in faces:
-        key = f.suggested_tag_id
-        if key not in groups:
-            name = f.suggested_tag.name if f.suggested_tag else None
-            groups[key] = {"suggested_id": key, "suggested_name": name, "faces": []}
-        photo = f.photo
-        groups[key]["faces"].append({
-            "id": f.id, "photo_id": f.photo_id,
-            "filename": photo.filename if photo else "",
+        suggestions = []
+        if f.embedding:
+            emb = faces_ai.bytes_to_emb(f.embedding)
+            for tag_id, score in matcher.topk(emb):
+                tag = db.get(Tag, tag_id)
+                if tag:
+                    suggestions.append({
+                        "tag_id": tag_id, "name": tag.name,
+                        "score": round(score, 3),
+                    })
+        out.append({
+            "id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,
+            "suggestions": suggestions,
         })
-    ordered = sorted(groups.values(), key=lambda g: (g["suggested_id"] is None, g["suggested_name"] or ""))
-    return JSONResponse({"groups": ordered, "total": len(faces)})
+    return JSONResponse({
+        "photo": {"id": photo.id, "filename": photo.filename},
+        "faces": out,
+    })
 
 
 def _confirm(db: Session, face: FaceRegion, tag: Tag) -> None:
@@ -208,26 +256,6 @@ def confirm_face(region_id: int, data: ConfirmFace, db: Session = Depends(get_db
     return JSONResponse({"ok": True, "person": {"id": tag.id, "name": tag.name}})
 
 
-@router.post("/api/faces/ai/confirm-group")
-def confirm_group(data: ConfirmGroup, db: Session = Depends(get_db)):
-    """Bekräfta alla obekräftade AI-ansikten med ett visst namnförslag."""
-    tag = db.get(Tag, data.suggested_tag_id)
-    if not tag or tag.kind != "person":
-        raise HTTPException(400, "Ogiltig person")
-    faces = (
-        db.query(FaceRegion)
-        .filter(
-            FaceRegion.source == "ai", FaceRegion.confirmed == 0,
-            FaceRegion.suggested_tag_id == tag.id,
-        )
-        .all()
-    )
-    for face in faces:
-        _confirm(db, face, tag)
-    db.commit()
-    return JSONResponse({"ok": True, "count": len(faces)})
-
-
 @router.get("/faces/review", response_class=HTMLResponse)
 def review_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
@@ -235,4 +263,15 @@ def review_page(request: Request, db: Session = Depends(get_db)):
         {"pending": _pending_count(db), "scanned": db.query(Photo).filter(
             Photo.ai_faces_at.isnot(None), Photo.back_of_id.is_(None)).count(),
          "total_photos": db.query(Photo).filter(Photo.back_of_id.is_(None)).count()},
+    )
+
+
+@router.get("/faces/review/{photo_id}", response_class=HTMLResponse)
+def review_photo_page(photo_id: int, request: Request, db: Session = Depends(get_db)):
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    return templates.TemplateResponse(
+        request, "faces_review_photo.html",
+        {"photo": photo},
     )

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Granska ansikten - {{ photo.filename }}{% endblock %}
+
+{% block head %}
+<style>
+.fr-stage { position: relative; display: inline-block; max-width: 100%; }
+.fr-stage img { max-width: 100%; max-height: 80vh; display: block; }
+.fr-box { position: absolute; border: 2px solid var(--bs-warning); box-shadow: 0 0 0 1px #000; pointer-events: none; }
+.fr-box.active { border-color: var(--bs-success); border-width: 3px; }
+.fr-box .fr-num { position: absolute; top: -1px; left: -1px; background: var(--bs-warning); color: #000;
+    font-size: .7rem; font-weight: 700; padding: 0 4px; line-height: 1.3; }
+.fr-box.active .fr-num { background: var(--bs-success); color: #fff; }
+.fr-item.done { opacity: .45; }
+.fr-crop { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; }
+.fr-sugg { cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h1 class="h5 mb-0 text-truncate">Granska ansikten: {{ photo.filename }}</h1>
+    <div class="d-flex gap-2">
+        <a href="/photo/{{ photo.id }}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Öppna foto</a>
+        <a href="/faces/review" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Till listan</a>
+    </div>
+</div>
+
+<div class="row g-3" data-photo-id="{{ photo.id }}">
+    <div class="col-lg-7">
+        <div class="fr-stage" id="fr-stage">
+            <img src="/image/{{ photo.id }}" alt="{{ photo.filename }}" id="fr-img">
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div id="fr-list" class="d-flex flex-column gap-2"></div>
+        <div id="fr-done" class="alert alert-success d-none mt-2">
+            Alla ansikten granskade.
+            <a href="#" id="fr-next" class="alert-link">Nästa foto</a> ·
+            <a href="/faces/review" class="alert-link">till listan</a>
+        </div>
+    </div>
+</div>
+
+<datalist id="person-list"></datalist>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const photoId = document.querySelector("[data-photo-id]").dataset.photoId;
+    const stage = document.getElementById("fr-stage");
+    const list = document.getElementById("fr-list");
+    const doneBox = document.getElementById("fr-done");
+    let remaining = 0;
+
+    async function fillPersons() {
+        try {
+            const names = await apiFetch("/api/tags?kind=person");
+            document.getElementById("person-list").innerHTML =
+                names.map(n => `<option value="${escapeHtml(n)}">`).join("");
+        } catch (e) { /* ok */ }
+    }
+
+    function drawBox(f, num) {
+        const box = document.createElement("div");
+        box.className = "fr-box";
+        box.dataset.faceId = f.id;
+        box.style.left = (f.x * 100) + "%";
+        box.style.top = (f.y * 100) + "%";
+        box.style.width = (f.w * 100) + "%";
+        box.style.height = (f.h * 100) + "%";
+        box.innerHTML = `<span class="fr-num">${num}</span>`;
+        stage.appendChild(box);
+    }
+
+    function setActive(faceId, on) {
+        const box = stage.querySelector(`.fr-box[data-face-id="${faceId}"]`);
+        if (box) box.classList.toggle("active", on);
+    }
+
+    function markDone(item, faceId) {
+        item.classList.add("done");
+        const box = stage.querySelector(`.fr-box[data-face-id="${faceId}"]`);
+        if (box) box.remove();
+        remaining--;
+        if (remaining <= 0) doneBox.classList.remove("d-none");
+    }
+
+    function faceItem(f, num) {
+        const item = document.createElement("div");
+        item.className = "fr-item card";
+        item.dataset.faceId = f.id;
+        // OBS: appenda FÖRE querySelector - obscura ger null på frånkopplat element.
+        list.appendChild(item);
+        const suggHtml = f.suggestions.length
+            ? f.suggestions.map(s =>
+                `<button class="btn btn-sm btn-outline-success fr-sugg py-0" data-tag="${s.tag_id}" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)} <span class="text-secondary">${s.score}</span></button>`
+              ).join(" ")
+            : '<span class="text-secondary small">Inga matchningar</span>';
+        item.innerHTML =
+            `<div class="card-body p-2">
+                <div class="d-flex gap-2">
+                    <img class="fr-crop" src="/api/faces/${f.id}/thumb" alt="">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge text-bg-warning">${num}</span>
+                            <span class="small text-secondary">Förslag:</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 mb-2">${suggHtml}</div>
+                        <div class="input-group input-group-sm mb-1">
+                            <input type="text" class="form-control py-0" list="person-list" placeholder="Sök eller skapa person...">
+                            <button class="btn btn-outline-primary" data-act="save" title="Spara"><i class="bi bi-check2"></i></button>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm py-0" data-act="reject"><i class="bi bi-trash"></i> Avvisa</button>
+                    </div>
+                </div>
+             </div>`;
+
+        item.addEventListener("mouseenter", () => setActive(f.id, true));
+        item.addEventListener("mouseleave", () => setActive(f.id, false));
+
+        async function confirm(body, label) {
+            try {
+                await apiFetch(`/api/faces/${f.id}/confirm`, { method: "POST", body });
+                showToast("Bekräftad: " + label);
+                markDone(item, f.id);
+            } catch (e) { showToast("Misslyckades: " + e.message, true); }
+        }
+        item.querySelectorAll(".fr-sugg").forEach(b =>
+            b.addEventListener("click", () => confirm({ tag_id: +b.dataset.tag }, b.dataset.name)));
+        item.querySelector('[data-act="save"]').addEventListener("click", () => {
+            const name = item.querySelector("input").value.trim();
+            if (!name) { showToast("Ange en person", true); return; }
+            confirm({ name }, name);
+        });
+        item.querySelector('[data-act="reject"]').addEventListener("click", async () => {
+            try {
+                await apiFetch(`/api/faces/${f.id}`, { method: "DELETE" });
+                showToast("Avvisad");
+                markDone(item, f.id);
+            } catch (e) { showToast("Misslyckades: " + e.message, true); }
+        });
+    }
+
+    async function load() {
+        let data;
+        try { data = await apiFetch(`/api/faces/ai/photo/${photoId}`); }
+        catch (e) { list.innerHTML = '<div class="alert alert-danger">Kunde inte ladda.</div>'; return; }
+        // rensa ev. gamla rutor
+        stage.querySelectorAll(".fr-box").forEach(b => b.remove());
+        list.innerHTML = "";
+        remaining = data.faces.length;
+        if (!remaining) { doneBox.classList.remove("d-none"); return; }
+        data.faces.forEach((f, i) => {
+            drawBox(f, i + 1);
+            faceItem(f, i + 1);  // appendar sig själv till listan
+        });
+    }
+
+    document.getElementById("fr-next").addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+            const d = await apiFetch("/api/faces/ai/photos");
+            const next = d.photos.find(p => String(p.photo_id) !== String(photoId));
+            location.href = next ? `/faces/review/${next.photo_id}` : "/faces/review";
+        } catch (err) { location.href = "/faces/review"; }
+    });
+
+    fillPersons();
+    // Rutorna är %-positionerade mot wrappern (som sizear till bilden via CSS),
+    // så de hamnar rätt när bilden laddats - vi behöver inte vänta på load.
+    load();
+})();
+</script>
+{% endblock %}

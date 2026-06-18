@@ -29,7 +29,7 @@ app/
     tags.py            GET /api/tags (autocomplete)
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
-    faces_ai.py        AI-ansiktsjobb (bakgrundstråd) + granskningskö (/faces/review)
+    faces_ai.py        AI-ansiktsjobb (bakgrundstråd) + granskning (/faces/review fotolista, /faces/review/{id} per foto)
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
@@ -188,9 +188,14 @@ photos/                exempel/testbilder (gitignored)
   (`_run_job`, modul-global `JOB`-status): pass 1 detekterar, backfillar embeddings
   på bekräftade rutor via IoU-matchning, samlar kandidater; pass 2 föreslår namn.
   **AI-rutor är obekräftade** (`confirmed=0`) och **räknas inte** in i personer/
-  export/album förrän de bekräftas i granskningskön - därför filtrerar alla
+  export/album förrän de bekräftas i granskningen - därför filtrerar alla
   läsställen på `confirmed=1` (faces/persons/context/exporter/pdf_album). Bekräfta
-  = sätt `tag_id` + `confirmed=1`; avvisa = `DELETE /api/faces/{id}`. OBS:
+  = sätt `tag_id` + `confirmed=1`; avvisa = `DELETE /api/faces/{id}`.
+  Granskning i två nivåer: `/faces/review` listar foton med obekräftade ansikten
+  (`/api/faces/ai/photos`, foto-thumb + ansikts-crops); `/faces/review/{photo_id}`
+  visar hela bilden med numrerade rutor + en turordningslista per ansikte
+  (`/api/faces/ai/photo/{id}` ger rutor + live-beräknade topp-förslag via
+  `Matcher.topk`) där man bekräftar förslag/söker/skapar person eller avvisar. OBS:
   `tag_id` är nullbar (obekräftade utan match saknar person) - kräver tabell-
   ombyggnad i SQLite (`_make_face_tag_id_nullable`, eftersom ALTER inte kan släppa
   NOT NULL). Tredje FK-vägen (`suggested_tag_id`) -> `foreign_keys` på relationerna.

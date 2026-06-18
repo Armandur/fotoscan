@@ -24,105 +24,50 @@
 </div>
 <div class="alert alert-info py-2 d-none" id="scan-msg"></div>
 
-<div id="pending-root"></div>
-
-<datalist id="person-list"></datalist>
+<div id="photos-root"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (() => {
-    const root = document.getElementById("pending-root");
-    const info = document.getElementById("scan-info");
+    const root = document.getElementById("photos-root");
     const progress = document.getElementById("scan-progress");
     const bar = document.getElementById("scan-bar");
     const msg = document.getElementById("scan-msg");
 
-    async function fillPersons() {
-        try {
-            const names = await apiFetch("/api/tags?kind=person");
-            document.getElementById("person-list").innerHTML =
-                names.map(n => `<option value="${escapeHtml(n)}">`).join("");
-        } catch (e) { /* tomt är ok */ }
-    }
-
-    function faceCard(f, suggestedName) {
+    function photoCard(p) {
         const col = document.createElement("div");
         col.className = "col-6 col-sm-4 col-md-3 col-lg-2";
-        col.dataset.faceId = f.id;
-        const card = document.createElement("div");
-        card.className = "card h-100";
-        card.innerHTML =
-            `<img class="card-img-top" src="/api/faces/${f.id}/thumb" alt="" style="aspect-ratio:1;object-fit:cover">
-             <div class="card-body p-2 d-flex flex-column gap-1">
-                <a href="/photo/${f.photo_id}" class="small text-truncate text-secondary" target="_blank" title="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</a>
-                ${suggestedName ? `<button class="btn btn-success btn-sm py-0" data-act="confirm-suggest"><i class="bi bi-check-lg"></i> ${escapeHtml(suggestedName)}</button>` : ""}
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control py-0" list="person-list" placeholder="Person...">
-                    <button class="btn btn-outline-primary" data-act="confirm-name" title="Spara"><i class="bi bi-check2"></i></button>
-                </div>
-                <button class="btn btn-outline-danger btn-sm py-0" data-act="reject"><i class="bi bi-trash"></i> Avvisa</button>
+        const a = document.createElement("a");
+        a.href = `/faces/review/${p.photo_id}`;
+        a.className = "card photo-card text-decoration-none h-100";
+        const crops = p.face_ids.slice(0, 5).map(
+            id => `<img src="/api/faces/${id}/thumb" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px">`
+        ).join("");
+        a.innerHTML =
+            `<img loading="lazy" class="card-img-top" src="/thumb/${p.photo_id}" alt="">
+             <div class="card-body p-2">
+                <div class="d-flex flex-wrap gap-1 mb-1">${crops}</div>
+                <div class="text-truncate small" title="${escapeHtml(p.filename)}">${escapeHtml(p.filename)}</div>
+                <span class="badge text-bg-primary">${p.face_ids.length} ansikte${p.face_ids.length !== 1 ? "n" : ""}</span>
              </div>`;
-        col.appendChild(card);
-
-        const remove = () => { col.remove(); refreshEmpty(); };
-        card.querySelector('[data-act="reject"]').addEventListener("click", async () => {
-            try { await apiFetch(`/api/faces/${f.id}`, { method: "DELETE" }); remove(); }
-            catch (e) { showToast("Misslyckades: " + e.message, true); }
-        });
-        const sug = card.querySelector('[data-act="confirm-suggest"]');
-        if (sug) sug.addEventListener("click", async () => {
-            try { await apiFetch(`/api/faces/${f.id}/confirm`, { method: "POST", body: { name: suggestedName } }); showToast("Bekräftad: " + suggestedName); remove(); }
-            catch (e) { showToast("Misslyckades: " + e.message, true); }
-        });
-        card.querySelector('[data-act="confirm-name"]').addEventListener("click", async () => {
-            const name = card.querySelector('input').value.trim();
-            if (!name) { showToast("Ange en person", true); return; }
-            try { await apiFetch(`/api/faces/${f.id}/confirm`, { method: "POST", body: { name } }); showToast("Bekräftad: " + name); remove(); }
-            catch (e) { showToast("Misslyckades: " + e.message, true); }
-        });
+        col.appendChild(a);
         return col;
     }
 
-    function refreshEmpty() {
-        if (!root.querySelector("[data-face-id]")) {
-            root.innerHTML = '<div class="alert alert-secondary">Inga ansikten att granska. Kör AI-detektering för att hitta fler.</div>';
-        }
-    }
-
-    async function loadPending() {
+    async function loadPhotos() {
         let data;
-        try { data = await apiFetch("/api/faces/ai/pending"); }
+        try { data = await apiFetch("/api/faces/ai/photos"); }
         catch (e) { root.innerHTML = '<div class="alert alert-danger">Kunde inte ladda.</div>'; return; }
-        root.innerHTML = "";
-        if (!data.total) { refreshEmpty(); return; }
-        for (const g of data.groups) {
-            const sec = document.createElement("div");
-            sec.className = "mb-4";
-            const head = document.createElement("div");
-            head.className = "d-flex align-items-center gap-2 mb-2";
-            const title = g.suggested_name
-                ? `Förslag: <strong>${escapeHtml(g.suggested_name)}</strong>`
-                : `<span class="text-secondary">Inget namnförslag</span>`;
-            head.innerHTML = `<h2 class="h6 mb-0">${title}</h2><span class="badge text-bg-secondary">${g.faces.length}</span>`;
-            if (g.suggested_id) {
-                const all = document.createElement("button");
-                all.className = "btn btn-success btn-sm py-0 ms-2";
-                all.innerHTML = `<i class="bi bi-check-all"></i> Bekräfta alla (${g.faces.length})`;
-                all.addEventListener("click", async () => {
-                    if (!(await showConfirm(`Bekräfta alla ${g.faces.length} ansikten som ${g.suggested_name}?`, { okLabel: "Bekräfta", okClass: "btn-success" }))) return;
-                    try { const r = await apiFetch("/api/faces/ai/confirm-group", { method: "POST", body: { suggested_tag_id: g.suggested_id } }); showToast(`${r.count} bekräftade`); loadPending(); }
-                    catch (e) { showToast("Misslyckades: " + e.message, true); }
-                });
-                head.appendChild(all);
-            }
-            sec.appendChild(head);
-            const grid = document.createElement("div");
-            grid.className = "row g-2";
-            for (const f of g.faces) grid.appendChild(faceCard(f, g.suggested_name));
-            sec.appendChild(grid);
-            root.appendChild(sec);
+        if (!data.total) {
+            root.innerHTML = '<div class="alert alert-secondary">Inga ansikten att granska. Kör AI-detektering för att hitta fler.</div>';
+            return;
         }
+        const grid = document.createElement("div");
+        grid.className = "row g-2";
+        for (const p of data.photos) grid.appendChild(photoCard(p));
+        root.innerHTML = "";
+        root.appendChild(grid);
     }
 
     let poll = null;
@@ -140,7 +85,7 @@
                 bar.classList.remove("progress-bar-animated");
                 if (s.error) showToast("Fel: " + s.error, true);
                 else showToast(s.message || "Klart");
-                loadPending(); fillPersons();
+                loadPhotos();
             }
         }, 1500);
     }
@@ -159,9 +104,7 @@
         scan(true);
     });
 
-    fillPersons();
-    loadPending();
-    // Om ett jobb redan kör (t.ex. efter sidladdning) - börja polla.
+    loadPhotos();
     apiFetch("/api/faces/ai/status").then(s => { if (s.running) startPolling(); }).catch(() => {});
 })();
 </script>

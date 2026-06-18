@@ -76,10 +76,6 @@ class ConfirmFace(BaseModel):
     name: str = ""
 
 
-class ConfirmGroup(BaseModel):
-    suggested_tag_id: int
-
-
 class PhotoUpdate(BaseModel):
     date_text: str = ""
     location: str = ""

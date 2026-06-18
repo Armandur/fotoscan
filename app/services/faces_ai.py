@@ -108,6 +108,15 @@ class Matcher:
             return self.ids[idx], best
         return None, best
 
+    def topk(self, emb: np.ndarray, k: int = 4, floor: float = 0.20) -> list[tuple[int, float]]:
+        """De k bästa personmatchningarna (tag_id, likhet) över ett lågt golv -
+        för att visa flera förslag att välja bland i granskningen."""
+        if self.mat is None:
+            return []
+        sims = self.mat @ _normalize(emb)
+        order = np.argsort(sims)[::-1][:k]
+        return [(self.ids[i], float(sims[i])) for i in order if sims[i] >= floor]
+
 
 def build_matcher(face_rows: list[tuple[int, bytes]], threshold: float = 0.40) -> Matcher:
     """face_rows: (tag_id, embedding-bytes) för bekräftade, namngivna ansikten."""

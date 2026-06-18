@@ -19,7 +19,13 @@
 {% endmacro %}
 
 {% block content %}
-<h1 class="h4 mb-3">Personer</h1>
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h1 class="h4 mb-0">Personer</h1>
+    <a href="/persons/duplicates" class="btn btn-outline-secondary btn-sm"
+       title="Hitta personer som troligen är samma (via AI-ansiktslikhet)">
+        <i class="bi bi-people-fill"></i> Möjliga dubbletter
+    </a>
+</div>
 
 {% if not identified and not unknown %}
     <div class="alert alert-secondary">

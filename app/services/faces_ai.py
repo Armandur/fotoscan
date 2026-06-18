@@ -140,6 +140,22 @@ class Matcher:
         order = np.argsort(sims)[::-1][:k]
         return [(self.ids[i], float(sims[i])) for i in order if sims[i] >= floor]
 
+    def pairs(self, threshold: float) -> list[tuple[int, int, float]]:
+        """Personpar (tag_id_a, tag_id_b, likhet) vars centroider liknar varandra
+        över tröskeln - troliga dubbletter att slå ihop. Sorterade fallande."""
+        if self.mat is None or len(self.ids) < 2:
+            return []
+        sim = self.mat @ self.mat.T
+        out = []
+        n = len(self.ids)
+        for i in range(n):
+            for j in range(i + 1, n):
+                s = float(sim[i, j])
+                if s >= threshold:
+                    out.append((self.ids[i], self.ids[j], s))
+        out.sort(key=lambda t: t[2], reverse=True)
+        return out
+
 
 def build_matcher(face_rows: list[tuple[int, bytes]], threshold: float = 0.40) -> Matcher:
     """face_rows: (tag_id, embedding-bytes) för bekräftade, namngivna ansikten."""

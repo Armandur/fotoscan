@@ -154,6 +154,43 @@ def scan_status():
     return JSONResponse(dict(JOB))
 
 
+def _confirmed_count(db: Session, tag_id: int) -> int:
+    return (
+        db.query(FaceRegion)
+        .filter(FaceRegion.tag_id == tag_id, FaceRegion.confirmed == 1)
+        .count()
+    )
+
+
+@router.get("/api/persons/similar")
+def similar_persons(threshold: float = 0.5, db: Session = Depends(get_db)):
+    """Personpar vars ansikts-embeddingar liknar varandra - troliga dubbletter
+    att slå ihop. Bygger på samma centroider som namnförslagen."""
+    threshold = max(0.3, min(0.95, threshold))
+    matcher = _build_db_matcher(db)
+    out = []
+    for a, b, score in matcher.pairs(threshold)[:100]:
+        ta, tb = db.get(Tag, a), db.get(Tag, b)
+        if not ta or not tb:
+            continue
+        out.append({
+            "a": {"id": a, "name": ta.name, "region_id": _avatar_region_id(db, ta),
+                  "count": _confirmed_count(db, a)},
+            "b": {"id": b, "name": tb.name, "region_id": _avatar_region_id(db, tb),
+                  "count": _confirmed_count(db, b)},
+            "score": round(score, 3),
+        })
+    return JSONResponse({"pairs": out, "threshold": threshold})
+
+
+@router.get("/persons/duplicates", response_class=HTMLResponse)
+def persons_duplicates_page(request: Request, threshold: float = 0.5,
+                            db: Session = Depends(get_db)):
+    return templates.TemplateResponse(
+        request, "persons_duplicates.html", {"threshold": threshold},
+    )
+
+
 def _pending_count(db: Session) -> int:
     return (
         db.query(FaceRegion)

@@ -206,9 +206,15 @@ photos/                exempel/testbilder (gitignored)
   (`/api/faces/ai/photo/{id}` ger rutor + live-beräknade topp-förslag via
   `Matcher.topk`) där man bekräftar förslag/söker/skapar person eller avvisar.
   Per-foto-vyn visar även redan bekräftade/manuella rutor som kontext (blå
-  streckade, med namn), har håll-för-att-dölja-alla-rutor (knapp/H, momentant) och
-  döljer klara ansikten ur listan (toggle "visa även klara", av som default;
-  listan skrollar vid många). OBS:
+  streckade, med namn - klickbara för att byta person), har håll-för-att-dölja-
+  alla-rutor (knapp/H, momentant), döljer klara ansikten ur listan (toggle "visa
+  även klara", av som default; listan skrollar vid många), och bläddrar mellan
+  granskningsfoton (J/K/pilar). Jobbet kan avbrytas (`/api/faces/ai/cancel` ->
+  cancel-flagga, stannar vid nästa foto, kraschsäkert). Byt person på en befintlig
+  ruta (även i manuella flödet): `POST /api/faces/{id}/person` (tag_id/name/
+  unidentified). **Dubblettpersoner:** `/persons/duplicates` +
+  `/api/persons/similar` jämför personernas centroider parvis (`Matcher.pairs`,
+  cosine-tröskel) och föreslår sammanslagning av troliga dubbletter. OBS:
   `tag_id` är nullbar (obekräftade utan match saknar person) - kräver tabell-
   ombyggnad i SQLite (`_make_face_tag_id_nullable`, eftersom ALTER inte kan släppa
   NOT NULL). Tredje FK-vägen (`suggested_tag_id`) -> `foreign_keys` på relationerna.

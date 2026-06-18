@@ -223,6 +223,12 @@ def photo_faces(photo_id: int, db: Session = Depends(get_db)):
             "id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,
             "suggestions": suggestions,
         })
+    # Ansikten med namnförslag först (högsta poäng överst), övriga sist.
+    out.sort(
+        key=lambda o: (bool(o["suggestions"]),
+                       o["suggestions"][0]["score"] if o["suggestions"] else 0.0),
+        reverse=True,
+    )
     # Redan bekräftade/manuella rutor visas som kontext (med namn), utan åtgärder.
     confirmed = [
         {"id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,

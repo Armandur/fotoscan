@@ -23,6 +23,11 @@
 - [x] **Auto-välj bästa tumnagel** för person: `_best_region_id` väljer störst
   ansiktsarea med `det_score` (lagras vid AI-detektering) som tiebreaker, om ingen
   manuell tumnagel (`thumb_face_id`) är vald.
+- [ ] **Verktyg för att utreda felmatchningar.** Diagnos/debug av igenkänningen:
+  varför ett ansikte fick (eller missade) ett förslag - visa likhetspoäng mot
+  kandidatpersoner, inspektera en persons referens-embeddings, och hitta avvikare
+  inom en person (ett bekräftat ansikte som ligger långt från personens centroid
+  = troligen feltaggat) för att kunna rätta. Ger insyn i varför AI:n matchar fel.
 - [ ] **Kör AI automatiskt vid scan** (valbart) så kön alltid är aktuell.
 - [ ] **GPU på Unraid** för snabbare detektering om volymen växer (2070ti kan
   delas mellan containrar via NVIDIA Container Toolkit; onödigt för nuvarande skala).

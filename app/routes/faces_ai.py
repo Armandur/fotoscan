@@ -217,6 +217,38 @@ def persons_duplicates_page(request: Request, threshold: float = 0.5,
     )
 
 
+@router.get("/api/persons/{tag_id}/find-faces")
+def find_more_faces(tag_id: int, threshold: float = 0.4,
+                    db: Session = Depends(get_db)):
+    """Omvänd sökning: hitta obekräftade AI-ansikten som liknar personens
+    medel-embedding (centroid) - kandidater att bekräfta som denna person."""
+    import numpy as np
+
+    threshold = max(0.3, min(0.9, threshold))
+    tag = db.get(Tag, tag_id)
+    if not tag or tag.kind != "person":
+        raise HTTPException(404, "Person hittades inte")
+    refs = [
+        faces_ai.bytes_to_emb(b) for (b,) in
+        db.query(FaceRegion.embedding).filter(
+            FaceRegion.tag_id == tag_id, FaceRegion.confirmed == 1,
+            FaceRegion.embedding.isnot(None)).all()
+    ]
+    if not refs:
+        return JSONResponse({"faces": [], "name": tag.name, "no_ref": True})
+    centroid = np.mean(refs, axis=0)
+    centroid = centroid / (np.linalg.norm(centroid) or 1.0)
+
+    out = []
+    for f in _pending_faces_query(db).filter(FaceRegion.embedding.isnot(None)).all():
+        emb = faces_ai.bytes_to_emb(f.embedding)
+        score = float(centroid @ (emb / (np.linalg.norm(emb) or 1.0)))
+        if score >= threshold:
+            out.append({"id": f.id, "photo_id": f.photo_id, "score": round(score, 3)})
+    out.sort(key=lambda d: -d["score"])
+    return JSONResponse({"faces": out[:80], "name": tag.name, "threshold": threshold})
+
+
 @router.get("/api/faces/ai/clusters")
 def face_clusters(threshold: float = 0.5, min_size: int = 2,
                   db: Session = Depends(get_db)):

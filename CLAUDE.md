@@ -238,7 +238,12 @@ photos/                exempel/testbilder (gitignored)
   cosine-tröskel) och föreslår sammanslagning av troliga dubbletter.
   **Klustra okända:** `/faces/clusters` + `/api/faces/ai/clusters` grupperar
   obekräftade ansikten på likhet (`cluster_embeddings`) så en hel grupp namnges
-  på en gång (`cluster-name`), med per-grupp namnförslag mot kända personer. OBS:
+  på en gång (`cluster-name`), med per-grupp namnförslag mot kända personer.
+  **Hitta fler foton:** knapp i `/persons/{id}` -> `GET /api/persons/{id}/find-faces`
+  kör personens centroid mot obekräftade ansikten och listar kandidater att
+  bekräfta i klump. **Förslag i listan:** `/faces/review`-korten visar lagrade
+  namnförslag (sorterbar på person); `POST /api/faces/ai/refresh-suggestions`
+  räknar om dem utan omdetektering. OBS:
   `tag_id` är nullbar (obekräftade utan match saknar person) - kräver tabell-
   ombyggnad i SQLite (`_make_face_tag_id_nullable`, eftersom ALTER inte kan släppa
   NOT NULL). Tredje FK-vägen (`suggested_tag_id`) -> `foreign_keys` på relationerna.

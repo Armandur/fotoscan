@@ -123,6 +123,19 @@
 </div>
 {% endif %}
 
+<div class="card mb-3">
+    <div class="card-body p-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-info btn-sm" id="find-faces-btn">
+                <i class="bi bi-search"></i> Hitta fler foton med {{ person.name }}
+            </button>
+            <span class="text-secondary small">Sök bland obekräftade AI-ansikten som liknar personen.</span>
+            <span class="text-secondary small ms-auto" id="find-faces-info"></span>
+        </div>
+        <div id="find-faces-results" class="mt-2"></div>
+    </div>
+</div>
+
 {{ filterbar("/persons/" ~ person.id, reviewed, ptype, paired, separate, sort) }}
 
 <div class="gallery-grid">
@@ -309,5 +322,67 @@ document.addEventListener("keydown", (e) => {
         }
     }
 });
+
+// ---- Hitta fler foton med denna person (omvänd ansiktssökning) ----
+(() => {
+    const btn = document.getElementById("find-faces-btn");
+    const info = document.getElementById("find-faces-info");
+    const root = document.getElementById("find-faces-results");
+    const selected = new Set();
+
+    btn.addEventListener("click", async () => {
+        btn.disabled = true; info.textContent = "Söker...";
+        root.innerHTML = ""; selected.clear();
+        let data;
+        try { data = await apiFetch(`/api/persons/${personId}/find-faces`); }
+        catch (e) { info.textContent = "Kunde inte söka: " + e.message; btn.disabled = false; return; }
+        btn.disabled = false;
+        if (data.no_ref) { info.textContent = "Personen saknar bekräftade ansikten med embedding att söka mot."; return; }
+        if (!data.faces.length) { info.textContent = "Inga liknande obekräftade ansikten hittades."; return; }
+        info.textContent = `${data.faces.length} kandidater (klicka för att av/på-markera).`;
+
+        const bar = document.createElement("div");
+        bar.className = "d-flex gap-2 mb-2 flex-wrap align-items-center";
+        bar.innerHTML = `<button class="btn btn-success btn-sm" data-act="confirm"><i class="bi bi-check-lg"></i> Bekräfta valda som ${escapeHtml(data.name)}</button>
+            <span class="text-secondary small" id="ff-count"></span>`;
+        const grid = document.createElement("div");
+        grid.className = "d-flex flex-wrap gap-2";
+        root.appendChild(bar); root.appendChild(grid);
+        const countEl = bar.querySelector("#ff-count");
+        const updateCount = () => { countEl.textContent = `${selected.size} valda`; };
+
+        data.faces.forEach(f => {
+            const cell = document.createElement("div");
+            cell.className = "text-center";
+            const img = document.createElement("img");
+            img.src = `/api/faces/${f.id}/thumb`;
+            img.title = `Likhet ${f.score} - klicka för att av/på-markera`;
+            img.style.cssText = "width:72px;height:72px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid var(--bs-success)";
+            selected.add(f.id);
+            img.addEventListener("click", () => {
+                if (selected.has(f.id)) { selected.delete(f.id); img.style.opacity = ".35"; img.style.borderColor = "transparent"; }
+                else { selected.add(f.id); img.style.opacity = "1"; img.style.borderColor = "var(--bs-success)"; }
+                updateCount();
+            });
+            const link = document.createElement("a");
+            link.href = `/faces/review/${f.photo_id}`; link.target = "_blank";
+            link.className = "d-block small text-secondary text-decoration-none";
+            link.innerHTML = `${f.score} <i class="bi bi-box-arrow-up-right"></i>`;
+            cell.append(img, link);
+            grid.appendChild(cell);
+        });
+        updateCount();
+
+        bar.querySelector('[data-act="confirm"]').addEventListener("click", async () => {
+            const ids = [...selected];
+            if (!ids.length) { showToast("Inga valda", true); return; }
+            try {
+                const r = await apiFetch("/api/faces/ai/cluster-name", { method: "POST", body: { face_ids: ids, tag_id: +personId } });
+                showToast(`${r.count} ansikten bekräftade som ${r.person.name}`);
+                setTimeout(() => location.reload(), 600);
+            } catch (e) { showToast("Misslyckades: " + e.message, true); }
+        });
+    });
+})();
 </script>
 {% endblock %}

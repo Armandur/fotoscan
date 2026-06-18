@@ -16,8 +16,10 @@
 - [x] **"Uppdatera förslag"-pass.** `POST /api/faces/ai/refresh-suggestions` räknar
   om `suggested_tag_id` för alla pending mot nuvarande modell utan omdetektering;
   knapp "Uppdatera förslag" i listvyn.
-- [ ] **"Hitta fler foton med denna person".** Omvänd sökning från `/persons/{id}`:
-  kör personens centroid mot obekräftade/odetekterade ansikten.
+- [x] **"Hitta fler foton med denna person".** `/persons/{id}` har en knapp som
+  kör personens centroid mot obekräftade AI-ansikten (`GET /api/persons/{id}/
+  find-faces`) och listar kandidater (crops + likhet + öppna-foto-länk) att
+  av/på-markera och bekräfta i klump (via `cluster-name`).
 - [x] **Auto-välj bästa tumnagel** för person: `_best_region_id` väljer störst
   ansiktsarea med `det_score` (lagras vid AI-detektering) som tiebreaker, om ingen
   manuell tumnagel (`thumb_face_id`) är vald.

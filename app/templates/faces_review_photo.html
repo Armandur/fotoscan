@@ -156,7 +156,10 @@
                             <input type="text" class="form-control form-control-sm fr-search" placeholder="Sök eller skapa person..." autocomplete="off">
                             <div class="face-ac fr-ac"></div>
                         </div>
-                        <button class="btn btn-outline-danger btn-sm py-0" data-act="reject"><i class="bi bi-trash"></i> Avvisa</button>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-outline-secondary btn-sm py-0" data-act="unknown" title="Bekräfta ansiktet men som oidentifierad person (Okänd-N)"><i class="bi bi-person-dash"></i> Oidentifierad</button>
+                            <button class="btn btn-outline-danger btn-sm py-0" data-act="reject"><i class="bi bi-trash"></i> Avvisa</button>
+                        </div>
                     </div>
                 </div>
              </div>`;
@@ -173,6 +176,8 @@
         }
         item.querySelectorAll(".fr-sugg").forEach(b =>
             b.addEventListener("click", () => confirm({ tag_id: +b.dataset.tag }, b.dataset.name)));
+        item.querySelector('[data-act="unknown"]').addEventListener("click", () =>
+            confirm({ unidentified: true }, "oidentifierad"));
         item.querySelector('[data-act="reject"]').addEventListener("click", async () => {
             try {
                 await apiFetch(`/api/faces/${f.id}`, { method: "DELETE" });

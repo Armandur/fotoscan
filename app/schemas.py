@@ -74,6 +74,7 @@ class FaceRegionIn(BaseModel):
 class ConfirmFace(BaseModel):
     tag_id: int | None = None
     name: str = ""
+    unidentified: bool = False
 
 
 class PhotoUpdate(BaseModel):

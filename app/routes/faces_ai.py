@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, Photo, Tag, SessionLocal, _now
 from app.deps import get_db
+from app.routes.faces import _next_unknown_name
 from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
 from app.schemas import ConfirmFace
@@ -241,8 +242,9 @@ def photo_faces(photo_id: int, db: Session = Depends(get_db)):
     })
 
 
-def _confirm(db: Session, face: FaceRegion, tag: Tag) -> None:
-    tag.placeholder = 0
+def _confirm(db: Session, face: FaceRegion, tag: Tag, identified: bool = True) -> None:
+    if identified:
+        tag.placeholder = 0
     face.tag_id = tag.id
     face.confirmed = 1
     face.suggested_tag_id = None
@@ -255,7 +257,13 @@ def confirm_face(region_id: int, data: ConfirmFace, db: Session = Depends(get_db
     face = db.get(FaceRegion, region_id)
     if not face:
         raise HTTPException(404, "Region hittades inte")
-    if data.tag_id:
+    identified = True
+    if data.unidentified:
+        # Bekräfta som oidentifierad: skapa en "Okänd-N"-platshållare att namnge senare.
+        tag = _get_or_create_tag(db, _next_unknown_name(db), "person")
+        tag.placeholder = 1
+        identified = False
+    elif data.tag_id:
         tag = db.get(Tag, data.tag_id)
         if not tag or tag.kind != "person":
             raise HTTPException(400, "Ogiltig person")
@@ -263,7 +271,7 @@ def confirm_face(region_id: int, data: ConfirmFace, db: Session = Depends(get_db
         tag = _get_or_create_tag(db, data.name.strip(), "person")
     else:
         raise HTTPException(400, "Ange en person")
-    _confirm(db, face, tag)
+    _confirm(db, face, tag, identified=identified)
     db.commit()
     return JSONResponse({"ok": True, "person": {"id": tag.id, "name": tag.name}})
 

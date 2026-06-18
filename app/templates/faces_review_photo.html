@@ -78,9 +78,9 @@
 
     async function fillPersons() {
         try {
-            const names = await apiFetch("/api/tags?kind=person");
+            const persons = await apiFetch("/api/tags?kind=person");
             document.getElementById("person-list").innerHTML =
-                names.map(n => `<option value="${escapeHtml(n)}">`).join("");
+                persons.map(p => `<option value="${escapeHtml(p.name)}">`).join("");
         } catch (e) { /* ok */ }
     }
 

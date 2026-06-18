@@ -102,7 +102,12 @@ photos/                exempel/testbilder (gitignored)
   ett avsnitt - rubrik överst på ny sida, egen layout för avsnittet. Foton chunkas
   per avsnitt. Varje foto renderas till en temp-JPEG (~1600px) som bäddas in.
   Kräver libpango/cairo (i Docker-imagen). OBS: i mallen heter sid-cellerna
-  `page.cells` (inte `items` - krockar med dict.items i Jinja).
+  `page.cells` (inte `items` - krockar med dict.items i Jinja). Bildtext: rader är
+  `{key, text}`; plats/personer/taggar får ikoner (Bootstrap-icons-fonten laddas i
+  PDF:en via @font-face, codepoints i mallen), anteckning får styckebrytning.
+  Per-foto bildtext-override (`AlbumPhoto.caption_fields`). Titelsidesbild
+  (`Album.cover_photo_id`). Layoutvyns A4-sida är låst (cm/pt) och zoomas via CSS
+  `zoom` (proportionellt).
 - **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
   -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),
   för foton som skannats i oordning med grovt datum. Sätts via "Ordna"-läget i

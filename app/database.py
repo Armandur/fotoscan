@@ -184,6 +184,9 @@ class Album(Base):
     layout = Column(Integer, default=4)            # bilder per A4-sida (1/2/4/6)
     subtitle = Column(String, default="")
     caption_fields = Column(String, default="date,place,persons")
+    cover_photo_id = Column(
+        Integer, ForeignKey("photos.id", ondelete="SET NULL"), nullable=True
+    )
 
     entries = relationship(
         "AlbumPhoto", back_populates="album",
@@ -297,3 +300,5 @@ def init_db() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE albums ADD COLUMN caption_fields VARCHAR DEFAULT 'date,place,persons'"
             )
+        if not _column_exists(conn, "albums", "cover_photo_id"):
+            conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN cover_photo_id INTEGER")

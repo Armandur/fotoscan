@@ -129,3 +129,7 @@ class AlbumSettingsIn(BaseModel):
 class CaptionIn(BaseModel):
     use_default: bool = True
     fields: str = ""
+
+
+class CoverIn(BaseModel):
+    photo_id: int | None = None

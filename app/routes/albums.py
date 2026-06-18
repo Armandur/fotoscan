@@ -10,7 +10,8 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import Album, AlbumPhoto, Photo
 from app.deps import get_db
 from app.schemas import (
-    AlbumPhotosIn, AlbumSettingsIn, CaptionIn, NameIn, ReorderRequest, SectionIn,
+    AlbumPhotosIn, AlbumSettingsIn, CaptionIn, CoverIn, NameIn, ReorderRequest,
+    SectionIn,
 )
 from app.services.pdf_album import (
     build_pages, caption_lines, entry_caption_fields, render_album_pdf,
@@ -203,6 +204,17 @@ def set_section(
     heading = data.heading.strip()
     entry.section_heading = heading or None
     entry.section_layout = data.layout if heading else None
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
+@router.post("/api/albums/{album_id}/cover")
+def set_cover(album_id: int, data: CoverIn, db: Session = Depends(get_db)):
+    """Välj (eller rensa) titelsidesbild för albumet."""
+    album = db.get(Album, album_id)
+    if not album:
+        raise HTTPException(404, "Albumet hittades inte")
+    album.cover_photo_id = data.photo_id
     db.commit()
     return JSONResponse({"ok": True})
 

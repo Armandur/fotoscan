@@ -12,6 +12,8 @@ from app.database import Album
 from app.services.scanner import render_photo
 
 _PRINT_MAX = 1600  # px, längsta sida på inbäddade bilder
+# Bootstrap-icons-fonten för bildtextikoner i PDF:en (laddas via @font-face).
+_BI_FONT = (BASE_DIR / "app" / "static" / "vendor" / "fonts" / "bootstrap-icons.woff2").as_uri()
 
 # Bildtextfält: nyckel -> (etikett, värdefunktion). Ordningen styr radordningen.
 CAPTION_FIELDS = {
@@ -29,7 +31,8 @@ _env = Environment(
 )
 
 
-def caption_lines(photo, fields: list[str]) -> list[str]:
+def caption_lines(photo, fields: list[str]) -> list[dict]:
+    """Bildtextrader som {key, text} (key används för ikon/styckebrytning i mallen)."""
     lines = []
     for key in CAPTION_FIELDS:  # fast ordning
         if key not in fields:
@@ -37,8 +40,10 @@ def caption_lines(photo, fields: list[str]) -> list[str]:
         _, fn = CAPTION_FIELDS[key]
         val = fn(photo).strip()
         if val:
-            lines.append(val)
+            lines.append({"key": key, "text": val})
     return lines
+
+
 
 
 def entry_caption_fields(entry, default_fields: list[str]) -> list[str]:
@@ -87,6 +92,21 @@ def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
         idx = 0
+
+        # Titelsidesbild (om vald och med i albumet).
+        cover_src = None
+        if album.cover_photo_id:
+            cover = next(
+                (e.photo for e in album.entries if e.photo_id == album.cover_photo_id),
+                None,
+            )
+            if cover:
+                img = render_photo(cover)
+                img.thumbnail((_PRINT_MAX, _PRINT_MAX))
+                dest = tmpdir / "cover.jpg"
+                img.save(dest, "JPEG", quality=88)
+                cover_src = dest.as_uri()
+
         out_pages: list[dict] = []
         for page in build_pages(album, layout):
             cells = []
@@ -105,5 +125,6 @@ def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str
 
         html = _env.get_template("album_pdf.html").render(
             title=album.name, subtitle=subtitle, pages=out_pages,
+            bi_font=_BI_FONT, cover_src=cover_src,
         )
         return HTML(string=html, base_url=str(tmpdir)).write_pdf()

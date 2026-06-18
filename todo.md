@@ -1,6 +1,15 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Avsnitt per bild + dra-om i layoutvyn.** I layoutvyn: (1) kunna dra om
+  bildernas ordning direkt där (idag bara i fotovyn). (2) Låta ett avsnitt börja
+  vid en SPECIFIK bild, inte bara vid en sidas första bild - så att t.ex. bild 4
+  på en sida flyttas till att bli bild 1 på en ny sida när den inleder ett avsnitt.
+  (Datamodellen stödjer redan section_heading per foto; UI:t sätter idag bara på
+  sidans första foto.)
+- [ ] **Personer i bildtext sorterade efter ansiktets position.** Utred om
+  personer som markerats med ansiktsrutor kan skrivas ut i ordning vänster->höger
+  (lägsta x först) i bildtexten/listan, i stället för t.ex. namnordning.
 - [ ] **PDF-album: full per-sida-kontroll.** I layoutvyn: låt varje enskild A4-sida
   få egen layout (utöver dagens global + per-avsnitt-layout), och ev. live-redigering
   i stället för spara-och-ladda-om. Bygger på WYSIWYG-layoutvyn.

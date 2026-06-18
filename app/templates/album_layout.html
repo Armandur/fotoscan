@@ -34,7 +34,9 @@
     .lv-cell img { width: 100%; flex: 1 1 auto; object-fit: contain; object-position: center bottom; min-height: 0; }
     /* Bildtext: nära fotot, vänsterställd text men blocket centrerat. */
     .lv-cap { display: inline-block; margin-top: 3pt; font-size: 9pt; line-height: 1.25; text-align: left; color: #333; }
+    .lv-cap .l { display: block; }
     .lv-cap .l:first-child { font-weight: bold; }
+    .lv-cap .l.note { margin-top: 6pt; }
     .lv-title { align-items: center; justify-content: center; text-align: center; }
     .lv-title h2 { font-size: 30pt; margin: 0; }
     .lv-title .sub { font-size: 14pt; }
@@ -106,6 +108,7 @@
 
     <div class="lv-main" id="lv-main">
         <div class="lv-page lv-title" id="lv-title">
+            {% if album.cover_photo_id %}<img src="/thumb/{{ album.cover_photo_id }}" alt="" style="max-width:100%;max-height:60%;object-fit:contain;margin-bottom:1cm">{% endif %}
             <h2>{{ album.name }}</h2>
             {% if album.subtitle %}<div class="sub text-secondary mt-3">{{ album.subtitle }}</div>{% endif %}
         </div>
@@ -123,12 +126,15 @@
             <div class="lv-grid l{{ p.layout }}">
                 {% for c in p.cells %}
                 <div class="lv-cell position-relative">
+                    <button type="button" class="btn btn-sm btn-light lv-cover-btn"
+                            data-id="{{ c.id }}" title="Använd som titelbild"
+                            style="position:absolute;top:2px;left:2px;z-index:2;padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-star{{ '-fill' if c.id == album.cover_photo_id else '' }}"></i></button>
                     <button type="button" class="btn btn-sm btn-light lv-caption-btn"
                             data-id="{{ c.id }}" data-default="{{ 1 if c.uses_default else 0 }}"
                             data-fields="{{ c.fields|join(',') }}" title="Bildtext för detta foto"
                             style="position:absolute;top:2px;right:2px;z-index:2;padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-card-text"></i></button>
                     <img src="/thumb/{{ c.id }}" alt="">
-                    {% if c.lines %}<div class="lv-cap">{% for ln in c.lines %}<span class="l">{{ ln }}</span><br>{% endfor %}</div>{% endif %}
+                    {% if c.lines %}<div class="lv-cap">{% for ln in c.lines %}<span class="l{% if ln.key == 'notes' %} note{% endif %}">{% if ln.key == 'place' %}<i class="bi bi-geo-alt"></i> {% elif ln.key == 'persons' %}<i class="bi bi-people"></i> {% elif ln.key == 'tags' %}<i class="bi bi-tags"></i> {% endif %}{{ ln.text }}</span>{% endfor %}</div>{% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -285,6 +291,20 @@
             sectionModal.hide();
             setTimeout(() => location.reload(), 300);
         } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
+    });
+
+    // Titelbild: klicka stjärnan -> sätt/rensa album.cover_photo_id
+    const currentCover = "{{ album.cover_photo_id or '' }}";
+    document.querySelectorAll(".lv-cover-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const photo_id = (String(currentCover) === id) ? null : parseInt(id, 10);
+            try {
+                await apiFetch(`/api/albums/${albumId}/cover`, { method: "POST", body: { photo_id } });
+                showToast(photo_id ? "Titelbild vald" : "Titelbild rensad");
+                setTimeout(() => location.reload(), 300);
+            } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
+        });
     });
 
     // Per-foto bildtext

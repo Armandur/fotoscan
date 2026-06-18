@@ -205,6 +205,9 @@ class AlbumPhoto(Base):
     # till nästa rubrik). section_layout kan överstyra albumets layout för avsnittet.
     section_heading = Column(String, nullable=True)
     section_layout = Column(Integer, nullable=True)
+    # Per-foto bildtextfält i detta album. None = använd albumets standard;
+    # "" = ingen bildtext; "date,place" = just dessa fält.
+    caption_fields = Column(String, nullable=True)
 
     album = relationship("Album", back_populates="entries")
     photo = relationship("Photo")
@@ -281,6 +284,10 @@ def init_db() -> None:
         if not _column_exists(conn, "album_photos", "section_layout"):
             conn.exec_driver_sql(
                 "ALTER TABLE album_photos ADD COLUMN section_layout INTEGER"
+            )
+        if not _column_exists(conn, "album_photos", "caption_fields"):
+            conn.exec_driver_sql(
+                "ALTER TABLE album_photos ADD COLUMN caption_fields VARCHAR"
             )
         if not _column_exists(conn, "albums", "layout"):
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN layout INTEGER DEFAULT 4")

@@ -26,9 +26,10 @@
         padding-bottom: 4pt; margin-bottom: 0.4cm;
     }
     .grid { flex: 1 1 auto; display: grid; gap: 0.5cm; min-height: 0; }
-    .cell { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-    .cell img { width: 100%; flex: 1 1 auto; object-fit: contain; min-height: 0; }
-    .cap { margin-top: 4pt; font-size: 9pt; line-height: 1.25; text-align: center; }
+    .cell { display: flex; flex-direction: column; min-height: 0; overflow: hidden; text-align: center; }
+    .cell img { width: 100%; flex: 1 1 auto; object-fit: contain; object-position: center bottom; min-height: 0; }
+    /* Bildtext nära fotot, vänsterställd text men blocket centrerat. */
+    .cap { display: inline-block; margin-top: 3pt; font-size: 9pt; line-height: 1.25; text-align: left; }
     .cap .l { display: block; }
     .cap .l:first-child { font-weight: bold; }
     .layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }

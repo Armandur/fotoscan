@@ -10,9 +10,11 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import Album, AlbumPhoto, Photo
 from app.deps import get_db
 from app.schemas import (
-    AlbumPhotosIn, AlbumSettingsIn, NameIn, ReorderRequest, SectionIn,
+    AlbumPhotosIn, AlbumSettingsIn, CaptionIn, NameIn, ReorderRequest, SectionIn,
 )
-from app.services.pdf_album import build_pages, caption_lines, render_album_pdf
+from app.services.pdf_album import (
+    build_pages, caption_lines, entry_caption_fields, render_album_pdf,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -62,11 +64,20 @@ def album_layout(album_id: int, request: Request, db: Session = Depends(get_db))
     fields = [f for f in (album.caption_fields or "").split(",") if f]
     pages = []
     for p in build_pages(album, album.layout or 4):
+        cells = []
+        for e in p["entries"]:
+            ef = entry_caption_fields(e, fields)
+            cells.append({
+                "id": e.photo.id,
+                "lines": caption_lines(e.photo, ef),
+                "uses_default": e.caption_fields is None,
+                "fields": ef,
+            })
         pages.append({
             "heading": p["heading"],
             "layout": p["layout"],
-            "first_id": p["photos"][0].id if p["photos"] else None,
-            "cells": [{"id": ph.id, "lines": caption_lines(ph, fields)} for ph in p["photos"]],
+            "first_id": p["entries"][0].photo.id if p["entries"] else None,
+            "cells": cells,
         })
     return templates.TemplateResponse(
         request, "album_layout.html",
@@ -192,6 +203,22 @@ def set_section(
     heading = data.heading.strip()
     entry.section_heading = heading or None
     entry.section_layout = data.layout if heading else None
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
+@router.post("/api/albums/{album_id}/photos/{photo_id}/caption")
+def set_caption(
+    album_id: int, photo_id: int, data: CaptionIn, db: Session = Depends(get_db)
+):
+    """Per-foto bildtextfält i albumet. use_default = följ albumets standard."""
+    entry = db.get(AlbumPhoto, (album_id, photo_id))
+    if not entry:
+        raise HTTPException(404, "Fotot finns inte i albumet")
+    if data.use_default:
+        entry.caption_fields = None
+    else:
+        entry.caption_fields = ",".join(f for f in data.fields.split(",") if f)
     db.commit()
     return JSONResponse({"ok": True})
 

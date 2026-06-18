@@ -124,3 +124,8 @@ class AlbumSettingsIn(BaseModel):
     layout: int = 4
     subtitle: str = ""
     caption_fields: str = "date,place,persons"
+
+
+class CaptionIn(BaseModel):
+    use_default: bool = True
+    fields: str = ""

@@ -19,8 +19,19 @@
 .fr-item.done { display: none; }
 #fr-list.show-done .fr-item.done { display: block; opacity: .45; }
 #fr-list { max-height: calc(100vh - 150px); overflow-y: auto; }
-.fr-crop { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; }
-.fr-sugg { cursor: pointer; }
+.fr-crop { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
+.min-w-0 { min-width: 0; }
+/* Förslagsrader: personens tumnagel + namn + poäng. */
+.fr-suggs { display: flex; flex-direction: column; gap: 4px; }
+.fr-sugg { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    padding: 3px 6px; cursor: pointer; background: transparent; line-height: 1.2;
+    border: 1px solid var(--bs-success); border-radius: var(--bs-border-radius); color: inherit; }
+.fr-sugg:hover { background: var(--bs-success); color: #fff; }
+.fr-sugg-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-pthumb { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; flex: 0 0 auto;
+    background: var(--bs-secondary-bg); font-size: 1.4rem; }
+/* Större tumnaglar i sök-autocompleten i granskningen. */
+.fr-ac .face-ac-thumb { width: 56px; height: 56px; }
 </style>
 {% endblock %}
 
@@ -64,7 +75,6 @@
     </div>
 </div>
 
-<datalist id="person-list"></datalist>
 {% endblock %}
 
 {% block scripts %}
@@ -75,14 +85,6 @@
     const list = document.getElementById("fr-list");
     const doneBox = document.getElementById("fr-done");
     let remaining = 0;
-
-    async function fillPersons() {
-        try {
-            const persons = await apiFetch("/api/tags?kind=person");
-            document.getElementById("person-list").innerHTML =
-                persons.map(p => `<option value="${escapeHtml(p.name)}">`).join("");
-        } catch (e) { /* ok */ }
-    }
 
     function drawBox(f, num) {
         const box = document.createElement("div");
@@ -120,6 +122,12 @@
         if (remaining <= 0) doneBox.classList.remove("d-none");
     }
 
+    function personThumb(regionId, cls) {
+        return regionId
+            ? `<img class="${cls}" src="/api/faces/${regionId}/thumb" alt="">`
+            : `<span class="${cls} empty d-flex align-items-center justify-content-center text-secondary"><i class="bi bi-person"></i></span>`;
+    }
+
     function faceItem(f, num) {
         const item = document.createElement("div");
         item.className = "fr-item card";
@@ -128,22 +136,25 @@
         list.appendChild(item);
         const suggHtml = f.suggestions.length
             ? f.suggestions.map(s =>
-                `<button class="btn btn-sm btn-outline-success fr-sugg py-0" data-tag="${s.tag_id}" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)} <span class="text-secondary">${s.score}</span></button>`
-              ).join(" ")
+                `<button class="fr-sugg" data-tag="${s.tag_id}" data-name="${escapeHtml(s.name)}">`
+                + personThumb(s.region_id, "fr-pthumb")
+                + `<span class="fr-sugg-name">${escapeHtml(s.name)}</span>`
+                + `<span class="badge text-bg-secondary">${s.score}</span></button>`
+              ).join("")
             : '<span class="text-secondary small">Inga matchningar</span>';
         item.innerHTML =
             `<div class="card-body p-2">
                 <div class="d-flex gap-2">
                     <img class="fr-crop" src="/api/faces/${f.id}/thumb" alt="">
-                    <div class="flex-grow-1">
+                    <div class="flex-grow-1 min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <span class="badge text-bg-warning">${num}</span>
-                            <span class="small text-secondary">Förslag:</span>
+                            <span class="small text-secondary">Förslag</span>
                         </div>
-                        <div class="d-flex flex-wrap gap-1 mb-2">${suggHtml}</div>
-                        <div class="input-group input-group-sm mb-1">
-                            <input type="text" class="form-control py-0" list="person-list" placeholder="Sök eller skapa person...">
-                            <button class="btn btn-outline-primary" data-act="save" title="Spara"><i class="bi bi-check2"></i></button>
+                        <div class="fr-suggs mb-2">${suggHtml}</div>
+                        <div class="position-relative mb-1">
+                            <input type="text" class="form-control form-control-sm fr-search" placeholder="Sök eller skapa person..." autocomplete="off">
+                            <div class="face-ac fr-ac"></div>
                         </div>
                         <button class="btn btn-outline-danger btn-sm py-0" data-act="reject"><i class="bi bi-trash"></i> Avvisa</button>
                     </div>
@@ -162,11 +173,6 @@
         }
         item.querySelectorAll(".fr-sugg").forEach(b =>
             b.addEventListener("click", () => confirm({ tag_id: +b.dataset.tag }, b.dataset.name)));
-        item.querySelector('[data-act="save"]').addEventListener("click", () => {
-            const name = item.querySelector("input").value.trim();
-            if (!name) { showToast("Ange en person", true); return; }
-            confirm({ name }, name);
-        });
         item.querySelector('[data-act="reject"]').addEventListener("click", async () => {
             try {
                 await apiFetch(`/api/faces/${f.id}`, { method: "DELETE" });
@@ -174,6 +180,40 @@
                 markDone(item, f.id);
             } catch (e) { showToast("Misslyckades: " + e.message, true); }
         });
+
+        // Personsök med tumnaglar (som vid manuell ansiktsmarkering).
+        const input = item.querySelector(".fr-search");
+        const ac = item.querySelector(".fr-ac");
+        let acItems = [], active = -1;
+        const renderAc = () => {
+            ac.innerHTML = acItems.map((p, i) =>
+                `<div class="face-ac-item${i === active ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
+                + personThumb(p.region_id, "face-ac-thumb")
+                + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+                + `<span class="face-ac-count">${p.count}</span></div>`).join("");
+            ac.classList.toggle("show", acItems.length > 0);
+        };
+        const search = async () => {
+            try { acItems = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`); }
+            catch (e) { acItems = []; }
+            active = -1; renderAc();
+        };
+        ac.addEventListener("mousedown", (e) => {
+            const it = e.target.closest(".face-ac-item");
+            if (it) { e.preventDefault(); confirm({ tag_id: +it.dataset.id }, it.dataset.name); }
+        });
+        input.addEventListener("input", search);
+        input.addEventListener("focus", search);
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, acItems.length - 1); renderAc(); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); renderAc(); }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                if (active >= 0) confirm({ tag_id: acItems[active].id }, acItems[active].name);
+                else if (input.value.trim()) confirm({ name: input.value.trim() }, input.value.trim());
+            } else if (e.key === "Escape") { ac.classList.remove("show"); }
+        });
+        input.addEventListener("blur", () => setTimeout(() => ac.classList.remove("show"), 150));
     }
 
     async function load() {
@@ -238,7 +278,6 @@
     showDone.addEventListener("change", () =>
         list.classList.toggle("show-done", showDone.checked));
 
-    fillPersons();
     // Rutorna är %-positionerade mot wrappern (som sizear till bilden via CSS),
     // så de hamnar rätt när bilden laddats - vi behöver inte vänta på load.
     load();

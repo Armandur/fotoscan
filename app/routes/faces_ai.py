@@ -1,11 +1,11 @@
 """AI-ansiktsdetektering: bakgrundsjobb + granskningskö.
 
 Jobbet körs i en daemon-tråd med egen DB-session. Tillstånd hålls i en
-modul-global dict (single-container -> räcker). Två pass: (1) detektera i varje
-foto, backfilla embeddings på redan bekräftade rutor (via IoU) och samla
-kandidater till nya ansikten; (2) bygg referens av bekräftade namngivna
-ansikten och föreslå namn för kandidaterna. Inget skrivs in i katalogen som
-bekräftat - allt är förslag tills användaren godkänner i granskningskön.
+modul-global dict (single-container -> räcker). Ett inkrementellt pass: varje
+foto detekteras, bekräftade rutor får backfillade embeddings (via IoU),
+förslagsrutor skapas och fotot markeras klart med en commit per foto - kön
+fylls löpande och avbrott behåller klart arbete. Inget skrivs in i katalogen
+som bekräftat - allt är förslag tills användaren godkänner i granskningen.
 """
 import logging
 import threading
@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, Photo, Tag, SessionLocal, _now
 from app.deps import get_db
+from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
 from app.schemas import ConfirmFace
 from app.services import faces_ai
@@ -216,6 +217,7 @@ def photo_faces(photo_id: int, db: Session = Depends(get_db)):
                     suggestions.append({
                         "tag_id": tag_id, "name": tag.name,
                         "score": round(score, 3),
+                        "region_id": _avatar_region_id(db, tag),
                     })
         out.append({
             "id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,

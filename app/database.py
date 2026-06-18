@@ -183,6 +183,7 @@ class Album(Base):
     # PDF-/layoutinställningar (redigeras i layoutvyn, används av PDF-exporten).
     layout = Column(Integer, default=4)            # bilder per sida (1/2/4/6)
     page_format = Column(String, default="a4p")    # a4p | a4l | a5p
+    trailing_blanks = Column(Integer, default=0)   # tomma sidor sist (häfteslayout)
     subtitle = Column(String, default="")
     caption_fields = Column(String, default="date,place,persons")
     cover_photo_id = Column(
@@ -212,6 +213,8 @@ class AlbumPhoto(Base):
     # Per-foto bildtextfält i detta album. None = använd albumets standard;
     # "" = ingen bildtext; "date,place" = just dessa fält.
     caption_fields = Column(String, nullable=True)
+    # Antal tomma sidor som infogas FÖRE detta fotos sida (för häfteslayout).
+    blank_before = Column(Integer, default=0)
 
     album = relationship("Album", back_populates="entries")
     photo = relationship("Photo")
@@ -305,3 +308,7 @@ def init_db() -> None:
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN cover_photo_id INTEGER")
         if not _column_exists(conn, "albums", "page_format"):
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN page_format VARCHAR DEFAULT 'a4p'")
+        if not _column_exists(conn, "albums", "trailing_blanks"):
+            conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN trailing_blanks INTEGER DEFAULT 0")
+        if not _column_exists(conn, "album_photos", "blank_before"):
+            conn.exec_driver_sql("ALTER TABLE album_photos ADD COLUMN blank_before INTEGER DEFAULT 0")

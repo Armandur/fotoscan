@@ -108,8 +108,10 @@ photos/                exempel/testbilder (gitignored)
   Per-foto bildtext-override (`AlbumPhoto.caption_fields`). Titelsidesbild
   (`Album.cover_photo_id`). Sidformat (`Album.page_format`: a4p/a4l/a5p) styr
   @page + den låsta sidan. Layoutvyns sida är låst (cm/pt) och zoomas via CSS
-  `zoom` (proportionellt); uppslagsvy = klient-toggle (klass `spread`). Avsnitt
-  sätts per foto i layoutvyn (kan börja mitt på en sida -> bryter till ny sida).
+  `zoom` (proportionellt); uppslagsvy = klient-toggle (klass `spread`) med ledande
+  tom plats för recto/verso. Avsnitt sätts per foto i layoutvyn (kan börja mitt på
+  en sida -> bryter till ny sida). Tomma sidor: `AlbumPhoto.blank_before` (före ett
+  foto) + `Album.trailing_blanks` (sist); `build_pages` infogar dem som blank-sidor.
   Formatspec i `pdf_album.PAGE_FORMATS` (delas av PDF + layoutvy).
 - **Manuell ordning** (`Photo.seq`): tiebreaker i datum-sorteringen (år -> månad
   -> seq -> date_text -> filnamn, i `services/filtering.sort_order` + timeline),

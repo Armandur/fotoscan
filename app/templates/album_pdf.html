@@ -49,6 +49,9 @@
         {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}
     </div>
     {% for page in pages %}
+    {% if page.blank %}
+    <div class="page"></div>
+    {% else %}
     <div class="page">
         {% if page.heading %}<div class="section-heading">{{ page.heading }}</div>{% endif %}
         <div class="grid layout-{{ page.layout }}">
@@ -62,6 +65,7 @@
             {% endfor %}
         </div>
     </div>
+    {% endif %}
     {% endfor %}
 </body>
 </html>

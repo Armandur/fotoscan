@@ -66,6 +66,9 @@ def album_layout(album_id: int, request: Request, db: Session = Depends(get_db))
     fields = [f for f in (album.caption_fields or "").split(",") if f]
     pages = []
     for p in build_pages(album, album.layout or 4):
+        if p.get("blank"):
+            pages.append({"blank": True})
+            continue
         cells = []
         for e in p["entries"]:
             ef = entry_caption_fields(e, fields)
@@ -76,12 +79,14 @@ def album_layout(album_id: int, request: Request, db: Session = Depends(get_db))
                 "fields": ef,
                 "section_heading": e.section_heading,
                 "section_layout": e.section_layout,
+                "blank_before": e.blank_before or 0,
             })
         pages.append({
             "heading": p["heading"],
             "layout": p["layout"],
             "first_id": p["entries"][0].photo.id if p["entries"] else None,
             "cells": cells,
+            "blank": False,
         })
     fmt = page_format(album)
     return templates.TemplateResponse(
@@ -100,6 +105,7 @@ def album_settings(album_id: int, data: AlbumSettingsIn, db: Session = Depends(g
         album.layout = data.layout
     if data.page_format in PAGE_FORMATS:
         album.page_format = data.page_format
+    album.trailing_blanks = max(0, min(20, data.trailing_blanks))
     album.subtitle = data.subtitle.strip()
     album.caption_fields = ",".join(
         f for f in data.caption_fields.split(",") if f
@@ -211,6 +217,7 @@ def set_section(
     heading = data.heading.strip()
     entry.section_heading = heading or None
     entry.section_layout = data.layout if heading else None
+    entry.blank_before = max(0, min(4, data.blank_before))
     db.commit()
     return JSONResponse({"ok": True})
 

@@ -68,33 +68,36 @@ def entry_caption_fields(entry, default_fields: list[str]) -> list[str]:
 
 def build_pages(album: Album, default_layout: int) -> list[dict]:
     """Dela albumet i sidor (samma modell för layoutvyn och PDF:en). Ett foto med
-    section_heading inleder ett avsnitt (ny sida, ev. egen layout); foton chunkas
-    per avsnitt. Returnerar [{heading, layout, entries:[AlbumPhoto,...]}]."""
+    section_heading ELLER blank_before inleder en ny körning (ny sida); foton
+    chunkas per körning. Tomma sidor (blank_before + albumets trailing_blanks)
+    bäddas in. Returnerar [{heading, layout, entries, blank}]."""
     if default_layout not in (1, 2, 4, 6):
         default_layout = 4
-    # Bygg avsnitt.
-    sections: list[dict] = []
-    cur = {"heading": None, "layout": default_layout, "entries": []}
+    # Gruppera i körningar som bryts av rubrik eller infogade tomma sidor.
+    runs: list[dict] = []
+    cur = None
     for e in album.entries:  # ordnade på position
-        if e.section_heading:
-            if cur["entries"]:
-                sections.append(cur)
+        brk = bool(e.section_heading) or (e.blank_before or 0) > 0
+        if cur is None or brk:
             lay = e.section_layout if e.section_layout in (1, 2, 4, 6) else default_layout
-            cur = {"heading": e.section_heading, "layout": lay, "entries": []}
+            cur = {"heading": e.section_heading, "layout": lay,
+                   "blanks": (e.blank_before or 0), "entries": []}
+            runs.append(cur)
         cur["entries"].append(e)
-    if cur["entries"]:
-        sections.append(cur)
-    # Chunka varje avsnitt i sidor; rubriken på avsnittets första sida.
+
     pages: list[dict] = []
-    for sec in sections:
-        lay = sec["layout"]
-        chunks = [sec["entries"][i:i + lay] for i in range(0, len(sec["entries"]), lay)]
+    for run in runs:
+        for _ in range(run["blanks"]):
+            pages.append({"blank": True})
+        lay = run["layout"]
+        chunks = [run["entries"][i:i + lay] for i in range(0, len(run["entries"]), lay)]
         for k, chunk in enumerate(chunks):
             pages.append({
-                "heading": sec["heading"] if k == 0 else None,
-                "layout": lay,
-                "entries": chunk,
+                "heading": run["heading"] if k == 0 else None,
+                "layout": lay, "entries": chunk, "blank": False,
             })
+    for _ in range(album.trailing_blanks or 0):
+        pages.append({"blank": True})
     return pages
 
 
@@ -121,6 +124,9 @@ def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str
 
         out_pages: list[dict] = []
         for page in build_pages(album, layout):
+            if page.get("blank"):
+                out_pages.append({"blank": True})
+                continue
             cells = []
             for entry in page["entries"]:
                 photo = entry.photo
@@ -132,7 +138,8 @@ def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str
                 lines = caption_lines(photo, entry_caption_fields(entry, fields))
                 cells.append({"src": dest.as_uri(), "lines": lines})
             out_pages.append({
-                "heading": page["heading"], "layout": page["layout"], "cells": cells,
+                "heading": page["heading"], "layout": page["layout"],
+                "cells": cells, "blank": False,
             })
 
         fmt = page_format(album)

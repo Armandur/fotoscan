@@ -49,6 +49,12 @@
     .lv-main.spread .lv-pageblock { width: 50%; }
     .lv-sidebar.spread { display: flex; flex-wrap: wrap; }
     .lv-sidebar.spread .lv-sb-item { width: 50%; }
+    /* Tom sida */
+    .lv-page.lv-blank { align-items: center; justify-content: center; color: #bbb; }
+    .lv-thumb.lv-blank { background: repeating-linear-gradient(45deg,#fff,#fff 6px,#f0f0f0 6px,#f0f0f0 12px); }
+    /* Recto/verso: tom plats före titeln så titeln hamnar som höger sida (bara i uppslag) */
+    .lv-spacer-block { display: none; }
+    .lv-main.spread .lv-spacer-block, .lv-sidebar.spread .lv-spacer-block { display: block; width: 50%; }
 </style>
 {% endblock %}
 
@@ -104,6 +110,10 @@
             <input type="text" class="form-control form-control-sm" id="lv-subtitle" value="{{ album.subtitle or '' }}">
         </div>
         <div class="col-auto">
+            <label class="form-label small text-secondary mb-1" for="lv-trailing">Tomma sidor sist</label>
+            <input type="number" class="form-control form-control-sm" id="lv-trailing" min="0" max="20" value="{{ album.trailing_blanks or 0 }}" style="width:90px">
+        </div>
+        <div class="col-auto">
             <button class="btn btn-primary btn-sm" id="lv-save">Spara &amp; uppdatera</button>
         </div>
     </div>
@@ -115,23 +125,29 @@
 <div class="lv-wrap" data-album-id="{{ album.id }}"
      style="--pg-w: {{ fmt.w_cm }}cm; --pg-h: {{ fmt.h_cm }}cm; --pg-ar: {{ fmt.w_cm }}/{{ fmt.h_cm }};">
     <div class="lv-sidebar" id="lv-sidebar">
+        <div class="lv-sb-item lv-spacer-block"></div>
         <div class="lv-sb-item">
             <div class="lv-thumb" data-target="#lv-title"><div class="lv-grid l1"><div class="lv-cell" style="align-items:center;justify-content:center;color:#888;font-size:.6rem">Titel</div></div></div>
             <div class="lv-num text-center mb-2">Titelsida</div>
         </div>
         {% for p in pages %}
         <div class="lv-sb-item">
+            {% if p.blank %}
+            <div class="lv-thumb lv-blank" data-target="#lv-page-{{ loop.index }}"></div>
+            {% else %}
             <div class="lv-thumb" data-target="#lv-page-{{ loop.index }}">
                 <div class="lv-grid l{{ p.layout }}">
                     {% for c in p.cells %}<div class="lv-cell"><img src="/thumb/{{ c.id }}" alt=""></div>{% endfor %}
                 </div>
             </div>
-            <div class="lv-num text-center mb-2">Sida {{ loop.index }}{% if p.heading %} - {{ p.heading }}{% endif %}</div>
+            {% endif %}
+            <div class="lv-num text-center mb-2">Sida {{ loop.index }}{% if p.blank %} - tom{% elif p.heading %} - {{ p.heading }}{% endif %}</div>
         </div>
         {% endfor %}
     </div>
 
     <div class="lv-main" id="lv-main">
+        <div class="lv-pageblock lv-spacer-block"></div>
         <div class="lv-pageblock">
             <div class="lv-pagenum">Titelsida</div>
             <div class="lv-page lv-title" id="lv-title">
@@ -143,6 +159,9 @@
         {% for p in pages %}
         <div class="lv-pageblock">
         <div class="lv-pagenum">Sida {{ loop.index }}</div>
+        {% if p.blank %}
+        <div class="lv-page lv-blank" id="lv-page-{{ loop.index }}"><span class="text-muted">Tom sida</span></div>
+        {% else %}
         <div class="lv-page" id="lv-page-{{ loop.index }}">
             {% if p.heading %}<div class="sec-head">{{ p.heading }}</div>{% endif %}
             <div class="lv-grid l{{ p.layout }}">
@@ -154,8 +173,8 @@
                     <div style="position:absolute;top:2px;right:2px;z-index:2;display:flex;gap:3px">
                         <button type="button" class="btn btn-sm btn-light lv-section-btn"
                                 data-id="{{ c.id }}" data-heading="{{ c.section_heading or '' }}"
-                                data-layout="{{ c.section_layout or '' }}" title="Avsnitt börjar med detta foto"
-                                style="padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-bookmark{{ '-fill' if c.section_heading else '' }}"></i></button>
+                                data-layout="{{ c.section_layout or '' }}" data-blank="{{ c.blank_before }}"
+                                title="Avsnitt / sidbrytning" style="padding:0 .3rem;line-height:1.3;opacity:.8"><i class="bi bi-bookmark{{ '-fill' if c.section_heading or c.blank_before else '' }}"></i></button>
                         <button type="button" class="btn btn-sm btn-light lv-caption-btn"
                                 data-id="{{ c.id }}" data-default="{{ 1 if c.uses_default else 0 }}"
                                 data-fields="{{ c.fields|join(',') }}" title="Bildtext för detta foto"
@@ -167,6 +186,7 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -196,6 +216,10 @@
                         <option value="4">4 per sida</option>
                         <option value="6">6 per sida</option>
                     </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary" for="section-blank-input">Tomma sidor före (häfteslayout)</label>
+                    <input type="number" class="form-control" id="section-blank-input" min="0" max="4" value="0">
                 </div>
             </div>
             <div class="modal-footer">
@@ -297,11 +321,12 @@
     document.getElementById("lv-save").addEventListener("click", async (e) => {
         const layout = parseInt(document.querySelector("input[name='lv-layout']:checked").value, 10);
         const page_format = document.getElementById("lv-format").value;
+        const trailing_blanks = parseInt(document.getElementById("lv-trailing").value, 10) || 0;
         const caption_fields = [...document.querySelectorAll(".lv-field:checked")].map(c => c.value).join(",");
         const subtitle = document.getElementById("lv-subtitle").value.trim();
         e.target.disabled = true;
         try {
-            await apiFetch(`/api/albums/${albumId}/settings`, { method: "POST", body: { layout, page_format, caption_fields, subtitle } });
+            await apiFetch(`/api/albums/${albumId}/settings`, { method: "POST", body: { layout, page_format, trailing_blanks, caption_fields, subtitle } });
             location.reload();
         } catch (err) { showToast("Kunde inte spara: " + err.message, true); e.target.disabled = false; }
     });
@@ -323,6 +348,7 @@
             document.getElementById("section-first-id").value = btn.dataset.id;
             document.getElementById("section-heading-input").value = btn.dataset.heading || "";
             document.getElementById("section-layout-input").value = btn.dataset.layout && btn.dataset.heading ? btn.dataset.layout : "";
+            document.getElementById("section-blank-input").value = btn.dataset.blank || "0";
             sectionModal.show();
         });
     });
@@ -360,9 +386,10 @@
         const pid = document.getElementById("section-first-id").value;
         const heading = document.getElementById("section-heading-input").value.trim();
         const lv = document.getElementById("section-layout-input").value;
+        const blank_before = parseInt(document.getElementById("section-blank-input").value, 10) || 0;
         try {
             await apiFetch(`/api/albums/${albumId}/photos/${pid}/section`, {
-                method: "POST", body: { heading, layout: lv ? parseInt(lv, 10) : null },
+                method: "POST", body: { heading, layout: lv ? parseInt(lv, 10) : null, blank_before },
             });
             sectionModal.hide();
             setTimeout(() => location.reload(), 300);

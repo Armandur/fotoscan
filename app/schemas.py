@@ -118,11 +118,13 @@ class SectionIn(BaseModel):
     # Tom rubrik = ta bort avsnittsstarten. layout None = använd albumets standard.
     heading: str = ""
     layout: int | None = None
+    blank_before: int = 0   # tomma sidor som infogas före detta fotos sida
 
 
 class AlbumSettingsIn(BaseModel):
     layout: int = 4
     page_format: str = "a4p"
+    trailing_blanks: int = 0
     subtitle: str = ""
     caption_fields: str = "date,place,persons"
 

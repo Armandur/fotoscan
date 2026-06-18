@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import FaceRegion, Photo, Tag
@@ -45,7 +46,8 @@ def list_persons(q: str = "", db: Session = Depends(get_db)):
     representativt region-id (för thumbnail)."""
     query = db.query(Tag).filter(Tag.kind == "person")
     if q:
-        query = query.filter(Tag.name.ilike(f"%{q}%"))
+        like = f"%{q}%"
+        query = query.filter(or_(Tag.name.ilike(like), Tag.aliases.ilike(like)))
 
     result = []
     for tag in query.order_by(Tag.name).all():

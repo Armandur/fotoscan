@@ -137,6 +137,11 @@ class Tag(Base):
     thumb_face_id = Column(
         Integer, ForeignKey("face_regions.id", ondelete="SET NULL"), nullable=True
     )
+    # Personmetadata (används när kind="person"). Fritext för ofullständiga år.
+    born = Column(String, default="")
+    died = Column(String, default="")
+    aliases = Column(String, default="")   # kommaseparerade alternativa namn
+    bio = Column(Text, default="")
 
     photos = relationship("Photo", secondary=photo_tags, back_populates="tags")
     parent = relationship("Tag", remote_side=[id], back_populates="children")
@@ -146,6 +151,21 @@ class Tag(Base):
     children = relationship(
         "Tag", back_populates="parent", passive_deletes=True,
     )
+
+
+class PersonLink(Base):
+    """Familjelänk mellan två personer (Tag kind=person). relation:
+    'parent' = person_id är förälder till related_id; 'partner' = symmetrisk."""
+    __tablename__ = "person_links"
+
+    id = Column(Integer, primary_key=True)
+    person_id = Column(
+        Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    related_id = Column(
+        Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    relation = Column(String, nullable=False)  # "parent" | "partner"
 
 
 class FaceRegion(Base):
@@ -278,6 +298,9 @@ def init_db() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE tags ADD COLUMN thumb_face_id INTEGER"
             )
+        for _c in ("born", "died", "aliases", "bio"):
+            if not _column_exists(conn, "tags", _c):
+                conn.exec_driver_sql(f"ALTER TABLE tags ADD COLUMN {_c} VARCHAR DEFAULT ''")
         if not _column_exists(conn, "photos", "back_of_id"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN back_of_id INTEGER")
         if not _column_exists(conn, "photos", "phash"):

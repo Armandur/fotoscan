@@ -8,11 +8,6 @@
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
   vid export i stället för dagens 00:00:00.
-- [ ] **Mer metadata på personer.** Idag är en person bara en tagg (namn). I
-  framtiden: födelse-/dödsår, relation, alias/smeknamn, anteckningar, ev. länk
-  mellan personer (familj). Kräver en egen Person-modell (eller utökad Tag) -
-  migrera person-taggar dit. Exportera till XMP där det går (PersonInImage med
-  detaljer / MWG).
 - [ ] **Ansiktstaggning steg 2 - AI.** Automatisk ansiktsdetektering +
   igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
   bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som
@@ -33,6 +28,10 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Mer metadata på personer.** Tag utökad med född/död (fritext), alias/
+  smeknamn (sökbara), anteckningar. Familjelänkar person<->person (`PersonLink`:
+  förälder/barn/partner, dubbelriktad visning). Redigeras i personvyn. (Ev.
+  XMP-export av persondetaljer = framtida.)
 - [x] **Personer i bildtext efter ansiktsposition.** I album-bildtexten sorteras
   personer med ansiktsruta vänster->höger (lägsta x först); de utan ruta sist på
   namn. `_persons_ordered` i `pdf_album`.

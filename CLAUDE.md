@@ -60,6 +60,10 @@ photos/                exempel/testbilder (gitignored)
   framtida tidslinjevy.
 - **Personer och taggar i samma tabell** (`Tag.kind` = "person" | "tag"),
   many-to-many via `photo_tags`. Hierarki (`parent_id`) gäller bara `kind="tag"`.
+- **Personmetadata** (på `Tag`, används när kind=person): `born`/`died` (fritext),
+  `aliases` (kommaseparerade, sökbara i `/api/persons`), `bio`. Familjelänkar i
+  `PersonLink` (person<->person, relation "parent"/"partner"; barn = omvänd parent).
+  Redigeras i personvyn; merge pekar om länkar, delete städar dem.
 - **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
   unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett
   träd-UI där förälder kan väljas med cykelskydd. Detaljvyn (`/tags/{id}`) visar

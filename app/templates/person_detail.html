@@ -35,6 +35,67 @@
     </div>
 </div>
 
+<div class="row g-3 mb-3" data-person-id="{{ person.id }}">
+    <div class="col-md-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-2">Om personen</h2>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small mb-1" for="pm-born">Född</label>
+                    <input type="text" class="form-control form-control-sm" id="pm-born" value="{{ person.born or '' }}" placeholder="t.ex. 1918 / ca 1920">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1" for="pm-died">Död</label>
+                    <input type="text" class="form-control form-control-sm" id="pm-died" value="{{ person.died or '' }}" placeholder="t.ex. 2003">
+                </div>
+                <div class="col-12">
+                    <label class="form-label small mb-1" for="pm-aliases">Alias/smeknamn (komma)</label>
+                    <input type="text" class="form-control form-control-sm" id="pm-aliases" value="{{ person.aliases or '' }}" placeholder="t.ex. Lasse, Karlsson (flicknamn)">
+                </div>
+                <div class="col-12">
+                    <label class="form-label small mb-1" for="pm-bio">Anteckningar</label>
+                    <textarea class="form-control form-control-sm" id="pm-bio" rows="3">{{ person.bio or '' }}</textarea>
+                </div>
+                <div class="col-12"><button class="btn btn-primary btn-sm" id="pm-save">Spara</button></div>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-2">Familj</h2>
+            {% macro rellist(label, items) %}
+            {% if items %}
+            <div class="small mb-1"><span class="text-secondary">{{ label }}:</span>
+                {% for r in items %}
+                <span class="badge text-bg-secondary me-1">
+                    <a href="/persons/{{ r.id }}" class="text-white text-decoration-none">{{ r.name }}</a>
+                    <a href="#" class="text-white rel-del" data-link="{{ r.link_id }}" title="Ta bort">&times;</a>
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endmacro %}
+            {{ rellist("Föräldrar", relations.parents) }}
+            {{ rellist("Barn", relations.children) }}
+            {{ rellist("Partner", relations.partners) }}
+            {% if not (relations.parents or relations.children or relations.partners) %}
+            <div class="text-secondary small mb-2">Inga familjelänkar än.</div>
+            {% endif %}
+            <div class="input-group input-group-sm mt-2">
+                <select class="form-select" id="rel-type" style="max-width:130px">
+                    <option value="parent_of">Förälder till</option>
+                    <option value="child_of">Barn till</option>
+                    <option value="partner">Partner</option>
+                </select>
+                <select class="form-select" id="rel-person">
+                    {% for pp in all_persons %}{% if pp.id != person.id %}<option value="{{ pp.id }}">{{ pp.name }}</option>{% endif %}{% endfor %}
+                </select>
+                <button class="btn btn-outline-primary" id="rel-add">Lägg till</button>
+            </div>
+        </div></div>
+    </div>
+</div>
+
 {% if regions %}
 <div class="mb-3">
     <div class="small text-secondary mb-1">Tumnagel (klicka för att välja):</div>
@@ -64,6 +125,41 @@
 {% block scripts %}
 <script>
 const personId = document.querySelector("[data-person-id]").dataset.personId;
+
+// Personmetadata
+document.getElementById("pm-save").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    try {
+        await apiFetch(`/api/persons/${personId}/meta`, { method: "POST", body: {
+            born: document.getElementById("pm-born").value,
+            died: document.getElementById("pm-died").value,
+            aliases: document.getElementById("pm-aliases").value,
+            bio: document.getElementById("pm-bio").value,
+        } });
+        showToast("Sparat");
+    } catch (err) { showToast("Kunde inte spara: " + err.message, true); }
+    finally { e.target.disabled = false; }
+});
+
+// Familjelänkar
+document.getElementById("rel-add").addEventListener("click", async () => {
+    const related_id = parseInt(document.getElementById("rel-person").value, 10);
+    const relation = document.getElementById("rel-type").value;
+    if (!related_id) { showToast("Välj en person", true); return; }
+    try {
+        await apiFetch(`/api/persons/${personId}/relations`, { method: "POST", body: { related_id, relation } });
+        location.reload();
+    } catch (err) { showToast("Kunde inte länka: " + err.message, true); }
+});
+document.querySelectorAll(".rel-del").forEach(a => {
+    a.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+            await apiFetch(`/api/persons/${personId}/relations/${a.dataset.link}`, { method: "DELETE" });
+            location.reload();
+        } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
+    });
+});
 
 // Tumnagel-väljare: klicka på ett ansikte (eller Auto) för att representera personen
 const thumbPicker = document.getElementById("thumb-picker");

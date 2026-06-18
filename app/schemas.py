@@ -33,6 +33,18 @@ class PersonThumb(BaseModel):
     face_id: int | None = None
 
 
+class PersonMeta(BaseModel):
+    born: str = ""
+    died: str = ""
+    aliases: str = ""
+    bio: str = ""
+
+
+class RelationIn(BaseModel):
+    related_id: int
+    relation: str  # "parent_of" | "child_of" | "partner"
+
+
 class FaceBox(BaseModel):
     x: float
     y: float

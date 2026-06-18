@@ -146,6 +146,9 @@ photos/                exempel/testbilder (gitignored)
   `rotate_photo`. Export skriver MWG-rs Regions (center-koordinater) via exiftool.
   En persons tumnagel kan väljas (`Tag.thumb_face_id` -> en `FaceRegion`); annars
   auto = senaste ansiktet (`_avatar_region_id`, validerar att valet finns kvar).
+  Vald tumnagel skrivs aldrig över av nya ansikten. Ansikts-crops cachas på disk
+  (`THUMB_DIR/face_{region_id}.jpg`, `scanner.face_thumb_path`), invalideras vid
+  flytt/rotation/radering - så /persons inte renderar om från originalen varje gång.
   OBS: `thumb_face_id` ger en andra FK-väg tags<->face_regions, så
   `FaceRegion.tag` måste ange `foreign_keys=[tag_id]`.
 - **Färg-/tonjustering** (`Photo.adj_*` + `auto_tone`, `services/adjust.py`):

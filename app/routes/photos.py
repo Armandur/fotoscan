@@ -24,7 +24,8 @@ from app.services.dates import parse_date_text
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
 from app.services.scanner import (
-    load_oriented, render_cache_path, refresh_derived, write_render,
+    invalidate_face_thumb, load_oriented, render_cache_path, refresh_derived,
+    write_render,
 )
 
 router = APIRouter()
@@ -461,6 +462,7 @@ def rotate_photo(
             f.x, f.y, f.w, f.h = 1 - f.y - f.h, f.x, f.h, f.w
         else:
             f.x, f.y, f.w, f.h = f.y, 1 - f.x - f.w, f.h, f.w
+        invalidate_face_thumb(f.id)  # crop roterar med
     db.commit()
     if Path(photo.path).exists():
         refresh_derived(photo)

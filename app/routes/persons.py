@@ -14,6 +14,7 @@ from app.schemas import (
 )
 from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions, sort_order
+from app.services.scanner import invalidate_face_thumb
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -214,6 +215,8 @@ def delete_person(tag_id: int, db: Session = Depends(get_db)):
     tag = db.get(Tag, tag_id)
     if not tag or tag.kind != "person":
         raise HTTPException(404, "Person hittades inte")
+    for (rid,) in db.query(FaceRegion.id).filter(FaceRegion.tag_id == tag.id).all():
+        invalidate_face_thumb(rid)
     db.query(FaceRegion).filter(FaceRegion.tag_id == tag.id).delete(
         synchronize_session=False
     )

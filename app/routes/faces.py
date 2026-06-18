@@ -1,9 +1,8 @@
-import io
 import re
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -12,7 +11,9 @@ from app.deps import get_db
 from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
 from app.schemas import FaceBox, FaceRegionIn
-from app.services.scanner import load_oriented
+from app.services.scanner import (
+    face_thumb_path, invalidate_face_thumb, load_oriented,
+)
 
 router = APIRouter()
 
@@ -111,6 +112,7 @@ def move_face(region_id: int, data: FaceBox, db: Session = Depends(get_db)):
     face.w, face.h = _clamp(data.w), _clamp(data.h)
     db.commit()
     db.refresh(face)
+    invalidate_face_thumb(region_id)  # crop ändrades
     return JSONResponse(_serialize(face))
 
 
@@ -123,6 +125,7 @@ def delete_face(region_id: int, db: Session = Depends(get_db)):
     photo = face.photo
     db.delete(face)
     db.flush()
+    invalidate_face_thumb(region_id)
 
     # Om personen inte har någon kvarvarande ruta på detta foto, ta även bort
     # personen ur fotots Personer-fält (taggades dit när rutan skapades).
@@ -145,6 +148,11 @@ def delete_face(region_id: int, db: Session = Depends(get_db)):
 
 @router.get("/api/faces/{region_id}/thumb")
 def face_thumb(region_id: int, db: Session = Depends(get_db)):
+    # Cachad crop (per region) - undviker att öppna+orientera originalet varje
+    # gång (segt på /persons med många ansikten). Invalideras vid flytt/rotation.
+    cache = face_thumb_path(region_id)
+    if cache.exists():
+        return FileResponse(cache)
     face = db.get(FaceRegion, region_id)
     if not face:
         raise HTTPException(404, "Region hittades inte")
@@ -162,7 +170,5 @@ def face_thumb(region_id: int, db: Session = Depends(get_db)):
     )
     crop = img.crop(box)
     crop.thumbnail((96, 96))
-    buf = io.BytesIO()
-    crop.save(buf, "JPEG", quality=80)
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="image/jpeg")
+    crop.save(cache, "JPEG", quality=80)
+    return FileResponse(cache)

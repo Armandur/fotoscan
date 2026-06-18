@@ -82,6 +82,17 @@ def render_cache_path(photo_id: int) -> Path:
     return RENDER_DIR / f"{photo_id}.jpg"
 
 
+def face_thumb_path(region_id: int) -> Path:
+    """Cachad ansikts-thumbnail (beror på regionens koordinater + rotation)."""
+    return THUMB_DIR / f"face_{region_id}.jpg"
+
+
+def invalidate_face_thumb(region_id: int) -> None:
+    p = face_thumb_path(region_id)
+    if p.exists():
+        p.unlink()
+
+
 def invalidate_render(photo_id: int) -> None:
     p = render_cache_path(photo_id)
     if p.exists():

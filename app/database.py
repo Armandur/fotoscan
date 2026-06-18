@@ -104,6 +104,9 @@ class Photo(Base):
     # Tidpunkt då AI-ansiktsdetekteringen kördes på fotot (NULL = aldrig).
     # Låter batch-jobbet hoppa över redan behandlade foton.
     ai_faces_at = Column(DateTime, nullable=True)
+    # 1 = uteslut fotot från AI-ansiktsdetektering helt (även "kör om alla").
+    # För foton där t.ex. målade dockor/mönster felaktigt tolkas som ansikten.
+    ai_exclude = Column(Integer, default=0)
 
     # Sätt när metadata bekräftats/redigerats av användaren.
     reviewed_at = Column(DateTime, nullable=True)
@@ -380,6 +383,8 @@ def init_db() -> None:
             )
         if not _column_exists(conn, "photos", "ai_faces_at"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN ai_faces_at DATETIME")
+        if not _column_exists(conn, "photos", "ai_exclude"):
+            conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN ai_exclude INTEGER DEFAULT 0")
         _make_face_tag_id_nullable(conn)
 
     _rebase_photo_paths()

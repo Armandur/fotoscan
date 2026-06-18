@@ -223,6 +223,10 @@
                       id="reviewed-state">
                     {% if photo.reviewed_at %}Granskad{% else %}Ej granskad{% endif %}
                 </span>
+                <div class="form-check form-switch ms-2" title="Uteslut fotot från AI-ansiktsdetektering (t.ex. målade dockor som tolkas som ansikten)">
+                    <input class="form-check-input" type="checkbox" id="ai-exclude" {% if photo.ai_exclude %}checked{% endif %}>
+                    <label class="form-check-label small" for="ai-exclude">Uteslut från AI</label>
+                </div>
                 <button type="button" class="btn btn-outline-danger ms-auto" id="delete-photo-btn"
                         title="Ta bort fotot ur katalogen (originalfilen rörs inte)">
                     <i class="bi bi-trash"></i> Ta bort ur katalogen

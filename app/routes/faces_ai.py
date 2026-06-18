@@ -44,7 +44,9 @@ JOB = {
 def _run_job(force: bool) -> None:
     db = SessionLocal()
     try:
-        q = db.query(Photo).filter(Photo.back_of_id.is_(None))
+        q = db.query(Photo).filter(
+            Photo.back_of_id.is_(None), Photo.ai_exclude == 0
+        )
         if not force:
             q = q.filter(Photo.ai_faces_at.is_(None))
         photos = q.all()
@@ -152,6 +154,23 @@ def cancel_scan():
 @router.get("/api/faces/ai/status")
 def scan_status():
     return JSONResponse(dict(JOB))
+
+
+@router.post("/api/faces/ai/photo/{photo_id}/exclude")
+def set_exclude(photo_id: int, exclude: bool = True, db: Session = Depends(get_db)):
+    """Uteslut/inkludera ett foto i AI-detekteringen. Vid uteslutning tas även
+    fotots obekräftade AI-förslag bort (de återkommer annars inte men städas)."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    photo.ai_exclude = 1 if exclude else 0
+    if exclude:
+        for f in list(photo.faces):
+            if f.source == "ai" and not f.confirmed:
+                invalidate_face_thumb(f.id)
+                db.delete(f)
+    db.commit()
+    return JSONResponse({"ok": True, "excluded": bool(photo.ai_exclude)})
 
 
 def _confirmed_count(db: Session, tag_id: int) -> int:

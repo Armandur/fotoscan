@@ -51,6 +51,10 @@
                 title="Håll inne för att tillfälligt dölja alla rutor">
             <i class="bi bi-eye-slash"></i> Dölj rutor <kbd class="kbd-hint">H</kbd>
         </button>
+        <button type="button" class="btn btn-outline-warning btn-sm" id="fr-exclude"
+                title="Uteslut fotot från AI-detektering (t.ex. målade dockor som tolkas som ansikten)">
+            <i class="bi bi-slash-circle"></i> Uteslut från AI
+        </button>
         <a href="/photo/{{ photo.id }}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Öppna foto</a>
         <a href="/faces/review" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Lista <kbd class="kbd-hint">G</kbd></a>
     </div>
@@ -331,6 +335,17 @@
     });
     document.addEventListener("keyup", (e) => { if (e.key === "h") hideOff(); });
     window.addEventListener("blur", hideOff);
+
+    document.getElementById("fr-exclude").addEventListener("click", async () => {
+        if (!(await showConfirm(
+            "Uteslut detta foto från AI-detektering? Obekräftade förslag tas bort och fotot hoppas över även vid 'Kör om alla'. Kan ångras i fotots detaljvy.",
+            { okLabel: "Uteslut", okClass: "btn-warning" }))) return;
+        try {
+            await apiFetch(`/api/faces/ai/photo/${photoId}/exclude?exclude=true`, { method: "POST" });
+            showToast("Fotot uteslutet från AI");
+            location.href = nextUrl || "/faces/review";
+        } catch (e) { showToast("Misslyckades: " + e.message, true); }
+    });
 
     // Toggle: visa även klara (matchade) ansikten i listan. Av som standard.
     const showDone = document.getElementById("fr-showdone");

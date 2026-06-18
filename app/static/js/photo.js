@@ -103,6 +103,20 @@
         }
     });
 
+    // ---- Uteslut foto från AI-detektering ----
+    const aiExclude = document.getElementById("ai-exclude");
+    if (aiExclude) {
+        aiExclude.addEventListener("change", async () => {
+            try {
+                await apiFetch(`/api/faces/ai/photo/${photoId}/exclude?exclude=${aiExclude.checked}`, { method: "POST" });
+                showToast(aiExclude.checked ? "Uteslutet från AI" : "Inkluderat i AI igen");
+            } catch (err) {
+                showToast("Misslyckades: " + err.message, true);
+                aiExclude.checked = !aiExclude.checked;  // återställ vid fel
+            }
+        });
+    }
+
     // ---- Rotation ----
     // Applicera CSS-transform direkt för omedelbar känsla, byt sedan till den
     // korrekt renderade bilden i bakgrunden när servern är klar.

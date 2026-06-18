@@ -233,6 +233,29 @@ photos/                exempel/testbilder (gitignored)
   annan plats (t.ex. /photos). `/thumb` self-healar saknad thumbnail ur
   originalet. Flytt-steg i `DOCKER.md`.
 
+## Prod vs dev (sedan 2026-06-18)
+Det finns nu en **skarp container på Unraid (TERVO2)** med riktig data (släkt-
+och jobbfoton). Datan i denna VM (`~/workspace/fotoscan/data/`) är kvar som
+**dev/test-data** - de två databaserna är separata och divergerar. Anta aldrig
+att dev-ID:n eller dev-innehåll matchar prod.
+
+Tänk på följande vid ändringar:
+- **Schema/migreringar körs automatiskt mot prod-DB:n vid uppstart** (`init_db`
+  -> `create_all` + ALTER-guards, ingen Alembic). En ny image som prod hämtar
+  och startar kör alltså migreringen direkt. Därför: nya kolumner/tabeller MÅSTE
+  ha idempotenta ALTER-/`_column_exists`-guards, och alla data-backfills i
+  `init_db` (t.ex. placeholder-flaggan, `_rebase_photo_paths`) måste vara säkra
+  och idempotenta att köra om på den riktiga datan. Inga destruktiva engångs-
+  skript i startvägen.
+- **Backa upp prod före riskabla migreringar:** hämta `/api/backup` från prod-
+  instansen först, så finns en återställningspunkt.
+- **Release-styrning:** push till main bygger `:latest`. För att kontrollera NÄR
+  prod uppdateras, överväg att pinna prod mot en `v*`-tagg (semver) i stället
+  för `:latest`, och uppdatera medvetet. Testa alltid på dev-VM:en först.
+- **Aldrig destruktiva tester mot prod.** Den här VM:en är lekplatsen; prod-
+  containern och dess `/data`-volym + read-only `/photos` lämnas i fred.
+- Prod-detaljer (host, portar, volymsökvägar) hör hemma i `DOCKER.md`, inte här.
+
 ## Konventioner
 - **Använd aldrig `alert()` eller `confirm()`** - använd Bootstrap-modaler.
   För bekräftelser finns `showConfirm(message, {okLabel, okClass})` i `utils.js`

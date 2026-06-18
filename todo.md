@@ -1,9 +1,6 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Personer i bildtext sorterade efter ansiktets position.** Utred om
-  personer som markerats med ansiktsrutor kan skrivas ut i ordning vänster->höger
-  (lägsta x först) i bildtexten/listan, i stället för t.ex. namnordning.
 - [ ] **PDF-album: full per-sida-kontroll.** I layoutvyn: låt varje enskild A4-sida
   få egen layout (utöver dagens global + per-avsnitt-layout), och ev. live-redigering
   i stället för spara-och-ladda-om. Bygger på WYSIWYG-layoutvyn.
@@ -36,6 +33,9 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Personer i bildtext efter ansiktsposition.** I album-bildtexten sorteras
+  personer med ansiktsruta vänster->höger (lägsta x först); de utan ruta sist på
+  namn. `_persons_ordered` i `pdf_album`.
 - [x] **Album-format + uppslag + tomma sidor.** Sidformat (`Album.page_format`:
   A4 stående/liggande, A5 stående) styr @page + den låsta sidan. Uppslagsvy (två
   sidor sida vid sida) i huvudvy + bläddermeny med recto/verso (titel ensam som

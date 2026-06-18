@@ -27,11 +27,24 @@ def page_format(album) -> dict:
 # Bootstrap-icons-fonten för bildtextikoner i PDF:en (laddas via @font-face).
 _BI_FONT = (BASE_DIR / "app" / "static" / "vendor" / "fonts" / "bootstrap-icons.woff2").as_uri()
 
+def _persons_ordered(p) -> str:
+    """Personer i bildtext: de med ansiktsruta först, sorterade vänster->höger
+    (lägsta x), därefter personer utan ruta i namnordning."""
+    xmin: dict[int, float] = {}
+    for f in p.faces:
+        if f.tag_id is not None:
+            xmin[f.tag_id] = min(xmin.get(f.tag_id, 2.0), f.x)
+    persons = [t for t in p.tags if t.kind == "person"]
+    with_face = sorted((t for t in persons if t.id in xmin), key=lambda t: xmin[t.id])
+    without = sorted((t for t in persons if t.id not in xmin), key=lambda t: t.name)
+    return ", ".join(t.name for t in with_face + without)
+
+
 # Bildtextfält: nyckel -> (etikett, värdefunktion). Ordningen styr radordningen.
 CAPTION_FIELDS = {
     "date": ("Datum", lambda p: p.date_text or (str(p.date_year) if p.date_year else "")),
     "place": ("Plats", lambda p: p.location or ""),
-    "persons": ("Personer", lambda p: ", ".join(t.name for t in p.tags if t.kind == "person")),
+    "persons": ("Personer", _persons_ordered),
     "tags": ("Taggar", lambda p: ", ".join(t.name for t in p.tags if t.kind == "tag")),
     "source": ("Källa", lambda p: p.source or ""),
     "notes": ("Anteckning", lambda p: p.notes or ""),

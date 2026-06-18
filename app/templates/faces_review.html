@@ -40,11 +40,10 @@
     const msg = document.getElementById("scan-msg");
 
     function photoCard(p) {
-        const col = document.createElement("div");
-        col.className = "col-6 col-sm-4 col-md-3 col-lg-2";
+        // .gallery-grid + .photo-card -> lyder S/M/L-kortstorleken (--card-min).
         const a = document.createElement("a");
         a.href = `/faces/review/${p.photo_id}`;
-        a.className = "card photo-card text-decoration-none h-100";
+        a.className = "card photo-card text-decoration-none";
         const crops = p.face_ids.slice(0, 5).map(
             id => `<img src="/api/faces/${id}/thumb" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px">`
         ).join("");
@@ -55,20 +54,25 @@
                 <div class="text-truncate small" title="${escapeHtml(p.filename)}">${escapeHtml(p.filename)}</div>
                 <span class="badge text-bg-primary">${p.face_ids.length} ansikte${p.face_ids.length !== 1 ? "n" : ""}</span>
              </div>`;
-        col.appendChild(a);
-        return col;
+        return a;
     }
 
+    let lastSig = null;
     async function loadPhotos() {
         let data;
         try { data = await apiFetch("/api/faces/ai/photos"); }
-        catch (e) { root.innerHTML = '<div class="alert alert-danger">Kunde inte ladda.</div>'; return; }
+        catch (e) { return; }  // tyst vid pollning; behåll befintlig vy
+        // Signatur: rendera bara om listan faktiskt ändrats (undviker flimmer
+        // och bevarar scroll vid löpande pollning under ett jobb).
+        const sig = data.photos.map(p => `${p.photo_id}:${p.face_ids.length}`).join("|");
+        if (sig === lastSig) return;
+        lastSig = sig;
         if (!data.total) {
             root.innerHTML = '<div class="alert alert-secondary">Inga ansikten att granska. Kör AI-detektering för att hitta fler.</div>';
             return;
         }
         const grid = document.createElement("div");
-        grid.className = "row g-2";
+        grid.className = "gallery-grid";
         for (const p of data.photos) grid.appendChild(photoCard(p));
         root.innerHTML = "";
         root.appendChild(grid);
@@ -87,13 +91,13 @@
             const pct = s.total ? Math.round(100 * s.done / s.total) : 0;
             bar.style.width = pct + "%"; bar.textContent = `${s.done}/${s.total}`;
             if (s.message) { msg.classList.remove("d-none"); msg.textContent = s.message; }
+            loadPhotos();  // fyll på listan löpande medan jobbet kör (renderar bara vid ändring)
             if (!s.running) {
                 clearInterval(poll); poll = null;
                 bar.classList.remove("progress-bar-animated");
                 cancelBtn.classList.add("d-none");
                 if (s.error) showToast("Fel: " + s.error, true);
                 else showToast(s.message || "Klart");
-                loadPhotos();
             }
         }, 1500);
     }

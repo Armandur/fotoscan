@@ -142,6 +142,9 @@ class Tag(Base):
     died = Column(String, default="")
     aliases = Column(String, default="")   # kommaseparerade alternativa namn
     bio = Column(Text, default="")
+    # 1 = oidentifierad platshållarperson (skapad vid ansiktsmarkering utan namn,
+    # "Okänd-N"). Skrivs inte ut med namn i album-bildtexten.
+    placeholder = Column(Integer, default=0)
 
     photos = relationship("Photo", secondary=photo_tags, back_populates="tags")
     parent = relationship("Tag", remote_side=[id], back_populates="children")
@@ -301,6 +304,12 @@ def init_db() -> None:
         for _c in ("born", "died", "aliases", "bio"):
             if not _column_exists(conn, "tags", _c):
                 conn.exec_driver_sql(f"ALTER TABLE tags ADD COLUMN {_c} VARCHAR DEFAULT ''")
+        if not _column_exists(conn, "tags", "placeholder"):
+            conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN placeholder INTEGER DEFAULT 0")
+            # Befintliga "Okänd-N"-personer markeras som platshållare (en gång).
+            conn.exec_driver_sql(
+                "UPDATE tags SET placeholder=1 WHERE kind='person' AND name LIKE 'Okänd-%'"
+            )
         if not _column_exists(conn, "photos", "back_of_id"):
             conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN back_of_id INTEGER")
         if not _column_exists(conn, "photos", "phash"):

@@ -60,6 +60,10 @@ photos/                exempel/testbilder (gitignored)
   framtida tidslinjevy.
 - **Personer och taggar i samma tabell** (`Tag.kind` = "person" | "tag"),
   many-to-many via `photo_tags`. Hierarki (`parent_id`) gäller bara `kind="tag"`.
+- **Oidentifierade personer** (`Tag.placeholder`=1): sätts när en ansiktsruta
+  skapas utan namn ("Okänd-N"), nollställs vid namnbyte. Skrivs INTE ut med namn i
+  album-bildtexten, och personlistan sorterar/markerar dem sist som "oidentifierad"
+  (flaggan ersätter att tolka namnet "Okänd-N").
 - **Personmetadata** (på `Tag`, används när kind=person): `born`/`died` (fritext),
   `aliases` (kommaseparerade, sökbara i `/api/persons`), `bio`. Familjelänkar i
   `PersonLink` (person<->person, relation "parent"/"partner"; barn = omvänd parent).

@@ -34,7 +34,8 @@ def _persons_ordered(p) -> str:
     for f in p.faces:
         if f.tag_id is not None:
             xmin[f.tag_id] = min(xmin.get(f.tag_id, 2.0), f.x)
-    persons = [t for t in p.tags if t.kind == "person"]
+    # Oidentifierade platshållare ("Okänd-N") skrivs inte ut med namn.
+    persons = [t for t in p.tags if t.kind == "person" and not getattr(t, "placeholder", 0)]
     with_face = sorted((t for t in persons if t.id in xmin), key=lambda t: xmin[t.id])
     without = sorted((t for t in persons if t.id not in xmin), key=lambda t: t.name)
     return ", ".join(t.name for t in with_face + without)

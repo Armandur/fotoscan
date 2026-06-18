@@ -117,7 +117,10 @@ def persons_page(request: Request, db: Session = Depends(get_db)):
             "count": len(ids),
             "region_id": _avatar_region_id(db, tag),
             "sample_photo": min(ids) if ids else None,
+            "placeholder": bool(tag.placeholder),
         })
+    # Identifierade först, oidentifierade ("Okänd") sist.
+    rows.sort(key=lambda r: (r["placeholder"], r["name"].lower()))
     return templates.TemplateResponse(request, "persons.html", {"persons": rows})
 
 
@@ -170,6 +173,7 @@ def rename_person(
     )
     if not existing:
         tag.name = new_name
+        tag.placeholder = 0  # namngiven = identifierad
         db.commit()
         return JSONResponse({"ok": True, "id": tag.id, "name": new_name, "merged": False})
 

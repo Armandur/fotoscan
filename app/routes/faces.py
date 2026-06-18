@@ -83,8 +83,11 @@ def add_face(
         raise HTTPException(404, "Foto hittades inte")
 
     # Tomt namn -> skapa en platshållarperson "Okänd-N" att komplettera senare.
+    is_placeholder = not data.person.strip()
     name = data.person.strip() or _next_unknown_name(db)
     tag = _get_or_create_tag(db, name, "person")
+    if is_placeholder:
+        tag.placeholder = 1
     face = FaceRegion(
         photo_id=photo_id, tag_id=tag.id,
         x=_clamp(data.x), y=_clamp(data.y),

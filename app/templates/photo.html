@@ -222,10 +222,11 @@
                         title="Exportera kopia med inbäddad metadata (XMP + EXIF)">
                     <i class="bi bi-box-arrow-up"></i> Exportera
                 </button>
-                <span class="badge {% if photo.reviewed_at %}text-bg-success{% else %}text-bg-secondary{% endif %}"
-                      id="reviewed-state">
+                <button type="button" class="badge border-0 {% if photo.reviewed_at %}text-bg-success{% else %}text-bg-secondary{% endif %}"
+                      id="reviewed-state" title="Klicka för att växla granskad-status"
+                      data-reviewed="{% if photo.reviewed_at %}1{% else %}0{% endif %}" style="cursor:pointer">
                     {% if photo.reviewed_at %}Granskad{% else %}Ej granskad{% endif %}
-                </span>
+                </button>
                 <div class="form-check form-switch ms-2" title="Uteslut fotot från AI-ansiktsdetektering (t.ex. målade dockor som tolkas som ansikten)">
                     <input class="form-check-input" type="checkbox" id="ai-exclude" {% if photo.ai_exclude %}checked{% endif %}>
                     <label class="form-check-label small" for="ai-exclude">Uteslut från AI</label>

@@ -39,7 +39,7 @@
                 body: collect(markReviewed),
             });
             if (markReviewed) {
-                document.getElementById("reviewed-state").textContent = "Granskad";
+                setReviewedBadge(true);
                 showToast("Sparat och markerat granskat");
                 const qs = detail.dataset.nav || "";
                 if (reviewMode) {
@@ -61,6 +61,23 @@
         e.preventDefault(); save(false);
     });
     document.getElementById("save-reviewed-btn").addEventListener("click", () => save(true));
+
+    // ---- Granskad-status: klickbar växel (sätt/avmarkera) ----
+    const reviewedBadge = document.getElementById("reviewed-state");
+    function setReviewedBadge(on) {
+        reviewedBadge.dataset.reviewed = on ? "1" : "0";
+        reviewedBadge.textContent = on ? "Granskad" : "Ej granskad";
+        reviewedBadge.classList.toggle("text-bg-success", on);
+        reviewedBadge.classList.toggle("text-bg-secondary", !on);
+    }
+    reviewedBadge.addEventListener("click", async () => {
+        const on = reviewedBadge.dataset.reviewed !== "1";
+        try {
+            await apiFetch(`/api/photos/${photoId}/reviewed?reviewed=${on}`, { method: "POST" });
+            setReviewedBadge(on);
+            showToast(on ? "Markerad som granskad" : "Avmarkerad");
+        } catch (err) { showToast("Misslyckades: " + err.message, true); }
+    });
 
     // ---- Export (kopia med inbäddad metadata) ----
     document.getElementById("export-btn").addEventListener("click", async (e) => {

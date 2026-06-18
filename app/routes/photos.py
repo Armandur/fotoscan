@@ -451,6 +451,17 @@ def image(photo_id: int, raw: bool = False, db: Session = Depends(get_db)):
     return FileResponse(cache)
 
 
+@router.post("/api/photos/{photo_id}/reviewed")
+def set_reviewed(photo_id: int, reviewed: bool = True, db: Session = Depends(get_db)):
+    """Sätt/avmarkera granskad-status (per foto)."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    photo.reviewed_at = _now() if reviewed else None
+    db.commit()
+    return JSONResponse({"ok": True, "reviewed": photo.reviewed_at is not None})
+
+
 @router.post("/api/photos/{photo_id}/rotate")
 def rotate_photo(
     photo_id: int, dir: str = "cw", db: Session = Depends(get_db)

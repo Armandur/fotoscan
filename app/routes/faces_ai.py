@@ -214,10 +214,12 @@ def persons_duplicates_page(request: Request, threshold: float = 0.5,
 
 
 @router.get("/api/faces/ai/clusters")
-def face_clusters(threshold: float = 0.5, db: Session = Depends(get_db)):
+def face_clusters(threshold: float = 0.5, min_size: int = 2,
+                  db: Session = Depends(get_db)):
     """Klustra obekräftade AI-ansikten på likhet -> grupper att namnge på en
     gång. Klara ansikten (högst det_score) blir frön. Varje grupp får ett
-    namnförslag via matchning mot kända personer."""
+    namnförslag via matchning mot kända personer. Enstaka ansikten (storlek <
+    min_size, default 2) utelämnas - de hör hemma i per-foto-granskningen."""
     import numpy as np
 
     threshold = max(0.3, min(0.9, threshold))
@@ -232,6 +234,8 @@ def face_clusters(threshold: float = 0.5, db: Session = Depends(get_db)):
     items = [(f.id, f.embedding) for f in faces]
     by_id = {f.id: f for f in faces}
     clusters = faces_ai.cluster_embeddings(items, threshold)
+    singletons = sum(1 for ids in clusters if len(ids) < min_size)
+    clusters = [ids for ids in clusters if len(ids) >= min_size]
 
     matcher = _build_db_matcher(db)
     out = []
@@ -252,7 +256,7 @@ def face_clusters(threshold: float = 0.5, db: Session = Depends(get_db)):
             "suggestion": suggestion,
         })
     return JSONResponse({"clusters": out, "threshold": threshold,
-                         "total_faces": len(faces)})
+                         "total_faces": len(faces), "singletons": singletons})
 
 
 @router.post("/api/faces/ai/cluster-name")

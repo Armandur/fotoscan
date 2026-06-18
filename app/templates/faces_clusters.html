@@ -164,14 +164,17 @@
         let data;
         try { data = await apiFetch(`/api/faces/ai/clusters?threshold=${thr.value}`); }
         catch (e) { root.innerHTML = '<div class="alert alert-danger">Kunde inte ladda.</div>'; return; }
+        const singNote = data.singletons
+            ? ` ${data.singletons} ensamma ansikten visas inte här - granska dem per foto.`
+            : "";
         if (!data.clusters.length) {
-            root.innerHTML = '<div class="alert alert-secondary">Inga obekräftade AI-ansikten att klustra. Kör AI-detektering först.</div>';
+            root.innerHTML = `<div class="alert alert-secondary">Inga grupper med flera liknande ansikten vid denna känslighet.${singNote}</div>`;
             return;
         }
         root.innerHTML = "";
         const info = document.createElement("div");
         info.className = "text-secondary small mb-2";
-        info.textContent = `${data.total_faces} obekräftade ansikten i ${data.clusters.length} grupper.`;
+        info.textContent = `${data.clusters.length} grupper med flera liknande ansikten.${singNote}`;
         root.appendChild(info);
         data.clusters.forEach(clusterCard);
     }

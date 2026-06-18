@@ -83,6 +83,11 @@ photos/                exempel/testbilder (gitignored)
   Personer förblir platta.
 - **Metadatafält:** date_text, date_year, plats (Place), source (vem fotot kommer
   från), notes, taggar/personer. (Arkivnummer fanns tidigare men togs bort.)
+  Personer i detaljvyn är **klickbara chips** (länk till `/persons/{id}`, ta-bort-×)
+  i ansiktenas x-ordning (`_ordered_people`, samma princip som album-bildtexten,
+  inkl. Okänd-N), med en autocomplete för att lägga till (välj/skapa); manuellt
+  markerade ansikten lägger sin person som chip live (`window.addPersonChip`).
+  `collect()` läser personer från chipsen. Taggar är fortfarande kommaseparerad text.
 - **Plats normaliserad** (`Place`-tabell, `Photo.place_id`): plats är en egen
   återanvändbar entitet. `Photo.location` är en synkad namn-cache (för sök/kort).
   `update_photo` gör get_or_create_place. Fotots egen GPS (`gps_lat/lon`) är

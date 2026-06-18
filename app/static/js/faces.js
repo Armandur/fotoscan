@@ -256,6 +256,8 @@
                 nameOpen = false;
                 box.remove();
                 layer.appendChild(makeBox(face));
+                // Lägg personen som chip i Personer-fältet direkt.
+                window.addPersonChip && window.addPersonChip(face.person, face.person_id);
                 showToast("Ansikte taggat: " + face.person);
             } catch (err) {
                 showToast("Kunde inte spara: " + err.message, true);

@@ -298,6 +298,20 @@ def review(db: Session = Depends(get_db)):
     )
 
 
+def _ordered_people(photo: Photo) -> list:
+    """Personer på fotot för chip-listan: de med bekräftad ansiktsruta först,
+    vänster->höger (lägsta x), sedan övriga på namn. Inkluderar platshållare
+    (Okänd-N), till skillnad från album-bildtextens ordning."""
+    xmin: dict[int, float] = {}
+    for f in photo.faces:
+        if f.tag_id is not None and f.confirmed:
+            xmin[f.tag_id] = min(xmin.get(f.tag_id, 2.0), f.x)
+    persons = [t for t in photo.tags if t.kind == "person"]
+    with_face = sorted((t for t in persons if t.id in xmin), key=lambda t: xmin[t.id])
+    without = sorted((t for t in persons if t.id not in xmin), key=lambda t: t.name)
+    return with_face + without
+
+
 @router.get("/photo/{photo_id}", response_class=HTMLResponse)
 def photo_detail(
     photo_id: int, request: Request,
@@ -386,6 +400,7 @@ def photo_detail(
         "photo.html",
         {
             "photo": photo,
+            "people": _ordered_people(photo),
             "paired": paired,
             "back": back,
             "back_of": back_of,

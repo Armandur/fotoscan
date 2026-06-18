@@ -27,6 +27,7 @@ def _clamp(v: float) -> float:
 def _serialize(f: FaceRegion) -> dict:
     return {
         "id": f.id, "person": f.tag.name if f.tag else None,
+        "person_id": f.tag_id,
         "x": f.x, "y": f.y, "w": f.w, "h": f.h,
     }
 

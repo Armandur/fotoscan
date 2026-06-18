@@ -67,6 +67,11 @@
         const label = document.createElement("span");
         label.className = "face-label";
         label.textContent = face.person;
+        label.title = "Klicka för att byta person";
+        label.style.cursor = "pointer";
+        // Klick på etiketten byter person; stoppa drag-starten (box-mousedown).
+        label.addEventListener("mousedown", (e) => e.stopPropagation());
+        label.addEventListener("click", (e) => { e.stopPropagation(); editPerson(box, face); });
 
         const del = document.createElement("button");
         del.type = "button";
@@ -161,7 +166,49 @@
         promptName(box);
     });
 
-    // ---- Namninmatning med personsök (thumbnails) ----
+    // ---- Personsök med tumnaglar (delas av ny-tagg och byt-person) ----
+    // onChoose(person|null): {id,name} vid val, {name} vid fritext, null vid Esc.
+    function attachPersonAC(input, ac, onChoose) {
+        let active = -1, items = [];
+        const render = () => {
+            ac.innerHTML = items.map((p, i) => {
+                const thumb = p.region_id
+                    ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
+                    : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
+                return `<div class="face-ac-item${i === active ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
+                    + thumb
+                    + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+                    + `<span class="face-ac-count">${p.count}</span></div>`;
+            }).join("");
+            ac.classList.toggle("show", items.length > 0);
+            const act = ac.querySelector(".face-ac-item.active");
+            if (act) act.scrollIntoView({ block: "nearest" });
+        };
+        const search = async () => {
+            try {
+                items = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`);
+            } catch (e) { items = []; }
+            active = -1;
+            render();
+        };
+        ac.addEventListener("mousedown", (e) => {
+            const item = e.target.closest(".face-ac-item");
+            if (item) { e.preventDefault(); onChoose({ id: +item.dataset.id, name: item.dataset.name }); }
+        });
+        input.addEventListener("input", search);
+        input.addEventListener("focus", search);
+        input.addEventListener("keydown", (e) => {
+            e.stopPropagation();
+            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                onChoose(active >= 0 ? { id: items[active].id, name: items[active].name } : { name: input.value.trim() });
+            } else if (e.key === "Escape") { e.preventDefault(); onChoose(null); }
+        });
+    }
+
+    // ---- Ny tagg: namnge en nyritad ruta ----
     function promptName(box) {
         nameOpen = true;
         let pending = { ...box._rect };
@@ -176,8 +223,6 @@
         box.appendChild(wrap);
         const input = wrap.querySelector("input");
         const ac = wrap.querySelector(".face-ac");
-        let active = -1, items = [];
-
         input.focus();
         const cancel = () => { nameOpen = false; box.remove(); };
 
@@ -197,48 +242,49 @@
             }
         };
 
-        const render = () => {
-            ac.innerHTML = items.map((p, i) => {
-                const thumb = p.region_id
-                    ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
-                    : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
-                return `<div class="face-ac-item${i === active ? " active" : ""}" data-name="${escapeHtml(p.name)}">`
-                    + thumb
-                    + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
-                    + `<span class="face-ac-count">${p.count}</span></div>`;
-            }).join("");
-            ac.classList.toggle("show", items.length > 0);
-            const act = ac.querySelector(".face-ac-item.active");
-            if (act) act.scrollIntoView({ block: "nearest" });
-        };
-
-        const search = async () => {
-            try {
-                items = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`);
-            } catch (e) { items = []; }
-            active = -1;
-            render();
-        };
-
-        ac.addEventListener("mousedown", (e) => {
-            const item = e.target.closest(".face-ac-item");
-            if (item) { e.preventDefault(); save(item.dataset.name); }
-        });
-        input.addEventListener("input", search);
-        input.addEventListener("focus", search);
-        input.addEventListener("keydown", (e) => {
-            e.stopPropagation();
-            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
-            else if (e.key === "Enter") {
-                e.preventDefault();
-                save(active >= 0 ? items[active].name : input.value.trim());
-            } else if (e.key === "Escape") {
-                e.preventDefault(); cancel();
-            }
-        });
+        attachPersonAC(input, ac, (p) => p === null ? cancel() : save(p.name));
         input.addEventListener("blur", () => {
             setTimeout(() => { if (nameOpen) save(input.value.trim()); }, 150);
         });
+    }
+
+    // ---- Byt person på en befintlig ruta ----
+    function editPerson(box, face) {
+        if (nameOpen || box.querySelector(".face-name")) return;
+        nameOpen = true;
+        const wrap = document.createElement("div");
+        wrap.className = "face-name";
+        wrap.innerHTML =
+            `<input type="text" class="form-control form-control-sm face-name-input" ` +
+            `placeholder="Byt person..." autocomplete="off"><div class="face-ac"></div>`;
+        box.appendChild(wrap);
+        const input = wrap.querySelector("input");
+        const ac = wrap.querySelector(".face-ac");
+        input.focus();
+        const close = () => { nameOpen = false; wrap.remove(); };
+
+        const apply = async (body, label) => {
+            try {
+                const res = await apiFetch(`/api/faces/${face.id}/person`, { method: "POST", body });
+                face.person = res.person.name;
+                box.querySelector(".face-label").textContent = res.person.name;
+                close();
+                showToast("Person ändrad: " + res.person.name);
+                if (res.old && res.old.orphaned && await showConfirm(
+                    `"${res.old.name}" har inga taggningar kvar. Ta bort personen ur registret?`,
+                    { okLabel: "Ta bort", okClass: "btn-danger" })) {
+                    await apiFetch(`/api/persons/${res.old.id}`, { method: "DELETE" });
+                    showToast("Personen borttagen");
+                }
+            } catch (err) { showToast("Kunde inte byta person: " + err.message, true); }
+        };
+
+        attachPersonAC(input, ac, (p) => {
+            if (p === null) close();
+            else if (p.id) apply({ tag_id: p.id }, p.name);
+            else if (p.name) apply({ name: p.name }, p.name);
+            else close();
+        });
+        input.addEventListener("blur", () => setTimeout(() => { if (nameOpen) close(); }, 150));
     }
 })();

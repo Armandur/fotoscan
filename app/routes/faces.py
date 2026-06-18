@@ -10,7 +10,7 @@ from app.database import FaceRegion, Photo, Tag
 from app.deps import get_db
 from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
-from app.schemas import FaceBox, FaceRegionIn
+from app.schemas import ConfirmFace, FaceBox, FaceRegionIn
 from app.services.scanner import (
     face_thumb_path, invalidate_face_thumb, load_oriented,
 )
@@ -115,6 +115,62 @@ def move_face(region_id: int, data: FaceBox, db: Session = Depends(get_db)):
     db.refresh(face)
     invalidate_face_thumb(region_id)  # crop ändrades
     return JSONResponse(_serialize(face))
+
+
+@router.post("/api/faces/{region_id}/person")
+def set_face_person(region_id: int, data: ConfirmFace, db: Session = Depends(get_db)):
+    """Byt person på en befintlig ruta (utan att ta bort + lägga till). Body som
+    ConfirmFace: tag_id, name (skapas vid behov) eller unidentified (Okänd-N).
+    Städar gamla personen ur fotots Personer-fält om den inte har fler rutor där,
+    och rapporterar om den blev helt oanvänd (för att kunna erbjuda borttag)."""
+    face = db.get(FaceRegion, region_id)
+    if not face:
+        raise HTTPException(404, "Region hittades inte")
+    photo = face.photo
+    old_tag = face.tag
+
+    if data.unidentified:
+        new_tag = _get_or_create_tag(db, _next_unknown_name(db), "person")
+        new_tag.placeholder = 1
+    elif data.tag_id:
+        new_tag = db.get(Tag, data.tag_id)
+        if not new_tag or new_tag.kind != "person":
+            raise HTTPException(400, "Ogiltig person")
+    elif data.name.strip():
+        new_tag = _get_or_create_tag(db, data.name.strip(), "person")
+        new_tag.placeholder = 0
+    else:
+        raise HTTPException(400, "Ange en person")
+
+    if old_tag and old_tag.id == new_tag.id:
+        return JSONResponse({"ok": True, "person": {"id": new_tag.id, "name": new_tag.name}, "old": None})
+
+    face.tag_id = new_tag.id
+    face.confirmed = 1
+    face.suggested_tag_id = None
+    if new_tag not in photo.tags:
+        photo.tags.append(new_tag)
+    db.flush()
+
+    old = None
+    if old_tag:
+        remaining_here = (
+            db.query(FaceRegion)
+            .filter(FaceRegion.photo_id == photo.id, FaceRegion.tag_id == old_tag.id)
+            .count()
+        )
+        if remaining_here == 0 and old_tag in photo.tags:
+            photo.tags.remove(old_tag)
+        db.flush()
+        total = db.query(FaceRegion).filter(FaceRegion.tag_id == old_tag.id).count()
+        orphaned = total == 0 and len(old_tag.photos) == 0
+        old = {"id": old_tag.id, "name": old_tag.name, "orphaned": orphaned}
+    db.commit()
+    return JSONResponse({
+        "ok": True,
+        "person": {"id": new_tag.id, "name": new_tag.name},
+        "old": old,
+    })
 
 
 @router.delete("/api/faces/{region_id}")

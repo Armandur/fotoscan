@@ -1,6 +1,11 @@
 # Fotoscan - todo
 
 ## Planerat
+- [ ] **Albumexport till mapp + metadatafil.** Exportera ett albums bilder till
+  en mapp i albumets ordning (filnamn med löpnummer-prefix så ordningen bevaras),
+  plus en mänskligt läsbar metadatafil (.txt och/eller .xlsx) med info per bild
+  (ordning, filnamn, datum, plats, personer, taggar, källa, anteckning) som man
+  kan läsa bredvid bilderna. Bygger på `AlbumPhoto.position` + `caption_lines`.
 - [ ] **PDF-album: full per-sida-kontroll.** I layoutvyn: låt varje enskild A4-sida
   få egen layout (utöver dagens global + per-avsnitt-layout), och ev. live-redigering
   i stället för spara-och-ladda-om. Bygger på WYSIWYG-layoutvyn.

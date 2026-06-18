@@ -197,10 +197,15 @@ photos/                exempel/testbilder (gitignored)
   beräknar 512-d embeddings. `FaceRegion` utökad med `source` (manual/ai),
   `confirmed` (0/1), `embedding` (bytes), `suggested_tag_id` (AI:ns gissning);
   `Photo.ai_faces_at` markerar behandlade foton. **Modellen tränas inte** - vi
-  gör k-NN/centroid-matchning: bekräftade, namngivna ansiktens embeddings bildar
-  per-person medel-embedding (`build_matcher`), nya ansikten får namnförslag via
-  cosine-likhet (tröskel 0.40). Manuellt markerade rutor är alltså referensdata
-  som förbättrar igenkänningen ju fler man bekräftar. Batch-jobb i bakgrundstråd
+  gör k-NN/centroid-matchning: bekräftade ansiktens embeddings bildar per-person
+  medel-embedding (`build_matcher`/`_build_db_matcher`), nya ansikten får namnförslag
+  via cosine-likhet (tröskel 0.40). **Platshållare (Okänd-N) ingår som referenser**
+  så ansikten man sparat som "oidentifierade" fylls på (och kan namnges i klump
+  senare); bekräfta ett ansikte TILL en befintlig person ändrar inte den personens
+  platshållar-status (`identified=False` i `_confirm` för tag_id-vägen). Manuellt
+  markerade rutor är alltså referensdata som förbättrar igenkänningen ju fler man
+  bekräftar. Jobbet hoppar över **hopparade negativ** (pair-sekundären) - samma
+  motiv som fotot som redan detekteras (oparade negativ scannas). Batch-jobb i bakgrundstråd
   (`_run_job`, modul-global `JOB`-status): **ett inkrementellt pass** - varje foto
   detekteras (på nedskalad bild, max 1600px, för fart), bekräftade rutor får
   backfillade embeddings via IoU-matchning, förslagsrutor skapas, och fotot

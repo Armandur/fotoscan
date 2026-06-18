@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, ASSET_V
@@ -45,7 +46,10 @@ def _run_job(force: bool) -> None:
     db = SessionLocal()
     try:
         q = db.query(Photo).filter(
-            Photo.back_of_id.is_(None), Photo.ai_exclude == 0
+            Photo.back_of_id.is_(None), Photo.ai_exclude == 0,
+            # Hoppa över negativet i ett par (sekundären) - samma motiv som fotot,
+            # som redan detekteras. Oparade negativ scannas dock.
+            or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1),
         )
         if not force:
             q = q.filter(Photo.ai_faces_at.is_(None))
@@ -270,7 +274,7 @@ def name_cluster(data: ClusterName, db: Session = Depends(get_db)):
         tag = db.get(Tag, data.tag_id)
         if not tag or tag.kind != "person":
             raise HTTPException(400, "Ogiltig person")
-        identified = True
+        identified = False  # bevara målpersonens status (kan vara en Okänd-N)
     elif data.name.strip():
         tag = _get_or_create_tag(db, data.name.strip(), "person")
         identified = True
@@ -337,13 +341,15 @@ def pending_photos(db: Session = Depends(get_db)):
 
 
 def _build_db_matcher(db: Session) -> faces_ai.Matcher:
+    # Inkluderar platshållare (Okänd-N): faces sparade som "oidentifierade" är
+    # också referensgrupper, så nya ansikten av samma okända person föreslås mot
+    # dem och kan fyllas på (och namnges senare i klump).
     rows = (
         db.query(FaceRegion.tag_id, FaceRegion.embedding)
-        .join(Tag, Tag.id == FaceRegion.tag_id)
         .filter(
             FaceRegion.confirmed == 1,
+            FaceRegion.tag_id.isnot(None),
             FaceRegion.embedding.isnot(None),
-            Tag.placeholder == 0,
         )
         .all()
     )
@@ -424,6 +430,7 @@ def confirm_face(region_id: int, data: ConfirmFace, db: Session = Depends(get_db
         tag = db.get(Tag, data.tag_id)
         if not tag or tag.kind != "person":
             raise HTTPException(400, "Ogiltig person")
+        identified = False  # bevara målpersonens status (kan vara en Okänd-N)
     elif data.name.strip():
         tag = _get_or_create_tag(db, data.name.strip(), "person")
     else:

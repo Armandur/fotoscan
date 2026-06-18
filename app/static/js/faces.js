@@ -117,6 +117,19 @@
     loadFaces();
     window.reloadFaces = loadFaces;  // anropas efter rotation
 
+    // ---- Håll H för att tillfälligt dölja ansiktsrutorna (momentant) ----
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "h" && e.key !== "H") return;
+        const el = document.activeElement;
+        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        layer.style.visibility = "hidden";
+    });
+    document.addEventListener("keyup", (e) => {
+        if (e.key === "h" || e.key === "H") layer.style.visibility = "";
+    });
+    window.addEventListener("blur", () => { layer.style.visibility = ""; });
+
     // ---- Ritläge ----
     function setDrawMode(on) {
         drawMode = on;

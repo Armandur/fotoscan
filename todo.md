@@ -3,10 +3,11 @@
 ## Planerat
 
 ### AI-ansiktsigenkänning - vidareutveckling
-- [ ] **Klustra okända ansikten.** Gruppera obekräftade/oidentifierade ansikten
-  på embedding-likhet (samma matte som dubblettpersoner) så en hel grupp kan
-  namnges på en gång ("personen återkommer 14 ggr -> namnge en gång"). Störst
-  tidsvinst för stora samlingar.
+- [x] **Klustra okända ansikten.** `/faces/clusters` + `/api/faces/ai/clusters`
+  grupperar obekräftade AI-ansikten på embedding-likhet (`cluster_embeddings`,
+  girig seed-gruppering, justerbar känslighet) så en hel grupp namnges på en gång
+  (`/api/faces/ai/cluster-name`). Avmarkera enstaka crops, namnförslag per grupp
+  (med tumnagel) via matchning mot kända personer, crops lyder S/M/L + hover-zoom.
 - [ ] **Auto-/massbekräfta höga träffar.** "Bekräfta alla förslag över likhet X"
   (t.ex. 0.6), eller per person, för att snabba upp granskningen.
 - [ ] **Förslag i fotolistan.** Visa toppförslag per foto i `/faces/review` +
@@ -17,7 +18,9 @@
   kvarvarande pending efter fler bekräftelser, utan att detektera om.
 - [ ] **"Hitta fler foton med denna person".** Omvänd sökning från `/persons/{id}`:
   kör personens centroid mot obekräftade/odetekterade ansikten.
-- [ ] **Auto-välj bästa tumnagel** för person via `det_score`/frontal-vinkel.
+- [x] **Auto-välj bästa tumnagel** för person: `_best_region_id` väljer störst
+  ansiktsarea med `det_score` (lagras vid AI-detektering) som tiebreaker, om ingen
+  manuell tumnagel (`thumb_face_id`) är vald.
 - [ ] **Kör AI automatiskt vid scan** (valbart) så kön alltid är aktuell.
 - [ ] **GPU på Unraid** för snabbare detektering om volymen växer (2070ti kan
   delas mellan containrar via NVIDIA Container Toolkit; onödigt för nuvarande skala).

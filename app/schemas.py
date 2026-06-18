@@ -77,6 +77,13 @@ class ConfirmFace(BaseModel):
     unidentified: bool = False
 
 
+class ClusterName(BaseModel):
+    face_ids: list[int]
+    tag_id: int | None = None
+    name: str = ""
+    unidentified: bool = False
+
+
 class PhotoUpdate(BaseModel):
     date_text: str = ""
     location: str = ""

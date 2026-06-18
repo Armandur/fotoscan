@@ -22,7 +22,7 @@ from app.deps import get_db
 from app.routes.faces import _next_unknown_name
 from app.routes.persons import _avatar_region_id
 from app.routes.photos import _get_or_create_tag
-from app.schemas import ConfirmFace
+from app.schemas import ClusterName, ConfirmFace
 from app.services import faces_ai
 from app.services.scanner import invalidate_face_thumb
 
@@ -210,6 +210,87 @@ def persons_duplicates_page(request: Request, threshold: float = 0.5,
                             db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request, "persons_duplicates.html", {"threshold": threshold},
+    )
+
+
+@router.get("/api/faces/ai/clusters")
+def face_clusters(threshold: float = 0.5, db: Session = Depends(get_db)):
+    """Klustra obekräftade AI-ansikten på likhet -> grupper att namnge på en
+    gång. Klara ansikten (högst det_score) blir frön. Varje grupp får ett
+    namnförslag via matchning mot kända personer."""
+    import numpy as np
+
+    threshold = max(0.3, min(0.9, threshold))
+    faces = (
+        db.query(FaceRegion)
+        .filter(FaceRegion.source == "ai", FaceRegion.confirmed == 0,
+                FaceRegion.embedding.isnot(None))
+        .all()
+    )
+    # Tydliga ansikten först (frön): högst det_score, sedan störst area.
+    faces.sort(key=lambda f: (f.det_score or 0.0, f.w * f.h), reverse=True)
+    items = [(f.id, f.embedding) for f in faces]
+    by_id = {f.id: f for f in faces}
+    clusters = faces_ai.cluster_embeddings(items, threshold)
+
+    matcher = _build_db_matcher(db)
+    out = []
+    for ids in clusters:
+        members = [by_id[i] for i in ids]
+        centroid = np.mean(
+            [faces_ai.bytes_to_emb(m.embedding) for m in members], axis=0)
+        tag_id, score = matcher.suggest(centroid)
+        suggestion = None
+        if tag_id is not None:
+            tag = db.get(Tag, tag_id)
+            if tag:
+                suggestion = {"tag_id": tag_id, "name": tag.name,
+                              "score": round(float(score), 3),
+                              "region_id": _avatar_region_id(db, tag)}
+        out.append({
+            "faces": [{"id": m.id, "photo_id": m.photo_id} for m in members],
+            "suggestion": suggestion,
+        })
+    return JSONResponse({"clusters": out, "threshold": threshold,
+                         "total_faces": len(faces)})
+
+
+@router.post("/api/faces/ai/cluster-name")
+def name_cluster(data: ClusterName, db: Session = Depends(get_db)):
+    """Namnge (bekräfta) alla ansikten i ett kluster på en gång."""
+    if data.unidentified:
+        tag = _get_or_create_tag(db, _next_unknown_name(db), "person")
+        tag.placeholder = 1
+        identified = False
+    elif data.tag_id:
+        tag = db.get(Tag, data.tag_id)
+        if not tag or tag.kind != "person":
+            raise HTTPException(400, "Ogiltig person")
+        identified = True
+    elif data.name.strip():
+        tag = _get_or_create_tag(db, data.name.strip(), "person")
+        identified = True
+    else:
+        raise HTTPException(400, "Ange en person")
+
+    faces = (
+        db.query(FaceRegion)
+        .filter(FaceRegion.id.in_(data.face_ids),
+                FaceRegion.source == "ai", FaceRegion.confirmed == 0)
+        .all()
+    )
+    for face in faces:
+        _confirm(db, face, tag, identified=identified)
+    db.commit()
+    return JSONResponse({"ok": True, "count": len(faces),
+                         "person": {"id": tag.id, "name": tag.name}})
+
+
+@router.get("/faces/clusters", response_class=HTMLResponse)
+def clusters_page(request: Request, threshold: float = 0.5,
+                  db: Session = Depends(get_db)):
+    return templates.TemplateResponse(
+        request, "faces_clusters.html", {"threshold": threshold},
     )
 
 

@@ -218,7 +218,10 @@ photos/                exempel/testbilder (gitignored)
   ruta (även i manuella flödet): `POST /api/faces/{id}/person` (tag_id/name/
   unidentified). **Dubblettpersoner:** `/persons/duplicates` +
   `/api/persons/similar` jämför personernas centroider parvis (`Matcher.pairs`,
-  cosine-tröskel) och föreslår sammanslagning av troliga dubbletter. OBS:
+  cosine-tröskel) och föreslår sammanslagning av troliga dubbletter.
+  **Klustra okända:** `/faces/clusters` + `/api/faces/ai/clusters` grupperar
+  obekräftade ansikten på likhet (`cluster_embeddings`) så en hel grupp namnges
+  på en gång (`cluster-name`), med per-grupp namnförslag mot kända personer. OBS:
   `tag_id` är nullbar (obekräftade utan match saknar person) - kräver tabell-
   ombyggnad i SQLite (`_make_face_tag_id_nullable`, eftersom ALTER inte kan släppa
   NOT NULL). Tredje FK-vägen (`suggested_tag_id`) -> `foreign_keys` på relationerna.

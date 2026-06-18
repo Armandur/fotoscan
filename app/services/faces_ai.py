@@ -157,6 +157,33 @@ class Matcher:
         return out
 
 
+def cluster_embeddings(
+    items: list[tuple[int, bytes]], threshold: float
+) -> list[list[int]]:
+    """Gruppera ansikten på embedding-likhet. items: (id, embedding-bytes).
+    Girig seed-baserad gruppering (O(n^2)): klara ansikten (skickas i den
+    ordning anroparen vill prioritera) blir frön; varje frö drar till sig alla
+    ännu ogrupperade ansikten över tröskeln. Inte transitiv -> undviker att
+    olika personer kedjas ihop. Returnerar grupper sorterade störst först."""
+    ids = [i for i, _ in items]
+    if not ids:
+        return []
+    mat = np.stack([_normalize(bytes_to_emb(b)) for _, b in items])
+    sim = mat @ mat.T
+    n = len(ids)
+    assigned = [False] * n
+    clusters: list[list[int]] = []
+    for i in range(n):
+        if assigned[i]:
+            continue
+        members = [j for j in range(n) if not assigned[j] and sim[i, j] >= threshold]
+        for j in members:
+            assigned[j] = True
+        clusters.append([ids[j] for j in members])
+    clusters.sort(key=len, reverse=True)
+    return clusters
+
+
 def build_matcher(face_rows: list[tuple[int, bytes]], threshold: float = 0.40) -> Matcher:
     """face_rows: (tag_id, embedding-bytes) för bekräftade, namngivna ansikten."""
     per_person: dict[int, list[np.ndarray]] = {}

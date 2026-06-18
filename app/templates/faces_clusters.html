@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Klustra okända ansikten - Fotoscan{% endblock %}
+
+{% block head %}
+<style>
+/* Crop-storlek följer kortstorleks-kontrollen (S/M/L -> --card-min). */
+.cl-crop { width: calc(var(--card-min, 150px) * 0.5); height: calc(var(--card-min, 150px) * 0.5);
+    object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent;
+    transition: transform .12s; }
+.cl-crop.off { opacity: .3; border-color: var(--bs-danger); }
+/* Hover -> förstora för att se ansiktet tydligt. */
+.cl-crop:hover { transform: scale(2.4); position: relative; z-index: 20;
+    box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.6); border-color: var(--bs-info); }
+.cl-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-ac .face-ac-thumb { width: 48px; height: 48px; }
+.sugg-thumb { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; }
+.sugg-thumb.empty { display: inline-flex; align-items: center; justify-content: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h1 class="h4 mb-0">Klustra okända ansikten</h1>
+    <a href="/faces/review" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Granskning</a>
+</div>
+
+<p class="text-secondary small">
+    Obekräftade AI-ansikten grupperade på likhet - troligen samma person. Namnge
+    en hel grupp på en gång. Klicka på ett ansikte för att avmarkera det ur gruppen
+    (om det inte hör dit). Tomt namn / "Oidentifierad" skapar en Okänd-person.
+</p>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <label class="form-label mb-0 small">Känslighet</label>
+    <input type="range" class="form-range" id="thr" min="0.35" max="0.75" step="0.05"
+           value="{{ threshold }}" style="max-width:220px">
+    <span class="badge text-bg-secondary" id="thr-val">{{ threshold }}</span>
+    <span class="text-secondary small">högre = striktare (renare men fler grupper)</span>
+</div>
+
+<div id="clusters-root"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const root = document.getElementById("clusters-root");
+    const thr = document.getElementById("thr");
+    const thrVal = document.getElementById("thr-val");
+
+    function personThumb(regionId, cls) {
+        return regionId
+            ? `<img class="${cls}" src="/api/faces/${regionId}/thumb" alt="">`
+            : `<span class="${cls} empty d-flex align-items-center justify-content-center text-secondary"><i class="bi bi-person"></i></span>`;
+    }
+
+    // Delad personsök-autocomplete (tumnaglar).
+    function attachPersonAC(input, ac, onChoose) {
+        let items = [], active = -1;
+        const render = () => {
+            ac.innerHTML = items.map((p, i) =>
+                `<div class="face-ac-item${i === active ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
+                + personThumb(p.region_id, "face-ac-thumb")
+                + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+                + `<span class="face-ac-count">${p.count}</span></div>`).join("");
+            ac.classList.toggle("show", items.length > 0);
+        };
+        const search = async () => {
+            try { items = await apiFetch(`/api/persons?q=${encodeURIComponent(input.value.trim())}`); }
+            catch (e) { items = []; }
+            active = -1; render();
+        };
+        ac.addEventListener("mousedown", (e) => {
+            const it = e.target.closest(".face-ac-item");
+            if (it) { e.preventDefault(); onChoose({ id: +it.dataset.id, name: it.dataset.name }); }
+        });
+        input.addEventListener("input", search);
+        input.addEventListener("focus", search);
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                onChoose(active >= 0 ? { id: items[active].id, name: items[active].name } : { name: input.value.trim() });
+            } else if (e.key === "Escape") { ac.classList.remove("show"); onChoose(null); }
+        });
+        input.addEventListener("blur", () => setTimeout(() => ac.classList.remove("show"), 150));
+    }
+
+    function clusterCard(cl, idx) {
+        const card = document.createElement("div");
+        card.className = "card mb-3";
+        root.appendChild(card);
+        const selected = new Set(cl.faces.map(f => f.id));
+        const sugg = cl.suggestion
+            ? `Förslag: <strong>${escapeHtml(cl.suggestion.name)}</strong> <span class="text-secondary">${cl.suggestion.score}</span>`
+            : `<span class="text-secondary">Inget namnförslag</span>`;
+        card.innerHTML =
+            `<div class="card-body p-2">
+                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                    <span class="badge text-bg-secondary">${cl.faces.length} ansikten</span>
+                    <span class="small">${sugg}</span>
+                </div>
+                <div class="cl-grid mb-2"></div>
+                <div class="d-flex gap-2 align-items-start flex-wrap">
+                    ${cl.suggestion ? `<button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" data-act="suggest">${personThumb(cl.suggestion.region_id, "sugg-thumb")}<i class="bi bi-check-lg"></i> Namnge alla som ${escapeHtml(cl.suggestion.name)}</button>` : ""}
+                    <div class="position-relative" style="min-width:220px">
+                        <input type="text" class="form-control form-control-sm cl-search" placeholder="Sök eller skapa person..." autocomplete="off">
+                        <div class="face-ac cl-ac"></div>
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm" data-act="unknown"><i class="bi bi-person-dash"></i> Oidentifierad</button>
+                </div>
+             </div>`;
+        const grid = card.querySelector(".cl-grid");
+        // Crops via createElement (robust + observerbart; CLAUDE.md-fallgrop).
+        for (const f of cl.faces) {
+            const img = document.createElement("img");
+            img.className = "cl-crop";
+            img.src = `/api/faces/${f.id}/thumb`;
+            img.title = "Klicka för att avmarkera";
+            img.addEventListener("click", () => {
+                if (selected.has(f.id)) { selected.delete(f.id); img.classList.add("off"); }
+                else { selected.add(f.id); img.classList.remove("off"); }
+            });
+            grid.appendChild(img);
+        }
+
+        const name = async (body, label) => {
+            const ids = [...selected];
+            if (!ids.length) { showToast("Inga ansikten valda", true); return; }
+            try {
+                const res = await apiFetch("/api/faces/ai/cluster-name", { method: "POST", body: { face_ids: ids, ...body } });
+                showToast(`${res.count} ansikten namngivna: ${res.person.name}`);
+                card.remove();
+            } catch (e) { showToast("Misslyckades: " + e.message, true); }
+        };
+        const sBtn = card.querySelector('[data-act="suggest"]');
+        if (sBtn) sBtn.addEventListener("click", () => name({ tag_id: cl.suggestion.tag_id }, cl.suggestion.name));
+        card.querySelector('[data-act="unknown"]').addEventListener("click", () => name({ unidentified: true }, "oidentifierad"));
+        attachPersonAC(card.querySelector(".cl-search"), card.querySelector(".cl-ac"), (p) => {
+            if (!p) return;
+            if (p.id) name({ tag_id: p.id }, p.name);
+            else if (p.name) name({ name: p.name }, p.name);
+        });
+    }
+
+    let t = null;
+    async function load() {
+        root.innerHTML = '<div class="text-secondary">Laddar...</div>';
+        let data;
+        try { data = await apiFetch(`/api/faces/ai/clusters?threshold=${thr.value}`); }
+        catch (e) { root.innerHTML = '<div class="alert alert-danger">Kunde inte ladda.</div>'; return; }
+        if (!data.clusters.length) {
+            root.innerHTML = '<div class="alert alert-secondary">Inga obekräftade AI-ansikten att klustra. Kör AI-detektering först.</div>';
+            return;
+        }
+        root.innerHTML = "";
+        const info = document.createElement("div");
+        info.className = "text-secondary small mb-2";
+        info.textContent = `${data.total_faces} obekräftade ansikten i ${data.clusters.length} grupper.`;
+        root.appendChild(info);
+        data.clusters.forEach(clusterCard);
+    }
+
+    thr.addEventListener("input", () => {
+        thrVal.textContent = (+thr.value).toFixed(2);
+        clearTimeout(t); t = setTimeout(load, 300);
+    });
+    load();
+})();
+</script>
+{% endblock %}

@@ -26,7 +26,9 @@ def _person_photo_ids(db: Session, tag: Tag) -> set[int]:
     via_tags = {p.id for p in tag.photos}
     via_faces = {
         r[0] for r in
-        db.query(FaceRegion.photo_id).filter(FaceRegion.tag_id == tag.id).all()
+        db.query(FaceRegion.photo_id).filter(
+            FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1
+        ).all()
     }
     return via_tags | via_faces
 
@@ -35,6 +37,9 @@ def _merge_person(db: Session, source: Tag, target: Tag) -> None:
     """Flytta source-personens ansikten och fototaggar till target, radera source."""
     db.query(FaceRegion).filter(FaceRegion.tag_id == source.id).update(
         {"tag_id": target.id}, synchronize_session=False
+    )
+    db.query(FaceRegion).filter(FaceRegion.suggested_tag_id == source.id).update(
+        {"suggested_tag_id": target.id}, synchronize_session=False
     )
     # Peka om familjelänkar till target, ta bort ev. själv-länkar.
     db.query(PersonLink).filter(PersonLink.person_id == source.id).update(
@@ -59,7 +64,7 @@ def _merge_person(db: Session, source: Tag, target: Tag) -> None:
 def _sample_region_id(db: Session, tag: Tag) -> int | None:
     region = (
         db.query(FaceRegion)
-        .filter(FaceRegion.tag_id == tag.id)
+        .filter(FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1)
         .order_by(FaceRegion.id.desc())
         .first()
     )
@@ -80,7 +85,7 @@ def _person_regions(db: Session, tag: Tag) -> list[dict]:
     """Alla ansiktsregioner för personen (för tumnagel-väljaren)."""
     regions = (
         db.query(FaceRegion)
-        .filter(FaceRegion.tag_id == tag.id)
+        .filter(FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1)
         .order_by(FaceRegion.id.desc())
         .all()
     )

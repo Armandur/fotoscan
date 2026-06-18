@@ -8,10 +8,13 @@
   ange tid på dygnet - skanntiden rensades bort (skräp). Om vi vill kunna sätta
   ett riktigt klockslag på ett foto: eget fält + skriv det till DateTimeOriginal
   vid export i stället för dagens 00:00:00.
-- [ ] **Ansiktstaggning steg 2 - AI.** Automatisk ansiktsdetektering +
-  igenkänning (face_recognition/dlib eller InsightFace) som ger förslag att
-  bekräfta. CPU-only på VM:en (ingen GPU) men görbart för <1000 foton som
-  batch-jobb. Bygger på steg 1:s `FaceRegion` + "Okänd-N"-platshållare.
+- [x] **Ansiktstaggning steg 2 - AI.** InsightFace (buffalo_l, CPU) detekterar
+  ansikten + 512-d embeddings; namnförslag via cosine-matchning mot bekräftade
+  personers medel-embedding (modellen tränas inte - k-NN/centroid). Bakgrunds-
+  batchjobb + granskningskö (`/faces/review`) där förslag bekräftas/avvisas.
+  Obekräftade AI-rutor räknas inte i katalogen. `services/faces_ai.py` +
+  `routes/faces_ai.py`. (Möjlig vidareutveckling: GPU på Unraid, klustring av
+  okända, automatisk omkörning vid scan.)
 - [ ] Färgkorrigering vidare: ev. histogram, manuell vitbalans-pipett, auto-
   färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)

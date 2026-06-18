@@ -105,20 +105,27 @@ def _metadata_args(photo: Photo, skip_orientation: bool = False) -> list[str]:
     return args
 
 
+def _named_faces(photo: Photo) -> list:
+    """Bekräftade ansiktsrutor med en person (AI-förslag exkluderas tills de
+    bekräftats)."""
+    return [f for f in photo.faces if f.confirmed and f.tag is not None]
+
+
 def _region_args(photo: Photo, width: int, height: int) -> list[str]:
     """MWG-rs ansiktsregioner (XMP). Läses av Lightroom/digiKam/Apple Foton.
 
     Våra koordinater är normaliserade (övre vänstra hörnet) relativt den visade
     bilden. MWG anger area med CENTRUM-koordinater, därav +w/2 och +h/2.
     """
-    if not photo.faces:
+    faces = _named_faces(photo)
+    if not faces:
         return []
     args = [
         f"-RegionAppliedToDimensionsW={width}",
         f"-RegionAppliedToDimensionsH={height}",
         "-RegionAppliedToDimensionsUnit=pixel",
     ]
-    for f in photo.faces:
+    for f in faces:
         args += [
             f"-RegionName={f.tag.name}",
             "-RegionType=Face",
@@ -170,12 +177,12 @@ def export_photo(
         dims = img.size
     else:
         shutil.copy2(src, dest)
-        dims = load_oriented(src, photo.rotation).size if photo.faces else (0, 0)
+        dims = load_oriented(src, photo.rotation).size if _named_faces(photo) else (0, 0)
 
     meta = _metadata_args(photo, skip_orientation=baked)
     # Ansiktsrutor skrivs inte på negativ - de kan vara skannade i annan dimension
     # eller förskjutna mot framkallningen, så koordinaterna stämmer inte.
-    if photo.faces and not _is_pair_negative(photo):
+    if _named_faces(photo) and not _is_pair_negative(photo):
         meta += _region_args(photo, dims[0], dims[1])
 
     args = ["exiftool", "-overwrite_original", *meta, str(dest)]

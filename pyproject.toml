@@ -13,6 +13,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "weasyprint>=69.0",
     "pillow-heif>=1.4.0",
+    "insightface>=1.0.1",
+    "onnxruntime>=1.27.0",
 ]
 
 [tool.uv]

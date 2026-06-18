@@ -26,7 +26,7 @@ def _clamp(v: float) -> float:
 
 def _serialize(f: FaceRegion) -> dict:
     return {
-        "id": f.id, "person": f.tag.name,
+        "id": f.id, "person": f.tag.name if f.tag else None,
         "x": f.x, "y": f.y, "w": f.w, "h": f.h,
     }
 
@@ -52,16 +52,15 @@ def list_persons(q: str = "", db: Session = Depends(get_db)):
 
     result = []
     for tag in query.order_by(Tag.name).all():
-        faces = (
+        count = (
             db.query(FaceRegion)
-            .filter(FaceRegion.tag_id == tag.id)
-            .order_by(FaceRegion.id.desc())
-            .all()
+            .filter(FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1)
+            .count()
         )
         result.append({
             "id": tag.id,
             "name": tag.name,
-            "count": len(faces),
+            "count": count,
             "region_id": _avatar_region_id(db, tag),
         })
     return result
@@ -72,7 +71,8 @@ def list_faces(photo_id: int, db: Session = Depends(get_db)):
     photo = db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "Foto hittades inte")
-    return [_serialize(f) for f in photo.faces]
+    # Bara bekräftade rutor visas i detaljvyn; AI-förslag hanteras i granskningskön.
+    return [_serialize(f) for f in photo.faces if f.confirmed]
 
 
 @router.post("/api/photos/{photo_id}/faces")
@@ -93,6 +93,7 @@ def add_face(
         photo_id=photo_id, tag_id=tag.id,
         x=_clamp(data.x), y=_clamp(data.y),
         w=_clamp(data.w), h=_clamp(data.h),
+        source="manual", confirmed=1,
     )
     db.add(face)
     # En markerad person finns i bilden -> lägg även till i fotots Personer-fält.
@@ -127,21 +128,23 @@ def delete_face(region_id: int, db: Session = Depends(get_db)):
     db.flush()
     invalidate_face_thumb(region_id)
 
-    # Om personen inte har någon kvarvarande ruta på detta foto, ta även bort
-    # personen ur fotots Personer-fält (taggades dit när rutan skapades).
-    remaining_here = (
-        db.query(FaceRegion)
-        .filter(FaceRegion.photo_id == photo.id, FaceRegion.tag_id == tag.id)
-        .count()
-    )
-    if remaining_here == 0 and tag in photo.tags:
-        photo.tags.remove(tag)
-    db.flush()
+    person = None
+    if tag is not None:
+        # Om personen inte har någon kvarvarande ruta på detta foto, ta även bort
+        # personen ur fotots Personer-fält (taggades dit när rutan skapades).
+        remaining_here = (
+            db.query(FaceRegion)
+            .filter(FaceRegion.photo_id == photo.id, FaceRegion.tag_id == tag.id)
+            .count()
+        )
+        if remaining_here == 0 and tag in photo.tags:
+            photo.tags.remove(tag)
+        db.flush()
 
-    # Är personen nu helt oanvänd (inga rutor, inga foton)? Då kan den städas bort.
-    total_faces = db.query(FaceRegion).filter(FaceRegion.tag_id == tag.id).count()
-    orphaned = total_faces == 0 and len(tag.photos) == 0
-    person = {"id": tag.id, "name": tag.name, "orphaned": orphaned}
+        # Är personen nu helt oanvänd (inga rutor, inga foton)? Då kan den städas bort.
+        total_faces = db.query(FaceRegion).filter(FaceRegion.tag_id == tag.id).count()
+        orphaned = total_faces == 0 and len(tag.photos) == 0
+        person = {"id": tag.id, "name": tag.name, "orphaned": orphaned}
     db.commit()
     return JSONResponse({"ok": True, "person": person})
 

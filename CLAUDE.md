@@ -11,6 +11,8 @@ läses orörda på plats (flyttas/döps/skrivs aldrig till).
   Bootstrap (galleri-grid, autocomplete-dropdown, detaljvyns bild).
 - Pillow för thumbnails och EXIF-datum; `pillow-heif` (registreras i
   `scanner.py`) ger HEIC/HEIF-stöd (iPhone-foton)
+- `insightface` + `onnxruntime` (CPU) för AI-ansiktsdetektering/igenkänning
+  (modellpack buffalo_l laddas till `DATA_DIR/insightface`)
 - `uv` för beroenden/körning
 
 ## Filstruktur
@@ -27,6 +29,7 @@ app/
     tags.py            GET /api/tags (autocomplete)
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
+    faces_ai.py        AI-ansiktsjobb (bakgrundstråd) + granskningskö (/faces/review)
     persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
@@ -45,6 +48,7 @@ app/
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
     adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
     dupes.py           dHash (perceptuell hash, ren Pillow) + hamming + group_similar
+    faces_ai.py        InsightFace: detect_in_photo, embedding<->bytes, iou, Matcher/build_matcher
     pdf_album.py       render_album_pdf (weasyprint HTML/CSS -> PDF, layout + bildtext)
   templates/           base/index/photo.html; _cards.html + _filterbar.html (delade macron)
   static/css|js/       style.css, utils.js (apiFetch/showToast/escapeHtml), photo.js, faces.js, adjust.js
@@ -172,6 +176,24 @@ photos/                exempel/testbilder (gitignored)
   flytt/rotation/radering - så /persons inte renderar om från originalen varje gång.
   OBS: `thumb_face_id` ger en andra FK-väg tags<->face_regions, så
   `FaceRegion.tag` måste ange `foreign_keys=[tag_id]`.
+- **AI-ansiktsigenkänning** (`services/faces_ai.py` + `routes/faces_ai.py`,
+  `/faces/review`): InsightFace (buffalo_l, CPU) detekterar ansikten och
+  beräknar 512-d embeddings. `FaceRegion` utökad med `source` (manual/ai),
+  `confirmed` (0/1), `embedding` (bytes), `suggested_tag_id` (AI:ns gissning);
+  `Photo.ai_faces_at` markerar behandlade foton. **Modellen tränas inte** - vi
+  gör k-NN/centroid-matchning: bekräftade, namngivna ansiktens embeddings bildar
+  per-person medel-embedding (`build_matcher`), nya ansikten får namnförslag via
+  cosine-likhet (tröskel 0.40). Manuellt markerade rutor är alltså referensdata
+  som förbättrar igenkänningen ju fler man bekräftar. Batch-jobb i bakgrundstråd
+  (`_run_job`, modul-global `JOB`-status): pass 1 detekterar, backfillar embeddings
+  på bekräftade rutor via IoU-matchning, samlar kandidater; pass 2 föreslår namn.
+  **AI-rutor är obekräftade** (`confirmed=0`) och **räknas inte** in i personer/
+  export/album förrän de bekräftas i granskningskön - därför filtrerar alla
+  läsställen på `confirmed=1` (faces/persons/context/exporter/pdf_album). Bekräfta
+  = sätt `tag_id` + `confirmed=1`; avvisa = `DELETE /api/faces/{id}`. OBS:
+  `tag_id` är nullbar (obekräftade utan match saknar person) - kräver tabell-
+  ombyggnad i SQLite (`_make_face_tag_id_nullable`, eftersom ALTER inte kan släppa
+  NOT NULL). Tredje FK-vägen (`suggested_tag_id`) -> `foreign_keys` på relationerna.
 - **Färg-/tonjustering** (`Photo.adj_*` + `auto_tone`, `services/adjust.py`):
   multiplikatorer (1.0 = oförändrat) för ljusstyrka/kontrast/gamma/mättnad +
   per-kanal RGB, samt auto-ton (`ImageOps.autocontrast`). Renderas on-the-fly i

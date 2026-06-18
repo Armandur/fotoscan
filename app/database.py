@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Integer, Float, String, Text, DateTime, ForeignKey, Table,
-    create_engine,
+    LargeBinary, create_engine,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
@@ -101,6 +101,10 @@ class Photo(Base):
     # oordning och bara har grovt datum. Sätts via dra-och-släpp i galleriet.
     seq = Column(Integer, nullable=True, index=True)
 
+    # Tidpunkt då AI-ansiktsdetekteringen kördes på fotot (NULL = aldrig).
+    # Låter batch-jobbet hoppa över redan behandlade foton.
+    ai_faces_at = Column(DateTime, nullable=True)
+
     # Sätt när metadata bekräftats/redigerats av användaren.
     reviewed_at = Column(DateTime, nullable=True)
 
@@ -179,8 +183,10 @@ class FaceRegion(Base):
         Integer, ForeignKey("photos.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
+    # Nullbar: obekräftade AI-ansikten utan säker matchning saknar person tills
+    # de bekräftas i granskningskön.
     tag_id = Column(
-        Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=True
     )
     # Normaliserade koordinater (0-1) relativt den VISADE bilden (efter
     # EXIF-orientering + användarens rotation). x/y = övre vänstra hörnet.
@@ -190,9 +196,23 @@ class FaceRegion(Base):
     h = Column(Float, nullable=False)
     created_at = Column(DateTime, default=_now)
 
+    # AI-ansiktsigenkänning. source="manual" (ritad av användaren) | "ai"
+    # (hittad av batch-jobbet). confirmed=0 => förslag som inte räknas in i
+    # personer/export/album förrän användaren bekräftat det i granskningskön.
+    source = Column(String, default="manual")
+    confirmed = Column(Integer, default=1)
+    # 512-d ansikts-embedding (float32 -> bytes) för matchning/klustring.
+    embedding = Column(LargeBinary, nullable=True)
+    # AI:ns namngissning (bekräftas/avvisas av användaren). Skild från tag_id.
+    suggested_tag_id = Column(
+        Integer, ForeignKey("tags.id", ondelete="SET NULL"), nullable=True
+    )
+
     photo = relationship("Photo", back_populates="faces")
-    # foreign_keys behövs: Tag.thumb_face_id ger en andra FK-väg mellan tabellerna.
+    # foreign_keys behövs: flera FK-vägar mellan tabellerna (Tag.thumb_face_id,
+    # suggested_tag_id).
     tag = relationship("Tag", foreign_keys=[tag_id])
+    suggested_tag = relationship("Tag", foreign_keys=[suggested_tag_id])
 
 
 class Album(Base):
@@ -344,8 +364,57 @@ def init_db() -> None:
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN trailing_blanks INTEGER DEFAULT 0")
         if not _column_exists(conn, "album_photos", "blank_before"):
             conn.exec_driver_sql("ALTER TABLE album_photos ADD COLUMN blank_before INTEGER DEFAULT 0")
+        if not _column_exists(conn, "face_regions", "source"):
+            conn.exec_driver_sql(
+                "ALTER TABLE face_regions ADD COLUMN source VARCHAR DEFAULT 'manual'"
+            )
+        if not _column_exists(conn, "face_regions", "confirmed"):
+            conn.exec_driver_sql(
+                "ALTER TABLE face_regions ADD COLUMN confirmed INTEGER DEFAULT 1"
+            )
+        if not _column_exists(conn, "face_regions", "embedding"):
+            conn.exec_driver_sql("ALTER TABLE face_regions ADD COLUMN embedding BLOB")
+        if not _column_exists(conn, "face_regions", "suggested_tag_id"):
+            conn.exec_driver_sql(
+                "ALTER TABLE face_regions ADD COLUMN suggested_tag_id INTEGER"
+            )
+        if not _column_exists(conn, "photos", "ai_faces_at"):
+            conn.exec_driver_sql("ALTER TABLE photos ADD COLUMN ai_faces_at DATETIME")
+        _make_face_tag_id_nullable(conn)
 
     _rebase_photo_paths()
+
+
+def _make_face_tag_id_nullable(conn) -> None:
+    """Gör face_regions.tag_id nullbar (för obekräftade AI-ansikten utan namn).
+    SQLite kan inte släppa NOT NULL via ALTER - bygg om tabellen om den gamla
+    har NOT NULL. Idempotent (hoppar över om redan nullbar)."""
+    info = conn.exec_driver_sql("PRAGMA table_info(face_regions)").fetchall()
+    tag_col = next((r for r in info if r[1] == "tag_id"), None)
+    if tag_col is None or tag_col[3] == 0:  # saknas eller redan nullbar
+        return
+    cols = "id, photo_id, tag_id, x, y, w, h, created_at, source, confirmed, embedding, suggested_tag_id"
+    conn.exec_driver_sql("""
+        CREATE TABLE face_regions_new (
+            id INTEGER PRIMARY KEY,
+            photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+            tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+            x FLOAT NOT NULL, y FLOAT NOT NULL, w FLOAT NOT NULL, h FLOAT NOT NULL,
+            created_at DATETIME,
+            source VARCHAR DEFAULT 'manual',
+            confirmed INTEGER DEFAULT 1,
+            embedding BLOB,
+            suggested_tag_id INTEGER REFERENCES tags(id) ON DELETE SET NULL
+        )
+    """)
+    conn.exec_driver_sql(
+        f"INSERT INTO face_regions_new ({cols}) SELECT {cols} FROM face_regions"
+    )
+    conn.exec_driver_sql("DROP TABLE face_regions")
+    conn.exec_driver_sql("ALTER TABLE face_regions_new RENAME TO face_regions")
+    conn.exec_driver_sql(
+        "CREATE INDEX ix_face_regions_photo_id ON face_regions (photo_id)"
+    )
 
 
 def _rebase_photo_paths() -> None:

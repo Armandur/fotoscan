@@ -693,7 +693,7 @@ def update_photo(
     # (man kan inte ta bort en person ur fältet om dess ansikte är markerat).
     present = {t.id for t in photo.tags}
     for f in photo.faces:
-        if f.tag_id not in present:
+        if f.confirmed and f.tag_id is not None and f.tag_id not in present:
             photo.tags.append(f.tag)
             present.add(f.tag_id)
 

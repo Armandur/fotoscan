@@ -71,6 +71,15 @@ class FaceRegionIn(BaseModel):
     h: float
 
 
+class ConfirmFace(BaseModel):
+    tag_id: int | None = None
+    name: str = ""
+
+
+class ConfirmGroup(BaseModel):
+    suggested_tag_id: int
+
+
 class PhotoUpdate(BaseModel):
     date_text: str = ""
     location: str = ""

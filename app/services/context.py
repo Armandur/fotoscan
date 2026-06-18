@@ -36,7 +36,9 @@ def context_query(db: Session, ctx: str, ctx_id: int | None):
         via_tags = {p.id for p in tag.photos}
         via_faces = {
             r[0] for r in
-            db.query(FaceRegion.photo_id).filter(FaceRegion.tag_id == tag.id).all()
+            db.query(FaceRegion.photo_id).filter(
+                FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1
+            ).all()
         }
         return db.query(Photo).filter(Photo.id.in_(via_tags | via_faces))
     if ctx == "tag" and ctx_id:

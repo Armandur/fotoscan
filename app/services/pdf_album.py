@@ -32,7 +32,7 @@ def _persons_ordered(p) -> str:
     (lägsta x), därefter personer utan ruta i namnordning."""
     xmin: dict[int, float] = {}
     for f in p.faces:
-        if f.tag_id is not None:
+        if f.tag_id is not None and f.confirmed:
             xmin[f.tag_id] = min(xmin.get(f.tag_id, 2.0), f.x)
     # Oidentifierade platshållare ("Okänd-N") skrivs inte ut med namn.
     persons = [t for t in p.tags if t.kind == "person" and not getattr(t, "placeholder", 0)]

@@ -82,6 +82,27 @@
         }
     });
 
+    // ---- Ta bort foto ur katalogen ----
+    document.getElementById("delete-photo-btn").addEventListener("click", async (e) => {
+        const ok = await showConfirm(
+            "Ta bort fotot ur katalogen? Metadata, taggar, ansiktsrutor och " +
+            "album-medlemskap för fotot tas bort. Originalfilen på disk rörs " +
+            "inte - ta även bort den ur fotomappen, annars läggs fotot tillbaka " +
+            "vid nästa scanning. Detta går inte att ångra.",
+            { okLabel: "Ta bort", okClass: "btn-danger" }
+        );
+        if (!ok) return;
+        e.currentTarget.disabled = true;
+        try {
+            await apiFetch(`/api/photos/${photoId}`, { method: "DELETE" });
+            showToast("Fotot togs bort ur katalogen");
+            setTimeout(() => { location.href = "/" + navQs; }, 400);
+        } catch (err) {
+            showToast("Borttagning misslyckades: " + err.message, true);
+            e.currentTarget.disabled = false;
+        }
+    });
+
     // ---- Rotation ----
     // Applicera CSS-transform direkt för omedelbar känsla, byt sedan till den
     // korrekt renderade bilden i bakgrunden när servern är klar.

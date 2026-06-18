@@ -223,6 +223,10 @@
                       id="reviewed-state">
                     {% if photo.reviewed_at %}Granskad{% else %}Ej granskad{% endif %}
                 </span>
+                <button type="button" class="btn btn-outline-danger ms-auto" id="delete-photo-btn"
+                        title="Ta bort fotot ur katalogen (originalfilen rörs inte)">
+                    <i class="bi bi-trash"></i> Ta bort ur katalogen
+                </button>
             </div>
         </form>
     </div>

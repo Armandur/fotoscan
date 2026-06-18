@@ -90,6 +90,14 @@ photos/                exempel/testbilder (gitignored)
   `back_of_id != None` alltid). Hanteras i detaljvyn (`backside.py` + `backside.js`):
   visa/förstora baksidan, koppla via kandidatsök, koppla loss. Andra själv-FK:n på
   photos (efter `paired_with_id`) - inga ORM-relationer på dem, slås upp via query.
+- **Ta bort foto ur katalogen** (`DELETE /api/photos/{id}`, knapp i detaljvyn):
+  tar bort katalogposten + diskcache (thumb/render/ansikts-crops) men rör ALDRIG
+  originalfilen. OBS: ligger originalet kvar i PHOTO_DIR läggs det tillbaka vid
+  nästa scan - filen måste tas bort ur fotomappen separat. SQLite-FK:erna är inte
+  påslagna, så endpointen städar alla kopplingar explicit: nollar partnerns
+  `paired_with_id`, baksidors `back_of_id`, `Album.cover_photo_id` och
+  `Tag.thumb_face_id` som pekar på fotots ansikten, samt raderar `AlbumPhoto`-rader
+  (ansiktsrutor + `photo_tags` går via ORM-cascade).
 - **Granskningsläge** (`/review` i `photos.py`): redirectar till första ogranskade
   (`?reviewed=no&review=1`); detaljvyns "Spara & granska" går vidare via `/review`.
   Återanvänder detaljformuläret. Dashboard (`/dashboard`) ger översikt + `missing`-

@@ -24,8 +24,8 @@ from app.services.dates import parse_date_text
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
 from app.services.scanner import (
-    invalidate_face_thumb, load_oriented, render_cache_path, refresh_derived,
-    write_render, write_thumbnail,
+    invalidate_face_thumb, invalidate_render, load_oriented, render_cache_path,
+    refresh_derived, write_render, write_thumbnail,
 )
 
 router = APIRouter()
@@ -472,6 +472,56 @@ def rotate_photo(
     if Path(photo.path).exists():
         refresh_derived(photo)
     return JSONResponse({"ok": True, "rotation": photo.rotation})
+
+
+@router.delete("/api/photos/{photo_id}")
+def delete_photo(photo_id: int, db: Session = Depends(get_db)):
+    """Ta bort ett foto ur katalogen (DB + cache). Rör ALDRIG originalfilen -
+    den måste tas bort ur fotomappen separat, annars läggs den tillbaka vid
+    nästa scan. Städar alla kopplingar explicit (SQLite-FK:erna är inte
+    påslagna)."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+
+    face_ids = [f.id for f in photo.faces]
+
+    # Personers utvalda tumnagel kan peka på en av fotots ansiktsrutor.
+    if face_ids:
+        for tag in db.query(Tag).filter(Tag.thumb_face_id.in_(face_ids)).all():
+            tag.thumb_face_id = None
+
+    # Hopparning: koppla loss eventuell partner (åt båda håll).
+    if photo.paired_with_id:
+        partner = db.get(Photo, photo.paired_with_id)
+        if partner:
+            partner.paired_with_id = None
+            partner.is_pair_primary = 0
+    for other in db.query(Photo).filter(Photo.paired_with_id == photo.id).all():
+        other.paired_with_id = None
+        other.is_pair_primary = 0
+
+    # Baksidor som pekar hit blir vanliga foton igen.
+    for other in db.query(Photo).filter(Photo.back_of_id == photo.id).all():
+        other.back_of_id = None
+
+    # Album: nolla omslag som pekar hit, ta bort medlemskap.
+    for alb in db.query(Album).filter(Album.cover_photo_id == photo.id).all():
+        alb.cover_photo_id = None
+    db.query(AlbumPhoto).filter(AlbumPhoto.photo_id == photo.id).delete(
+        synchronize_session=False
+    )
+
+    db.delete(photo)  # tar ansiktsrutor (delete-orphan) + photo_tags-rader
+    db.commit()
+
+    # Diskcache (regenereras annars aldrig för ett borttaget foto).
+    (THUMB_DIR / f"{photo_id}.jpg").unlink(missing_ok=True)
+    invalidate_render(photo_id)
+    for fid in face_ids:
+        invalidate_face_thumb(fid)
+
+    return JSONResponse({"ok": True})
 
 
 @router.get("/api/photos/{photo_id}/auto-suggest")

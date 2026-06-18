@@ -48,11 +48,17 @@ def _run_job(force: bool) -> None:
         photos = q.all()
         JOB.update(total=len(photos), done=0, added=0, message="Detekterar ansikten...")
 
-        candidates: list[tuple[int, dict]] = []
+        # Pass 1: detektera, backfilla embeddings på bekräftade rutor, samla
+        # kandidater per foto. ai_faces_at sätts INTE här - först i pass 2 när
+        # förslagen faktiskt skapats, så ett avbrutet jobb är kraschsäkert
+        # (omarkerade foton körs om).
+        candidates: dict[int, list[dict]] = {}
+        processed: list[int] = []
         for photo in photos:
+            pid = photo.id
+            processed.append(pid)
+            JOB["done"] += 1
             if not Path(photo.path).exists():
-                photo.ai_faces_at = _now()
-                JOB["done"] += 1
                 continue
             if force:
                 # Rensa tidigare obekräftade AI-förslag på fotot -> färska förslag.
@@ -65,9 +71,7 @@ def _run_job(force: bool) -> None:
             try:
                 dets = faces_ai.detect_in_photo(photo)
             except Exception:
-                logger.exception("Detektering misslyckades för foto %s", photo.id)
-                photo.ai_faces_at = _now()
-                JOB["done"] += 1
+                logger.exception("Detektering misslyckades för foto %s", pid)
                 continue
 
             confirmed = [f for f in photo.faces if f.confirmed and f.tag_id]
@@ -88,12 +92,10 @@ def _run_job(force: bool) -> None:
                     continue
                 if any(faces_ai.iou(d, f) >= _IOU_DUP_AI for f in ai_existing):
                     continue
-                candidates.append((photo.id, d))
+                candidates.setdefault(pid, []).append(d)
 
-            photo.ai_faces_at = _now()
-            JOB["done"] += 1
             if JOB["done"] % 20 == 0:
-                db.commit()
+                db.commit()  # persistera backfillade embeddings
         db.commit()
 
         # Referens: bekräftade, namngivna (ej platshållare) ansikten med embedding.
@@ -110,17 +112,24 @@ def _run_job(force: bool) -> None:
         )
         matcher = faces_ai.build_matcher(rows)
 
+        # Pass 2: skapa förslag och markera fotot som behandlat i samma commit.
         added = 0
-        for photo_id, d in candidates:
-            tag_id, _score = matcher.suggest(d["embedding"])
-            db.add(FaceRegion(
-                photo_id=photo_id, tag_id=None,
-                x=d["x"], y=d["y"], w=d["w"], h=d["h"],
-                source="ai", confirmed=0,
-                embedding=faces_ai.emb_to_bytes(d["embedding"]),
-                suggested_tag_id=tag_id,
-            ))
-            added += 1
+        for i, pid in enumerate(processed):
+            for d in candidates.get(pid, []):
+                tag_id, _score = matcher.suggest(d["embedding"])
+                db.add(FaceRegion(
+                    photo_id=pid, tag_id=None,
+                    x=d["x"], y=d["y"], w=d["w"], h=d["h"],
+                    source="ai", confirmed=0,
+                    embedding=faces_ai.emb_to_bytes(d["embedding"]),
+                    suggested_tag_id=tag_id,
+                ))
+                added += 1
+            photo = db.get(Photo, pid)
+            if photo:
+                photo.ai_faces_at = _now()
+            if i % 20 == 0:
+                db.commit()
         db.commit()
         JOB.update(added=added, message=f"Klart: {added} nya ansiktsförslag.")
     except Exception as e:

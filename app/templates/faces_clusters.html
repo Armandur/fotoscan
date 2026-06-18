@@ -11,10 +11,14 @@
 /* Hover -> förstora för att se ansiktet tydligt. */
 .cl-crop:hover { transform: scale(2.4); position: relative; z-index: 20;
     box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.6); border-color: var(--bs-info); }
-.cl-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.cl-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cl-open { font-size: .7rem; line-height: 1.1; text-decoration: none; }
 .cl-ac .face-ac-thumb { width: 48px; height: 48px; }
-.sugg-thumb { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; }
+/* Tumnagel på "Namnge alla som N"-knappen - tydligt stor. */
+.sugg-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 4px; }
 .sugg-thumb.empty { display: inline-flex; align-items: center; justify-content: center; }
+[data-act="suggest"] { padding-top: 2px; padding-bottom: 2px; }
 </style>
 {% endblock %}
 
@@ -114,6 +118,8 @@
         const grid = card.querySelector(".cl-grid");
         // Crops via createElement (robust + observerbart; CLAUDE.md-fallgrop).
         for (const f of cl.faces) {
+            const cell = document.createElement("div");
+            cell.className = "cl-cell";
             const img = document.createElement("img");
             img.className = "cl-crop";
             img.src = `/api/faces/${f.id}/thumb`;
@@ -122,7 +128,15 @@
                 if (selected.has(f.id)) { selected.delete(f.id); img.classList.add("off"); }
                 else { selected.add(f.id); img.classList.remove("off"); }
             });
-            grid.appendChild(img);
+            const link = document.createElement("a");
+            link.href = `/faces/review/${f.photo_id}`;
+            link.target = "_blank";
+            link.className = "cl-open";
+            link.title = "Öppna fotot i granskning";
+            link.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> foto';
+            cell.appendChild(img);
+            cell.appendChild(link);
+            grid.appendChild(cell);
         }
 
         const name = async (body, label) => {

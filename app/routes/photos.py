@@ -25,7 +25,7 @@ from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
 from app.services.scanner import (
     invalidate_face_thumb, load_oriented, render_cache_path, refresh_derived,
-    write_render,
+    write_render, write_thumbnail,
 )
 
 router = APIRouter()
@@ -403,10 +403,15 @@ def photo_detail(
 
 
 @router.get("/thumb/{photo_id}")
-def thumb(photo_id: int):
+def thumb(photo_id: int, db: Session = Depends(get_db)):
     path = THUMB_DIR / f"{photo_id}.jpg"
     if not path.exists():
-        raise HTTPException(404, "Thumbnail saknas")
+        # Self-heal: regenerera ur originalet om det går (t.ex. efter flytt med
+        # medhavd databas men utan thumbnail-cache). Annars 404.
+        photo = db.get(Photo, photo_id)
+        if not photo or not Path(photo.path).exists():
+            raise HTTPException(404, "Thumbnail saknas")
+        write_thumbnail(photo)
     return FileResponse(path)
 
 

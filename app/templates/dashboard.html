@@ -90,4 +90,20 @@
     </div>
 </div>
 {% endif %}
+
+<h2 class="h6 text-secondary mt-4 mb-2">Säkerhetskopiering</h2>
+<div class="card">
+    <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+        <i class="bi bi-database-down fs-3 text-info"></i>
+        <div class="flex-grow-1">
+            <div>Ladda ner en ögonblicksbild av databasen (metadata, taggar,
+                personer, album m.m.).</div>
+            <div class="text-secondary small">Originalbilder och thumbnails ingår
+                inte - de regenereras ur fotomappen.</div>
+        </div>
+        <a href="/api/backup" class="btn btn-outline-info">
+            <i class="bi bi-download"></i> Ladda ner backup
+        </a>
+    </div>
+</div>
 {% endblock %}

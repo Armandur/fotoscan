@@ -6,7 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-from app.config import DB_PATH, DATA_DIR, THUMB_DIR, RENDER_DIR
+from app.config import DB_PATH, DATA_DIR, THUMB_DIR, RENDER_DIR, PHOTO_DIR
 
 Base = declarative_base()
 
@@ -344,3 +344,33 @@ def init_db() -> None:
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN trailing_blanks INTEGER DEFAULT 0")
         if not _column_exists(conn, "album_photos", "blank_before"):
             conn.exec_driver_sql("ALTER TABLE album_photos ADD COLUMN blank_before INTEGER DEFAULT 0")
+
+    _rebase_photo_paths()
+
+
+def _rebase_photo_paths() -> None:
+    """Räkna om varje fotos absoluta sökväg från PHOTO_DIR + folder + filename.
+
+    Scanningen lägger alltid foton under PHOTO_DIR, så den absoluta sökvägen är
+    alltid PHOTO_DIR/folder/filename. När PHOTO_DIR byts (t.ex. flytt till
+    Unraid där fotomappen monteras på /photos) pekar de lagrade absoluta
+    sökvägarna fel - den här rebaseringen gör en medhavd databas portabel.
+    Idempotent: rör bara rader som faktiskt skiljer sig."""
+    import logging
+
+    log = logging.getLogger("fotoscan")
+    with engine.begin() as conn:
+        rows = conn.exec_driver_sql(
+            "SELECT id, folder, filename, path FROM photos"
+        ).fetchall()
+        changed = 0
+        for pid, folder, filename, path in rows:
+            expected = str((PHOTO_DIR / folder / filename) if folder
+                           else (PHOTO_DIR / filename))
+            if expected != path:
+                conn.exec_driver_sql(
+                    "UPDATE photos SET path = ? WHERE id = ?", (expected, pid)
+                )
+                changed += 1
+    if changed:
+        log.info("Rebaserade %d fotosökvägar mot PHOTO_DIR=%s", changed, PHOTO_DIR)

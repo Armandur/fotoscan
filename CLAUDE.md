@@ -209,7 +209,10 @@ photos/                exempel/testbilder (gitignored)
   streckade, med namn - klickbara för att byta person), har håll-för-att-dölja-
   alla-rutor (knapp/H, momentant), döljer klara ansikten ur listan (toggle "visa
   även klara", av som default; listan skrollar vid många), och bläddrar mellan
-  granskningsfoton (J/K/pilar). Jobbet kan avbrytas (`/api/faces/ai/cancel` ->
+  granskningsfoton (J/K/pilar). Man kan markera ansikten manuellt (rita ruta,
+  knapp/F) som AI missat, och klick på en gul ruta hoppar till dess rad i listan.
+  Foton kan uteslutas från AI (`Photo.ai_exclude`, knapp i vyn + switch i
+  detaljvyn) - skippas även vid "kör om alla". Jobbet kan avbrytas (`/api/faces/ai/cancel` ->
   cancel-flagga, stannar vid nästa foto, kraschsäkert). Byt person på en befintlig
   ruta (även i manuella flödet): `POST /api/faces/{id}/person` (tag_id/name/
   unidentified). **Dubblettpersoner:** `/persons/duplicates` +

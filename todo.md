@@ -1,6 +1,27 @@
 # Fotoscan - todo
 
 ## Planerat
+
+### AI-ansiktsigenkänning - vidareutveckling
+- [ ] **Klustra okända ansikten.** Gruppera obekräftade/oidentifierade ansikten
+  på embedding-likhet (samma matte som dubblettpersoner) så en hel grupp kan
+  namnges på en gång ("personen återkommer 14 ggr -> namnge en gång"). Störst
+  tidsvinst för stora samlingar.
+- [ ] **Auto-/massbekräfta höga träffar.** "Bekräfta alla förslag över likhet X"
+  (t.ex. 0.6), eller per person, för att snabba upp granskningen.
+- [ ] **Förslag i fotolistan.** Visa toppförslag per foto i `/faces/review` +
+  sortera/gruppera listan på föreslagen person.
+- [ ] **Minsta ansiktsstorlek + konfidensgolv.** Filtrera bort pyttesmå/lågkonfidenta
+  detekteringar automatiskt (fångar en del dock-/mönster-falsklarm).
+- [ ] **"Uppdatera förslag"-pass.** Billig omräkning av `suggested_tag_id` för
+  kvarvarande pending efter fler bekräftelser, utan att detektera om.
+- [ ] **"Hitta fler foton med denna person".** Omvänd sökning från `/persons/{id}`:
+  kör personens centroid mot obekräftade/odetekterade ansikten.
+- [ ] **Auto-välj bästa tumnagel** för person via `det_score`/frontal-vinkel.
+- [ ] **Kör AI automatiskt vid scan** (valbart) så kön alltid är aktuell.
+- [ ] **GPU på Unraid** för snabbare detektering om volymen växer (2070ti kan
+  delas mellan containrar via NVIDIA Container Toolkit; onödigt för nuvarande skala).
+
 - [ ] **Albumexport till mapp + metadatafil.** Exportera ett albums bilder till
   en mapp i albumets ordning (filnamn med löpnummer-prefix så ordningen bevaras),
   plus en mänskligt läsbar metadatafil (.txt och/eller .xlsx) med info per bild

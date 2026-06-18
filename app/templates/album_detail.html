@@ -27,7 +27,7 @@
         <button type="button" class="btn btn-sm btn-danger album-remove" data-id="{{ photo.id }}"
                 title="Ta bort ur album"
                 style="position:absolute;top:4px;right:4px;z-index:2;padding:0 .4rem;line-height:1.4">&times;</button>
-        <a href="/photo/{{ photo.id }}" class="text-decoration-none" draggable="false">
+        <a href="/photo/{{ photo.id }}?ctx=album&ctx_id={{ album.id }}" class="text-decoration-none" draggable="false">
             <img loading="lazy" class="card-img-top" draggable="false"
                  src="/thumb/{{ photo.id }}?v={{ (photo.updated_at.timestamp()|int) if photo.updated_at else 0 }}" alt="{{ photo.filename }}">
             <div class="card-body p-2">

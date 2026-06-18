@@ -7,16 +7,18 @@ from urllib.parse import urlencode
 
 from sqlalchemy.orm import Session
 
-from app.database import FaceRegion, Photo, Tag
+from app.database import AlbumPhoto, FaceRegion, Photo, Tag
 from app.services.filtering import apply_dimensions, sort_order
 
 _CTX_PATHS = {
     "person": "/persons/{id}", "tag": "/tags/{id}",
     "place": "/place/{id}", "timeline": "/timeline",
+    "album": "/albums/{id}",
 }
 _CTX_LABELS = {
     "person": "Till personen", "tag": "Till taggen",
     "place": "Till platsen", "timeline": "Till tidslinjen",
+    "album": "Till albumet",
 }
 
 
@@ -60,6 +62,17 @@ def context_ordered_ids(
 ) -> list[int] | None:
     """Foto-id i ursprungsvyns ordning (med samma filter), eller None om ctx
     inte gick att tolka -> anroparen faller tillbaka på galleriet."""
+    # Album har sin egen kurerade ordning (AlbumPhoto.position) och ska visa
+    # exakt albumets foton - inga dimensions-/sorteringsfilter.
+    if ctx == "album" and ctx_id:
+        rows = (
+            db.query(AlbumPhoto.photo_id)
+            .filter(AlbumPhoto.album_id == ctx_id)
+            .order_by(AlbumPhoto.position)
+            .all()
+        )
+        return [r[0] for r in rows] or None
+
     query = context_query(db, ctx, ctx_id)
     if query is None:
         return None

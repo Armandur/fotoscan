@@ -43,7 +43,7 @@ app/
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     filtering.py       apply_dimensions + sort_order (delas av galleri/person/tagg/plats/tidslinje)
-    context.py         bläddringskontext (ctx=person/tag/place/timeline) för prev/next i detaljvyn
+    context.py         bläddringskontext (ctx=person/tag/place/timeline/album) för prev/next i detaljvyn
     scanner.py         scan_directory, load_oriented, render_photo, write_thumbnail, _read_exif_date
     exporter.py        export_photo, export_many (exiftool, inkl. MWG-rs regioner)
     adjust.py          apply_adjustments, has_adjustments (färg-/tonpipeline, Pillow)
@@ -154,11 +154,14 @@ photos/                exempel/testbilder (gitignored)
   dominerar sorteringen.
 - **prev/next** i detaljvyn beräknas från samma sortering som galleriet
   (`_ordered_ids`) - OK för projektets skala (<1000 foton). Öppnas en bild från
-  en annan vy bär kort-länken `?ctx=person|tag|place|timeline[&ctx_id=N]` (+ aktiva
-  filter); då går prev/next genom DEN listan i stället (`services/context.py`,
-  `context_ordered_ids`), och bakåtknappen leder till ursprungsvyn. Korten får
-  querystringen via `card_qs` -> `_cards.html`-macrots `qs`-arg. Galleriets egna
-  kort (i index.html, ej macrot) bär folder+qbase som förut.
+  en annan vy bär kort-länken `?ctx=person|tag|place|timeline|album[&ctx_id=N]`
+  (+ aktiva filter); då går prev/next genom DEN listan i stället
+  (`services/context.py`, `context_ordered_ids`), och bakåtknappen leder till
+  ursprungsvyn. Korten får querystringen via `card_qs` -> `_cards.html`-macrots
+  `qs`-arg. Galleriets egna kort (i index.html, ej macrot) bär folder+qbase som
+  förut. `ctx=album` är specialfall: bläddrar i albumets kurerade ordning
+  (`AlbumPhoto.position`), utan dimensions-/sorteringsfilter; albumvyns kort
+  länkar `?ctx=album&ctx_id={album.id}`.
 - **Inbäddat EXIF-datum** (`Photo.exif_datetime`): råa `DateTimeOriginal` läses
   en gång vid scan ur Exif-sub-IFD:n (0x8769, inte topp-IFD:n!) och skrivs
   aldrig över. Visas read-only i detaljvyn med en "Använd"-knapp. OBS: klockslag

@@ -343,8 +343,15 @@ def _pending_count(db: Session) -> int:
 
 
 def _pending_faces_query(db: Session):
-    return db.query(FaceRegion).filter(
-        FaceRegion.source == "ai", FaceRegion.confirmed == 0
+    # Uteslut ansikten på hopparade negativ (pair-sekundären) - samma motiv som
+    # fotot. Gäller alla pending-vyer (lista, kluster, find-faces, per foto).
+    return (
+        db.query(FaceRegion)
+        .join(Photo, Photo.id == FaceRegion.photo_id)
+        .filter(
+            FaceRegion.source == "ai", FaceRegion.confirmed == 0,
+            or_(Photo.paired_with_id.is_(None), Photo.is_pair_primary == 1),
+        )
     )
 
 

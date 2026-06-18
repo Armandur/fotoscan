@@ -206,6 +206,9 @@ class FaceRegion(Base):
     confirmed = Column(Integer, default=1)
     # 512-d ansikts-embedding (float32 -> bytes) för matchning/klustring.
     embedding = Column(LargeBinary, nullable=True)
+    # Detektorns konfidens (frontal/kvalitet), om hittat av AI. Används som
+    # tiebreaker vid auto-val av personens tumnagel. Manuella rutor saknar den.
+    det_score = Column(Float, nullable=True)
     # AI:ns namngissning (bekräftas/avvisas av användaren). Skild från tag_id.
     suggested_tag_id = Column(
         Integer, ForeignKey("tags.id", ondelete="SET NULL"), nullable=True
@@ -377,6 +380,8 @@ def init_db() -> None:
             )
         if not _column_exists(conn, "face_regions", "embedding"):
             conn.exec_driver_sql("ALTER TABLE face_regions ADD COLUMN embedding BLOB")
+        if not _column_exists(conn, "face_regions", "det_score"):
+            conn.exec_driver_sql("ALTER TABLE face_regions ADD COLUMN det_score FLOAT")
         if not _column_exists(conn, "face_regions", "suggested_tag_id"):
             conn.exec_driver_sql(
                 "ALTER TABLE face_regions ADD COLUMN suggested_tag_id INTEGER"

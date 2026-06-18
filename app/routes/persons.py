@@ -61,24 +61,28 @@ def _merge_person(db: Session, source: Tag, target: Tag) -> None:
     db.commit()
 
 
-def _sample_region_id(db: Session, tag: Tag) -> int | None:
-    region = (
+def _best_region_id(db: Session, tag: Tag) -> int | None:
+    """Auto-val av personens tumnagel: störst ansiktsarea (mest pixlar -> skarpast
+    crop), med detektorns konfidens (frontal/kvalitet) som tiebreaker."""
+    faces = (
         db.query(FaceRegion)
         .filter(FaceRegion.tag_id == tag.id, FaceRegion.confirmed == 1)
-        .order_by(FaceRegion.id.desc())
-        .first()
+        .all()
     )
-    return region.id if region else None
+    if not faces:
+        return None
+    best = max(faces, key=lambda f: ((f.w or 0) * (f.h or 0), f.det_score or 0.0))
+    return best.id
 
 
 def _avatar_region_id(db: Session, tag: Tag) -> int | None:
-    """Personens representativa ansiktsregion: vald (thumb_face_id) om den finns
-    kvar och fortfarande tillhör personen, annars senaste ansiktet (fallback)."""
+    """Personens representativa ansiktsregion: manuellt vald (thumb_face_id) om
+    den finns kvar och tillhör personen, annars auto-valt bästa ansiktet."""
     if tag.thumb_face_id:
         chosen = db.get(FaceRegion, tag.thumb_face_id)
         if chosen and chosen.tag_id == tag.id:
             return chosen.id
-    return _sample_region_id(db, tag)
+    return _best_region_id(db, tag)
 
 
 def _person_regions(db: Session, tag: Tag) -> list[dict]:

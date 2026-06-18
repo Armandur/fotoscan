@@ -103,6 +103,8 @@ def _run_job(force: bool) -> None:
                     used.add(best_f.id)
                     if not best_f.embedding:
                         best_f.embedding = faces_ai.emb_to_bytes(d["embedding"])
+                    if best_f.det_score is None:
+                        best_f.det_score = d["det_score"]
                     continue
                 if any(faces_ai.iou(d, f) >= _IOU_DUP_AI for f in ai_existing):
                     continue
@@ -112,6 +114,7 @@ def _run_job(force: bool) -> None:
                     x=d["x"], y=d["y"], w=d["w"], h=d["h"],
                     source="ai", confirmed=0,
                     embedding=faces_ai.emb_to_bytes(d["embedding"]),
+                    det_score=d["det_score"],
                     suggested_tag_id=tag_id,
                 ))
                 added += 1

@@ -173,7 +173,8 @@ photos/                exempel/testbilder (gitignored)
   Tomt namn -> "Okänd-N" (platshållare). Vid rotation transformeras regionerna i
   `rotate_photo`. Export skriver MWG-rs Regions (center-koordinater) via exiftool.
   En persons tumnagel kan väljas (`Tag.thumb_face_id` -> en `FaceRegion`); annars
-  auto = senaste ansiktet (`_avatar_region_id`, validerar att valet finns kvar).
+  auto = bästa ansiktet (`_best_region_id`: störst area, `det_score` som tiebreaker;
+  `_avatar_region_id` validerar att ett manuellt val finns kvar).
   Vald tumnagel skrivs aldrig över av nya ansikten. Ansikts-crops cachas på disk
   (`THUMB_DIR/face_{region_id}.jpg`, `scanner.face_thumb_path`), invalideras vid
   flytt/rotation/radering - så /persons inte renderar om från originalen varje gång.

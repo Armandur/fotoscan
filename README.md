@@ -46,15 +46,25 @@ kopierar foton till `EXPORT_DIR` och bäddar in metadatan i kopiorna som **XMP**
 när ett exakt datum finns. Originalen rörs aldrig. Kräver `exiftool` på servern
 (ingår i Docker-imagen; lokalt: `sudo apt install libimage-exiftool-perl`).
 
+## Säkerhetskopiering
+
+Översikt -> **Ladda ner backup** (eller `GET /api/backup`) ger en zip med en
+konsekvent ögonblicksbild av databasen. Originalbilder och thumbnails ingår
+inte - de regenereras ur fotomappen. Se `DOCKER.md` för hur man flyttar
+databasen till en ny miljö.
+
 ## Docker (Unraid)
 
 ```bash
 # Drift (hämtar image från GHCR) - justera fotomappen i docker-compose.yml
-docker compose up -d
+docker compose pull && docker compose up -d
 
 # Lokal utveckling (bygger image, --reload)
 docker compose -f docker-compose.dev.yml up --build
 ```
+
+Imagen byggs och publiceras automatiskt till `ghcr.io/armandur/fotoscan` av
+GitHub Actions. Fullständiga deploy- och flyttsteg finns i `DOCKER.md`.
 
 ## Miljövariabler
 

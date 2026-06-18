@@ -16,16 +16,22 @@
   färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
-- [ ] CI/CD: GitHub Actions som bygger image till ghcr.io/armandur/fotoscan.
 - [ ] Hantera HEIC ordentligt (kräver pillow-heif).
-- [ ] Backup/databasexport.
 
 ## Deployment
-- Tanken är att deploya på Unraid-servern (TERVO2) som en monolitisk
-  single-container Docker-image (image till GHCR). `exiftool`
-  (libimage-exiftool-perl) måste installeras i imagen för exportfunktionen.
-- Persistenta volymer för `DATA_DIR` (databas + thumbnails) och read-only-mount
-  för fotomappen som ska scannas.
+- [x] **CI/CD.** `.github/workflows/docker-publish.yml` bygger och pushar imagen
+  till `ghcr.io/armandur/fotoscan` vid push till main (latest/main/sha), vid
+  `v*`-taggar (semver) och manuellt. GHCR-login via `GITHUB_TOKEN`, gha-cache.
+- [x] **Backup/databasexport.** `GET /api/backup` (`routes/backup.py`) ger en zip
+  med en konsekvent SQLite-ögonblicksbild (`VACUUM INTO`). Knapp i /dashboard.
+  Originalbilder/thumbnails ingår inte - de regenereras.
+- [x] **Portabel migrering.** Fotosökvägar rebaseras automatiskt mot `PHOTO_DIR`
+  vid uppstart (`_rebase_photo_paths`), så en medhavd databas funkar direkt när
+  fotomappen monteras på annan plats (t.ex. `/photos`). Thumbnails self-healar
+  i `/thumb` ur originalet vid miss. Fullständiga steg i `DOCKER.md`.
+- Drift: monolitisk single-container på Unraid (TERVO2), image från GHCR.
+  `exiftool` + libpango/cairo ingår i imagen. Persistenta volymer för `DATA_DIR`
+  (databas + thumbnails) och read-only-mount för fotomappen. Se `DOCKER.md`.
 
 ## Klart
 - [x] **Mer metadata på personer.** Tag utökad med född/död (fritext), alias/

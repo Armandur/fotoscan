@@ -35,6 +35,7 @@ app/
     backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss
     dashboard.py       /dashboard: översikt + saknar-statistik; /review-flödet ligger i photos.py
     duplicates.py      /duplicates: grupperar liknande foton via phash (services/dupes.py)
+    backup.py          GET /api/backup: konsekvent SQLite-snapshot (VACUUM INTO) som zip
     geo.py             /api/geocode (proxy mot OSM Nominatim för platssökning)
   services/
     filtering.py       apply_dimensions + sort_order (delas av galleri/person/tagg/plats/tidslinje)
@@ -219,6 +220,18 @@ photos/                exempel/testbilder (gitignored)
   apt-installerar `libimage-exiftool-perl`. `docker-compose.yml` = drift (GHCR-
   image, volymer för /data, /export, read-only /photos), `docker-compose.dev.yml`
   = lokal build med --reload.
+- **CI/CD:** `.github/workflows/docker-publish.yml` bygger/pushar imagen till
+  `ghcr.io/armandur/fotoscan` (push main -> latest/main/sha; `v*`-taggar ->
+  semver; manuell). Login via `GITHUB_TOKEN`, gha-cache. Se `DOCKER.md`.
+- **Backup** (`routes/backup.py`, `GET /api/backup`): `VACUUM INTO` ger en
+  konsekvent DB-ögonblicksbild som zippas och laddas ner (knapp i /dashboard).
+  Bilder/thumbnails ingår inte - DB:n är sanningskällan.
+- **Portabel migrering:** `Photo.path` är absolut men `folder`/`filename` är
+  portabla. `database._rebase_photo_paths()` (körs i `init_db`) räknar om varje
+  sökväg till `PHOTO_DIR/folder/filename` - idempotent, rör bara rader som
+  skiljer sig. Gör en medhavd databas direkt körbar när fotomappen monteras på
+  annan plats (t.ex. /photos). `/thumb` self-healar saknad thumbnail ur
+  originalet. Flytt-steg i `DOCKER.md`.
 
 ## Konventioner
 - **Använd aldrig `alert()` eller `confirm()`** - använd Bootstrap-modaler.

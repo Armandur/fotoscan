@@ -122,6 +122,7 @@ class SectionIn(BaseModel):
 
 class AlbumSettingsIn(BaseModel):
     layout: int = 4
+    page_format: str = "a4p"
     subtitle: str = ""
     caption_fields: str = "date,place,persons"
 

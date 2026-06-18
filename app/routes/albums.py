@@ -14,7 +14,8 @@ from app.schemas import (
     SectionIn,
 )
 from app.services.pdf_album import (
-    build_pages, caption_lines, entry_caption_fields, render_album_pdf,
+    PAGE_FORMATS, build_pages, caption_lines, entry_caption_fields,
+    page_format, render_album_pdf,
 )
 
 router = APIRouter()
@@ -82,9 +83,11 @@ def album_layout(album_id: int, request: Request, db: Session = Depends(get_db))
             "first_id": p["entries"][0].photo.id if p["entries"] else None,
             "cells": cells,
         })
+    fmt = page_format(album)
     return templates.TemplateResponse(
         request, "album_layout.html",
-        {"album": album, "pages": pages, "fields": fields},
+        {"album": album, "pages": pages, "fields": fields,
+         "fmt": fmt, "formats": PAGE_FORMATS},
     )
 
 
@@ -95,6 +98,8 @@ def album_settings(album_id: int, data: AlbumSettingsIn, db: Session = Depends(g
         raise HTTPException(404, "Albumet hittades inte")
     if data.layout in (1, 2, 4, 6):
         album.layout = data.layout
+    if data.page_format in PAGE_FORMATS:
+        album.page_format = data.page_format
     album.subtitle = data.subtitle.strip()
     album.caption_fields = ",".join(
         f for f in data.caption_fields.split(",") if f

@@ -12,6 +12,18 @@ from app.database import Album
 from app.services.scanner import render_photo
 
 _PRINT_MAX = 1600  # px, längsta sida på inbäddade bilder
+
+# Sidformat: @page-size för PDF, innehållshöjd (sidhöjd - 2*marginal), samt
+# sidmått i cm (för layoutvyns låsta sida + zoom). Delas av PDF och layoutvy.
+PAGE_FORMATS = {
+    "a4p": {"label": "A4 stående", "size": "A4 portrait", "page_h": "27.5cm", "w_cm": 21.0, "h_cm": 29.7},
+    "a4l": {"label": "A4 liggande", "size": "A4 landscape", "page_h": "18.8cm", "w_cm": 29.7, "h_cm": 21.0},
+    "a5p": {"label": "A5 stående", "size": "A5 portrait", "page_h": "18.8cm", "w_cm": 14.8, "h_cm": 21.0},
+}
+
+
+def page_format(album) -> dict:
+    return PAGE_FORMATS.get(album.page_format, PAGE_FORMATS["a4p"])
 # Bootstrap-icons-fonten för bildtextikoner i PDF:en (laddas via @font-face).
 _BI_FONT = (BASE_DIR / "app" / "static" / "vendor" / "fonts" / "bootstrap-icons.woff2").as_uri()
 
@@ -123,8 +135,10 @@ def render_album_pdf(album: Album, layout: int, fields: list[str], subtitle: str
                 "heading": page["heading"], "layout": page["layout"], "cells": cells,
             })
 
+        fmt = page_format(album)
         html = _env.get_template("album_pdf.html").render(
             title=album.name, subtitle=subtitle, pages=out_pages,
             bi_font=_BI_FONT, cover_src=cover_src,
+            page_size=fmt["size"], page_h=fmt["page_h"],
         )
         return HTML(string=html, base_url=str(tmpdir)).write_pdf()

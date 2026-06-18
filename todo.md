@@ -1,10 +1,11 @@
 # Fotoscan - todo
 
 ## Planerat
-- [ ] **Fler album-format + uppslag + tomma sidor.** Stödja fler sidformat än
-  stående A4: först liggande A4, kanske även stående A5. Kunna visa som uppslag
-  (två sidor sida vid sida) både i huvudvyn och i bläddermenyn till vänster. Kunna
-  lägga in tomma sidor så att häftes-/uppslagslayouten går jämnt ut.
+- [ ] **Album: tomma sidor + riktigt uppslag (recto/verso).** Kunna lägga in
+  tomma sidor så häftes-/uppslagslayouten går jämnt ut, och para sidorna korrekt
+  (titel ensam som höger sida, sedan vänster/höger-par). Bygger på format+uppslag
+  som redan finns. Kräver en liten modell för tomma sidor (auto-chunkningen
+  hanterar bara foton idag).
 - [ ] **Personer i bildtext sorterade efter ansiktets position.** Utred om
   personer som markerats med ansiktsrutor kan skrivas ut i ordning vänster->höger
   (lägsta x först) i bildtexten/listan, i stället för t.ex. namnordning.
@@ -40,6 +41,11 @@
   för fotomappen som ska scannas.
 
 ## Klart
+- [x] **Album-format + uppslagsvy.** Sidformat per album (`Album.page_format`):
+  A4 stående/liggande + A5 stående - styr @page i PDF:en och den låsta sidan i
+  layoutvyn (mått via CSS-variabler). Uppslagsvy (två sidor sida vid sida) i både
+  huvudvyn och bläddermenyn (klient-toggle, zoom räknas om). (Tomma sidor +
+  recto/verso återstår.)
 - [x] **Avsnitt per bild + dra-om i layoutvyn.** Avsnitt sätts nu per foto i
   layoutvyn (knapp på varje bild) - ett avsnitt kan börja vid valfri bild och
   bryter då till ny sida vid just den (resten av föregående sida lämnas). Bilderna

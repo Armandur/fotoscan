@@ -181,7 +181,8 @@ class Album(Base):
     name = Column(String, nullable=False)
     created_at = Column(DateTime, default=_now)
     # PDF-/layoutinställningar (redigeras i layoutvyn, används av PDF-exporten).
-    layout = Column(Integer, default=4)            # bilder per A4-sida (1/2/4/6)
+    layout = Column(Integer, default=4)            # bilder per sida (1/2/4/6)
+    page_format = Column(String, default="a4p")    # a4p | a4l | a5p
     subtitle = Column(String, default="")
     caption_fields = Column(String, default="date,place,persons")
     cover_photo_id = Column(
@@ -302,3 +303,5 @@ def init_db() -> None:
             )
         if not _column_exists(conn, "albums", "cover_photo_id"):
             conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN cover_photo_id INTEGER")
+        if not _column_exists(conn, "albums", "page_format"):
+            conn.exec_driver_sql("ALTER TABLE albums ADD COLUMN page_format VARCHAR DEFAULT 'a4p'")

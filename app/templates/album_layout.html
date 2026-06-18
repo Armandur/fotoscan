@@ -12,14 +12,14 @@
     .lv-toolbar { position: sticky; top: 56px; z-index: 1019; }
     .lv-wrap { display: grid; grid-template-columns: 180px 1fr; gap: 1rem; align-items: start; }
     .lv-sidebar { position: sticky; top: 150px; max-height: calc(100vh - 170px); overflow-y: auto; }
-    .lv-thumb { aspect-ratio: 210/297; background: #fff; border: 1px solid var(--bs-border-color);
+    .lv-thumb { aspect-ratio: var(--pg-ar, 210/297); background: #fff; border: 1px solid var(--bs-border-color);
         border-radius: 4px; padding: 3px; margin-bottom: 8px; cursor: pointer; display: block; }
     .lv-thumb.active { outline: 2px solid var(--bs-info); }
     .lv-thumb .lv-grid { height: 100%; gap: 1px; }
     .lv-num { font-size: .7rem; color: var(--bs-secondary); }
     /* Sidan är en LÅST A4-design i cm/pt (matchar PDF:en). Zoom skalar HELA sidan
        proportionellt - layout och storlekar ändras inte med zoomnivån. */
-    .lv-page { width: 21cm; height: 29.7cm; padding: 1cm; margin: 0 auto 1.2rem;
+    .lv-page { width: var(--pg-w, 21cm); height: var(--pg-h, 29.7cm); padding: 1cm; margin: 0 auto 1.2rem;
         zoom: var(--lv-zoom, .65);
         background: #fff; color: #111; border: 1px solid var(--bs-border-color);
         border-radius: 4px; display: flex; flex-direction: column;
@@ -42,6 +42,13 @@
     .lv-title h2 { font-size: 30pt; margin: 0; }
     .lv-title .sub { font-size: 14pt; }
     .lv-pagebar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; }
+    .lv-pagenum { font-size: .75rem; color: var(--bs-secondary); margin-bottom: .2rem; text-align: center; }
+    .lv-pageblock { margin-bottom: 1rem; }
+    /* Uppslag: två sidor sida vid sida (huvudvy + bläddermeny). */
+    .lv-main.spread { display: flex; flex-wrap: wrap; align-items: flex-start; }
+    .lv-main.spread .lv-pageblock { width: 50%; }
+    .lv-sidebar.spread { display: flex; flex-wrap: wrap; }
+    .lv-sidebar.spread .lv-sb-item { width: 50%; }
 </style>
 {% endblock %}
 
@@ -58,6 +65,18 @@
                 <label class="btn btn-outline-secondary" for="lvl{{ n }}">{{ n }}</label>
                 {% endfor %}
             </div>
+        </div>
+        <div class="col-auto">
+            <label class="form-label small text-secondary mb-1">Format</label>
+            <select class="form-select form-select-sm" id="lv-format">
+                {% for key, f in formats.items() %}
+                <option value="{{ key }}" {{ 'selected' if album.page_format == key else '' }}>{{ f.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label small text-secondary mb-1">Visning</label>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-block" id="lv-spread"><i class="bi bi-book"></i> Uppslag</button>
         </div>
         <div class="col-auto">
             <label class="form-label small text-secondary mb-1">Sidstorlek</label>
@@ -93,30 +112,37 @@
 {% if not pages %}
 <div class="alert alert-secondary">Inga foton i albumet. Lägg till foton i fotovyn först.</div>
 {% else %}
-<div class="lv-wrap" data-album-id="{{ album.id }}">
-    <div class="lv-sidebar">
-        <div class="lv-thumb" data-target="#lv-title"><div class="lv-grid l1"><div class="lv-cell" style="align-items:center;justify-content:center;color:#888;font-size:.6rem">Titel</div></div></div>
-        <div class="lv-num text-center mb-2">Titelsida</div>
-        {% for p in pages %}
-        <div class="lv-thumb" data-target="#lv-page-{{ loop.index }}">
-            <div class="lv-grid l{{ p.layout }}">
-                {% for c in p.cells %}<div class="lv-cell"><img src="/thumb/{{ c.id }}" alt=""></div>{% endfor %}
-            </div>
+<div class="lv-wrap" data-album-id="{{ album.id }}"
+     style="--pg-w: {{ fmt.w_cm }}cm; --pg-h: {{ fmt.h_cm }}cm; --pg-ar: {{ fmt.w_cm }}/{{ fmt.h_cm }};">
+    <div class="lv-sidebar" id="lv-sidebar">
+        <div class="lv-sb-item">
+            <div class="lv-thumb" data-target="#lv-title"><div class="lv-grid l1"><div class="lv-cell" style="align-items:center;justify-content:center;color:#888;font-size:.6rem">Titel</div></div></div>
+            <div class="lv-num text-center mb-2">Titelsida</div>
         </div>
-        <div class="lv-num text-center mb-2">Sida {{ loop.index }}{% if p.heading %} - {{ p.heading }}{% endif %}</div>
+        {% for p in pages %}
+        <div class="lv-sb-item">
+            <div class="lv-thumb" data-target="#lv-page-{{ loop.index }}">
+                <div class="lv-grid l{{ p.layout }}">
+                    {% for c in p.cells %}<div class="lv-cell"><img src="/thumb/{{ c.id }}" alt=""></div>{% endfor %}
+                </div>
+            </div>
+            <div class="lv-num text-center mb-2">Sida {{ loop.index }}{% if p.heading %} - {{ p.heading }}{% endif %}</div>
+        </div>
         {% endfor %}
     </div>
 
     <div class="lv-main" id="lv-main">
-        <div class="lv-page lv-title" id="lv-title">
-            {% if album.cover_photo_id %}<img src="/thumb/{{ album.cover_photo_id }}" alt="" style="max-width:100%;max-height:60%;object-fit:contain;margin-bottom:1cm">{% endif %}
-            <h2>{{ album.name }}</h2>
-            {% if album.subtitle %}<div class="sub text-secondary mt-3">{{ album.subtitle }}</div>{% endif %}
+        <div class="lv-pageblock">
+            <div class="lv-pagenum">Titelsida</div>
+            <div class="lv-page lv-title" id="lv-title">
+                {% if album.cover_photo_id %}<img src="/thumb/{{ album.cover_photo_id }}" alt="" style="max-width:100%;max-height:60%;object-fit:contain;margin-bottom:1cm">{% endif %}
+                <h2>{{ album.name }}</h2>
+                {% if album.subtitle %}<div class="sub text-secondary mt-3">{{ album.subtitle }}</div>{% endif %}
+            </div>
         </div>
         {% for p in pages %}
-        <div class="lv-pagebar">
-            <span class="small text-secondary">Sida {{ loop.index }}</span>
-        </div>
+        <div class="lv-pageblock">
+        <div class="lv-pagenum">Sida {{ loop.index }}</div>
         <div class="lv-page" id="lv-page-{{ loop.index }}">
             {% if p.heading %}<div class="sec-head">{{ p.heading }}</div>{% endif %}
             <div class="lv-grid l{{ p.layout }}">
@@ -140,6 +166,7 @@
                 </div>
                 {% endfor %}
             </div>
+        </div>
         </div>
         {% endfor %}
     </div>
@@ -219,16 +246,18 @@
         window.location.href = `/albums/${albumId}/pdf`;
     });
 
-    // Sidstorlek = zoom på hela den låsta A4-sidan (proportionellt). Sparas i
-    // localStorage. fit-width/height räknas ut från ytan; S/M/L är fasta nivåer.
+    // Sidstorlek = zoom på den låsta sidan (proportionellt). Sidmått från formatet.
     const main = document.getElementById("lv-main");
-    const PAGE_W = 21 * 96 / 2.54;    // A4-bredd i px
-    const PAGE_H = 29.7 * 96 / 2.54;  // A4-höjd i px
+    const sidebar = document.getElementById("lv-sidebar");
+    const PAGE_W = {{ fmt.w_cm }} * 96 / 2.54;
+    const PAGE_H = {{ fmt.h_cm }} * 96 / 2.54;
     function zoomFor(s) {
+        const spread = main.classList.contains("spread");
+        const availW = spread ? (main.clientWidth / 2 - 8) : (main.clientWidth - 4);
         if (s === "s") return 0.4;
         if (s === "l") return 0.9;
-        if (s === "fit-width") return Math.max(0.15, (main.clientWidth - 4) / PAGE_W);
-        if (s === "fit-height") return Math.max(0.15, (window.innerHeight - 130) / PAGE_H);
+        if (s === "fit-width") return Math.max(0.12, availW / PAGE_W);
+        if (s === "fit-height") return Math.max(0.12, (window.innerHeight - 130) / PAGE_H);
         return 0.6;  // m
     }
     function applySize(s) {
@@ -239,7 +268,6 @@
         document.querySelectorAll("#lv-size button").forEach(b =>
             b.classList.toggle("active", b.dataset.size === s));
     }
-    applySize(localStorage.getItem("lvPageSize") || "m");
     document.getElementById("lv-size").addEventListener("click", (e) => {
         const b = e.target.closest("button[data-size]");
         if (b) applySize(b.dataset.size);
@@ -250,14 +278,30 @@
         }
     });
 
+    // Uppslag (två sidor sida vid sida) i huvudvy + bläddermeny.
+    const spreadBtn = document.getElementById("lv-spread");
+    function applySpread(on) {
+        main.classList.toggle("spread", on);
+        if (sidebar) sidebar.classList.toggle("spread", on);
+        spreadBtn.classList.toggle("active", on);
+        localStorage.setItem("lvSpread", on ? "1" : "0");
+        applySize(main.dataset.size || "m");  // räkna om zoom (halverad bredd)
+    }
+    spreadBtn.addEventListener("click", () => applySpread(!main.classList.contains("spread")));
+
+    // Init (storlek först, sedan uppslag som kan räkna om zoom)
+    applySize(localStorage.getItem("lvPageSize") || "m");
+    applySpread(localStorage.getItem("lvSpread") === "1");
+
     // Spara inställningar (layout/bildtext/undertitel) -> ladda om så sidorna räknas om.
     document.getElementById("lv-save").addEventListener("click", async (e) => {
         const layout = parseInt(document.querySelector("input[name='lv-layout']:checked").value, 10);
+        const page_format = document.getElementById("lv-format").value;
         const caption_fields = [...document.querySelectorAll(".lv-field:checked")].map(c => c.value).join(",");
         const subtitle = document.getElementById("lv-subtitle").value.trim();
         e.target.disabled = true;
         try {
-            await apiFetch(`/api/albums/${albumId}/settings`, { method: "POST", body: { layout, caption_fields, subtitle } });
+            await apiFetch(`/api/albums/${albumId}/settings`, { method: "POST", body: { layout, page_format, caption_fields, subtitle } });
             location.reload();
         } catch (err) { showToast("Kunde inte spara: " + err.message, true); e.target.disabled = false; }
     });

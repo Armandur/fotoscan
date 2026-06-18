@@ -409,27 +409,36 @@ def thumb(photo_id: int):
     return FileResponse(path)
 
 
+# Format webbläsare kan visa inline. Övriga (TIFF/BMP/HEIC ...) renderas till JPEG.
+_WEB_NATIVE = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+def _web_native(photo) -> bool:
+    return Path(photo.path).suffix.lower() in _WEB_NATIVE
+
+
 @router.get("/image/{photo_id}")
 def image(photo_id: int, raw: bool = False, db: Session = Depends(get_db)):
     photo = db.get(Photo, photo_id)
     if not photo or not Path(photo.path).exists():
         raise HTTPException(404, "Bildfil saknas")
+    native = _web_native(photo)
     # raw=1: orienterad/roterad men UTAN färgjusteringar (för live-preview),
     # renderas on-the-fly och cachas inte.
     if raw:
-        if not photo.rotation:
+        if not photo.rotation and native:
             return FileResponse(photo.path)
-        img = load_oriented(Path(photo.path), photo.rotation)
+        img = load_oriented(Path(photo.path), photo.rotation or 0)
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=90)
         buf.seek(0)
         return StreamingResponse(buf, media_type="image/jpeg")
 
-    # Inga transformeringar: servera originalet direkt.
-    if not photo.rotation and not has_adjustments(photo):
+    # Inga transformeringar OCH webb-native format: servera originalet direkt.
+    if not photo.rotation and not has_adjustments(photo) and native:
         return FileResponse(photo.path)
 
-    # Annars: servera den cachade renderingen (skapa den vid första visning).
+    # Annars (transform eller t.ex. TIFF): servera cachad JPEG-rendering.
     cache = render_cache_path(photo.id)
     if not cache.exists():
         write_render(photo)

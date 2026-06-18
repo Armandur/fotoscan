@@ -90,14 +90,20 @@ photos/                exempel/testbilder (gitignored)
   `back_of_id != None` alltid). Hanteras i detaljvyn (`backside.py` + `backside.js`):
   visa/förstora baksidan, koppla via kandidatsök, koppla loss. Andra själv-FK:n på
   photos (efter `paired_with_id`) - inga ORM-relationer på dem, slås upp via query.
-- **Ta bort foto ur katalogen** (`DELETE /api/photos/{id}`, knapp i detaljvyn):
-  tar bort katalogposten + diskcache (thumb/render/ansikts-crops) men rör ALDRIG
-  originalfilen. OBS: ligger originalet kvar i PHOTO_DIR läggs det tillbaka vid
-  nästa scan - filen måste tas bort ur fotomappen separat. SQLite-FK:erna är inte
-  påslagna, så endpointen städar alla kopplingar explicit: nollar partnerns
-  `paired_with_id`, baksidors `back_of_id`, `Album.cover_photo_id` och
-  `Tag.thumb_face_id` som pekar på fotots ansikten, samt raderar `AlbumPhoto`-rader
-  (ansiktsrutor + `photo_tags` går via ORM-cascade).
+- **Ta bort foto ur katalogen** (`DELETE /api/photos/{id}` i detaljvyn,
+  `POST /api/photos/batch-delete` som massåtgärd): tar bort katalogposten +
+  diskcache (thumb/render/ansikts-crops) men rör ALDRIG originalfilen. OBS:
+  ligger originalet kvar i PHOTO_DIR läggs det tillbaka vid nästa scan - filen
+  måste tas bort ur fotomappen separat. SQLite-FK:erna är inte påslagna, så
+  gemensam helper `_delete_photo(db, photo, del_ids)` städar alla kopplingar
+  explicit: nollar partnerns `paired_with_id`, baksidors `back_of_id`,
+  `Album.cover_photo_id` och `Tag.thumb_face_id` som pekar på fotots ansikten,
+  samt raderar `AlbumPhoto`-rader (ansiktsrutor + `photo_tags` via ORM-cascade).
+  `del_ids` (alla foton i samma operation) hoppas över i referens-nollningen så
+  hopparade/baksides-foton i samma batch inte rörs i onödan. Cachestädning
+  (`_purge_photo_cache`) sker efter commit. Mappträdet byggs om från
+  `DISTINCT Photo.folder` vid varje sidladdning, så en tom mapp försvinner ur
+  trädet automatiskt efter borttag (galleriet reloadar).
 - **Granskningsläge** (`/review` i `photos.py`): redirectar till första ogranskade
   (`?reviewed=no&review=1`); detaljvyns "Spara & granska" går vidare via `/review`.
   Återanvänder detaljformuläret. Dashboard (`/dashboard`) ger översikt + `missing`-
@@ -184,7 +190,8 @@ photos/                exempel/testbilder (gitignored)
   (alla None/tom = oförändrat): `set_negative`, `set_reviewed`, `add_tags`/
   `remove_tags` (tagg el. person), `set_date` (date_text -> härledda fält),
   `set_location` (get_or_create_place), `add_to_album` (lägg i album, funkar med
-  både markerade och "alla i filtret"). Galleri-söket (`q`) träffar även tagg-/
+  både markerade och "alla i filtret"). Destruktiv borttagning ligger i samma
+  meny men går mot egen endpoint (`batch-delete`, se "Ta bort foto ur katalogen"). Galleri-söket (`q`) träffar även tagg-/
   personnamn (`Photo.tags.any(Tag.name ...)`) utöver filnamn/mapp/plats/notis/
   datum/källa. Tagg-/person-/plats-fälten har
   autocomplete via native `<datalist>` som fylls från `/api/tags`/`/api/places`

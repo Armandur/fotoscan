@@ -474,16 +474,13 @@ def rotate_photo(
     return JSONResponse({"ok": True, "rotation": photo.rotation})
 
 
-@router.delete("/api/photos/{photo_id}")
-def delete_photo(photo_id: int, db: Session = Depends(get_db)):
-    """Ta bort ett foto ur katalogen (DB + cache). Rör ALDRIG originalfilen -
-    den måste tas bort ur fotomappen separat, annars läggs den tillbaka vid
-    nästa scan. Städar alla kopplingar explicit (SQLite-FK:erna är inte
-    påslagna)."""
-    photo = db.get(Photo, photo_id)
-    if not photo:
-        raise HTTPException(404, "Foto hittades inte")
-
+def _delete_photo(db: Session, photo: Photo, del_ids: set[int]) -> list[int]:
+    """Ta bort ett foto ur katalogen och städa alla kopplingar explicit
+    (SQLite-FK:erna är inte påslagna). Commit:ar INTE. Returnerar fotots
+    ansikts-region-id:n så att diskcachen kan städas efter commit. `del_ids` =
+    alla foton som tas bort i samma operation; referenser från dem hoppas över
+    (de försvinner ändå) så att hopparade/baksides-foton i samma batch inte
+    rörs i onödan."""
     face_ids = [f.id for f in photo.faces]
 
     # Personers utvalda tumnagel kan peka på en av fotots ansiktsrutor.
@@ -491,18 +488,22 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db)):
         for tag in db.query(Tag).filter(Tag.thumb_face_id.in_(face_ids)).all():
             tag.thumb_face_id = None
 
-    # Hopparning: koppla loss eventuell partner (åt båda håll).
-    if photo.paired_with_id:
+    # Hopparning: koppla loss partner (åt båda håll), om den inte också tas bort.
+    if photo.paired_with_id and photo.paired_with_id not in del_ids:
         partner = db.get(Photo, photo.paired_with_id)
         if partner:
             partner.paired_with_id = None
             partner.is_pair_primary = 0
-    for other in db.query(Photo).filter(Photo.paired_with_id == photo.id).all():
+    for other in db.query(Photo).filter(
+        Photo.paired_with_id == photo.id, Photo.id.notin_(del_ids)
+    ).all():
         other.paired_with_id = None
         other.is_pair_primary = 0
 
     # Baksidor som pekar hit blir vanliga foton igen.
-    for other in db.query(Photo).filter(Photo.back_of_id == photo.id).all():
+    for other in db.query(Photo).filter(
+        Photo.back_of_id == photo.id, Photo.id.notin_(del_ids)
+    ).all():
         other.back_of_id = None
 
     # Album: nolla omslag som pekar hit, ta bort medlemskap.
@@ -513,15 +514,51 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db)):
     )
 
     db.delete(photo)  # tar ansiktsrutor (delete-orphan) + photo_tags-rader
-    db.commit()
+    return face_ids
 
-    # Diskcache (regenereras annars aldrig för ett borttaget foto).
+
+def _purge_photo_cache(photo_id: int, face_ids: list[int]) -> None:
+    """Diskcache regenereras annars aldrig för ett borttaget foto."""
     (THUMB_DIR / f"{photo_id}.jpg").unlink(missing_ok=True)
     invalidate_render(photo_id)
     for fid in face_ids:
         invalidate_face_thumb(fid)
 
+
+@router.delete("/api/photos/{photo_id}")
+def delete_photo(photo_id: int, db: Session = Depends(get_db)):
+    """Ta bort ett foto ur katalogen (DB + cache). Rör ALDRIG originalfilen -
+    den måste tas bort ur fotomappen separat, annars läggs den tillbaka vid
+    nästa scan."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    face_ids = _delete_photo(db, photo, {photo.id})
+    db.commit()
+    _purge_photo_cache(photo_id, face_ids)
     return JSONResponse({"ok": True})
+
+
+@router.post("/api/photos/batch-delete")
+def batch_delete(data: BatchUpdate, db: Session = Depends(get_db)):
+    """Massborttagning ur katalogen. Återanvänder urvalsfälten i BatchUpdate
+    (id-lista eller hela filtret). Rör aldrig originalfilerna."""
+    if data.use_filter:
+        photos = _filtered_query(
+            db, data.q, data.reviewed, data.ptype, data.paired,
+            data.folder, data.recursive, data.separate, data.missing,
+        ).all()
+    elif data.ids:
+        photos = db.query(Photo).filter(Photo.id.in_(data.ids)).all()
+    else:
+        return JSONResponse({"ok": True, "count": 0})
+
+    del_ids = {p.id for p in photos}
+    purge = [(p.id, _delete_photo(db, p, del_ids)) for p in photos]
+    db.commit()
+    for pid, face_ids in purge:
+        _purge_photo_cache(pid, face_ids)
+    return JSONResponse({"ok": True, "count": len(purge)})
 
 
 @router.get("/api/photos/{photo_id}/auto-suggest")

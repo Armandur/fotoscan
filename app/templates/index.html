@@ -156,6 +156,10 @@
                     <select class="form-select" id="batch-album-select"><option value="">Välj album...</option></select>
                     <button class="btn btn-outline-primary" type="button" id="batch-album-add">Lägg till i album</button>
                 </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger" type="button" data-batch="delete">
+                    <i class="bi bi-trash"></i> Ta bort ur katalogen
+                </button>
                 <datalist id="batch-tags-list"></datalist>
                 <datalist id="batch-places-list"></datalist>
             </div>
@@ -511,12 +515,33 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
 
     bar.querySelectorAll("[data-batch]").forEach(btn => {
         btn.addEventListener("click", async () => {
-            const op = buildOp(btn.dataset.batch);
-            if (!op) return;
             const base = batchBase();
             if (!base) { showToast("Inget valt", true); return; }
-            const body = { ...base, ...op };
             const n = allFilter.checked ? bar.dataset.total : selected.size;
+
+            // Destruktiv massborttagning ur katalogen (egen endpoint + varning).
+            if (btn.dataset.batch === "delete") {
+                const ok = await showConfirm(
+                    `Ta bort ${n} foton ur katalogen? Metadata, taggar, ` +
+                    `ansiktsrutor och album-medlemskap tas bort. Originalfilerna ` +
+                    `på disk rörs inte - ta även bort dem ur fotomappen, annars ` +
+                    `läggs fotona tillbaka vid nästa scanning. Detta går inte att ångra.`,
+                    { okLabel: "Ta bort", okClass: "btn-danger" }
+                );
+                if (!ok) return;
+                try {
+                    const res = await apiFetch("/api/photos/batch-delete", { method: "POST", body: base });
+                    showToast(`${res.count} foton togs bort ur katalogen`);
+                    setTimeout(() => location.reload(), 600);
+                } catch (err) {
+                    showToast("Borttagning misslyckades: " + err.message, true);
+                }
+                return;
+            }
+
+            const op = buildOp(btn.dataset.batch);
+            if (!op) return;
+            const body = { ...base, ...op };
             if (!(await showConfirm(`Tillämpa på ${n} foton?`))) return;
             try {
                 const res = await apiFetch("/api/photos/batch", { method: "POST", body });

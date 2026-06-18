@@ -48,17 +48,21 @@ def _run_job(force: bool) -> None:
         photos = q.all()
         JOB.update(total=len(photos), done=0, added=0, message="Detekterar ansikten...")
 
-        # Pass 1: detektera, backfilla embeddings på bekräftade rutor, samla
-        # kandidater per foto. ai_faces_at sätts INTE här - först i pass 2 när
-        # förslagen faktiskt skapats, så ett avbrutet jobb är kraschsäkert
-        # (omarkerade foton körs om).
-        candidates: dict[int, list[dict]] = {}
-        processed: list[int] = []
+        # Referensmatcher byggs en gång vid start (bekräftade, namngivna ansikten
+        # med embedding). Lagrade förslag är "best-effort" - granskningsvyn räknar
+        # ändå ut förslagen live, så de är alltid färska.
+        matcher = _build_db_matcher(db)
+
+        # Ett inkrementellt pass: varje foto detekteras, får förslagsrutor och
+        # markeras klart med en commit per foto. Granskningskön fylls löpande och
+        # ett avbrutet jobb behåller allt som hunnit bli klart.
+        added = 0
         for photo in photos:
             pid = photo.id
-            processed.append(pid)
-            JOB["done"] += 1
             if not Path(photo.path).exists():
+                photo.ai_faces_at = _now()
+                db.commit()
+                JOB["done"] += 1
                 continue
             if force:
                 # Rensa tidigare obekräftade AI-förslag på fotot -> färska förslag.
@@ -72,6 +76,9 @@ def _run_job(force: bool) -> None:
                 dets = faces_ai.detect_in_photo(photo)
             except Exception:
                 logger.exception("Detektering misslyckades för foto %s", pid)
+                photo.ai_faces_at = _now()
+                db.commit()
+                JOB["done"] += 1
                 continue
 
             confirmed = [f for f in photo.faces if f.confirmed and f.tag_id]
@@ -92,30 +99,6 @@ def _run_job(force: bool) -> None:
                     continue
                 if any(faces_ai.iou(d, f) >= _IOU_DUP_AI for f in ai_existing):
                     continue
-                candidates.setdefault(pid, []).append(d)
-
-            if JOB["done"] % 20 == 0:
-                db.commit()  # persistera backfillade embeddings
-        db.commit()
-
-        # Referens: bekräftade, namngivna (ej platshållare) ansikten med embedding.
-        JOB["message"] = "Matchar mot kända personer..."
-        rows = (
-            db.query(FaceRegion.tag_id, FaceRegion.embedding)
-            .join(Tag, Tag.id == FaceRegion.tag_id)
-            .filter(
-                FaceRegion.confirmed == 1,
-                FaceRegion.embedding.isnot(None),
-                Tag.placeholder == 0,
-            )
-            .all()
-        )
-        matcher = faces_ai.build_matcher(rows)
-
-        # Pass 2: skapa förslag och markera fotot som behandlat i samma commit.
-        added = 0
-        for i, pid in enumerate(processed):
-            for d in candidates.get(pid, []):
                 tag_id, _score = matcher.suggest(d["embedding"])
                 db.add(FaceRegion(
                     photo_id=pid, tag_id=None,
@@ -125,13 +108,12 @@ def _run_job(force: bool) -> None:
                     suggested_tag_id=tag_id,
                 ))
                 added += 1
-            photo = db.get(Photo, pid)
-            if photo:
-                photo.ai_faces_at = _now()
-            if i % 20 == 0:
-                db.commit()
-        db.commit()
-        JOB.update(added=added, message=f"Klart: {added} nya ansiktsförslag.")
+
+            photo.ai_faces_at = _now()
+            db.commit()  # per foto -> kraschsäkert + kön fylls löpande
+            JOB["done"] += 1
+            JOB["added"] = added
+        JOB["message"] = f"Klart: {added} nya ansiktsförslag."
     except Exception as e:
         logger.exception("AI-jobbet kraschade")
         JOB["error"] = str(e)
@@ -171,9 +153,9 @@ def _pending_faces_query(db: Session):
     )
 
 
-@router.get("/api/faces/ai/photos")
-def pending_photos(db: Session = Depends(get_db)):
-    """Foton med obekräftade AI-ansikten, med foto-thumb + ansikts-crops."""
+def _pending_photos(db: Session) -> list[dict]:
+    """Foton med obekräftade AI-ansikten i filnamnsordning (delas av listvy +
+    prev/next-navigeringen)."""
     faces = _pending_faces_query(db).order_by(FaceRegion.id).all()
     by_photo: dict[int, dict] = {}
     for f in faces:
@@ -184,8 +166,15 @@ def pending_photos(db: Session = Depends(get_db)):
             "photo_id": p.id, "filename": p.filename, "face_ids": [],
         })
         d["face_ids"].append(f.id)
-    photos = sorted(by_photo.values(), key=lambda d: d["filename"])
-    return JSONResponse({"photos": photos, "total": len(faces)})
+    return sorted(by_photo.values(), key=lambda d: d["filename"])
+
+
+@router.get("/api/faces/ai/photos")
+def pending_photos(db: Session = Depends(get_db)):
+    """Foton med obekräftade AI-ansikten, med foto-thumb + ansikts-crops."""
+    photos = _pending_photos(db)
+    total = sum(len(p["face_ids"]) for p in photos)
+    return JSONResponse({"photos": photos, "total": total})
 
 
 def _build_db_matcher(db: Session) -> faces_ai.Matcher:
@@ -232,9 +221,15 @@ def photo_faces(photo_id: int, db: Session = Depends(get_db)):
             "id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,
             "suggestions": suggestions,
         })
+    # Redan bekräftade/manuella rutor visas som kontext (med namn), utan åtgärder.
+    confirmed = [
+        {"id": f.id, "x": f.x, "y": f.y, "w": f.w, "h": f.h,
+         "name": f.tag.name if f.tag else "?"}
+        for f in photo.faces if f.confirmed and f.tag_id
+    ]
     return JSONResponse({
         "photo": {"id": photo.id, "filename": photo.filename},
-        "faces": out,
+        "faces": out, "confirmed": confirmed,
     })
 
 
@@ -280,7 +275,21 @@ def review_photo_page(photo_id: int, request: Request, db: Session = Depends(get
     photo = db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "Foto hittades inte")
+    # Prev/next bland foton med obekräftade ansikten (filnamnsordning, samma som
+    # listvyn). Är fotot redan klart (ej i listan) faller vi tillbaka på listans
+    # ändar så man ändå kan ta sig vidare.
+    ids = [p["photo_id"] for p in _pending_photos(db)]
+    prev_id = next_id = None
+    pos, total = 0, len(ids)
+    if photo_id in ids:
+        i = ids.index(photo_id)
+        pos = i + 1
+        prev_id = ids[i - 1] if i > 0 else None
+        next_id = ids[i + 1] if i < len(ids) - 1 else None
+    elif ids:
+        next_id = ids[0]
     return templates.TemplateResponse(
         request, "faces_review_photo.html",
-        {"photo": photo},
+        {"photo": photo, "prev_id": prev_id, "next_id": next_id,
+         "pos": pos, "total": total},
     )

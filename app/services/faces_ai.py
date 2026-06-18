@@ -49,11 +49,27 @@ def _normalize(emb: np.ndarray) -> np.ndarray:
     return emb / n if n else emb
 
 
+_DETECT_MAX = 1600  # nedskala stora original innan detektering (fart)
+# InsightFace ger en tight ruta kring ansiktet (saknar öron/hår). Vi utökar den
+# lagrade rutan med marginal - mer upptill (hår) - så rutor och tumnaglar visar
+# hela huvudet. Påverkar bara koordinaterna, inte embeddingen (som beräknas på
+# den tighta ansiktsuppriktningen).
+_PAD_X = 0.30
+_PAD_TOP = 0.45
+_PAD_BOTTOM = 0.18
+
+
 def detect_in_photo(photo) -> list[dict]:
     """Detektera ansikten i ett foto. Returnerar en lista med dicts:
-    {x, y, w, h (normaliserade), embedding (np.float32 512-d), det_score}."""
+    {x, y, w, h (normaliserade), embedding (np.float32 512-d), det_score}.
+    Stora original skalas ned till max 1600px - detektorn kör ändå mot 640px
+    internt, så det kostar inget i träffsäkerhet men sparar mycket tid/minne
+    på högupplösta TIFF-scans. Koordinaterna är normaliserade -> oförändrade."""
     img = load_oriented(photo.path if isinstance(photo.path, str) else str(photo.path),
                         photo.rotation or 0)
+    if max(img.size) > _DETECT_MAX:
+        img = img.copy()
+        img.thumbnail((_DETECT_MAX, _DETECT_MAX))
     W, H = img.size
     arr = np.asarray(img)[:, :, ::-1]  # RGB -> BGR
     out = []
@@ -63,9 +79,16 @@ def detect_in_photo(photo) -> list[dict]:
         x2, y2 = min(float(W), x2), min(float(H), y2)
         if x2 <= x1 or y2 <= y1:
             continue
+        # Utöka rutan med marginal (öron/hår). Embeddingen tas från den tighta
+        # detekteringen oförändrad.
+        fw, fh = x2 - x1, y2 - y1
+        px1 = max(0.0, x1 - _PAD_X * fw)
+        px2 = min(float(W), x2 + _PAD_X * fw)
+        py1 = max(0.0, y1 - _PAD_TOP * fh)
+        py2 = min(float(H), y2 + _PAD_BOTTOM * fh)
         out.append({
-            "x": x1 / W, "y": y1 / H,
-            "w": (x2 - x1) / W, "h": (y2 - y1) / H,
+            "x": px1 / W, "y": py1 / H,
+            "w": (px2 - px1) / W, "h": (py2 - py1) / H,
             "embedding": np.asarray(f.embedding, dtype=np.float32),
             "det_score": float(f.det_score),
         })

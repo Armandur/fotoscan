@@ -59,10 +59,13 @@ photos/                exempel/testbilder (gitignored)
 ## Designbeslut
 - **Metadata i DB, inte i filerna.** Snabb sökning, ångerbart, funkar för
   negativ utan EXIF. Inbäddning till EXIF/XMP sker vid export (`services/exporter.py`).
-  **Långsiktig riktning (se todo "Metadata-import vid scan"):** filen ska bli den
-  portabla sanningskällan - "har du filen har du metadatan". Det kräver att scan
-  även LÄSER tillbaka inbäddad metadata in i DB:n (idag läses bara `DateTimeOriginal`).
-  Tills dess är DB-backupen (`/api/backup`) den primära portabiliteten.
+  **Långsiktig riktning (se todo "Filen som portabel sanningskälla"):** filen ska
+  bli den portabla, delbara sanningskällan - "har du filen har du metadatan".
+  Planen är INTE att läsa tillbaka metadata in i fotoscan, utan att (1) säkra
+  komplett inbäddning vid export och (2) bygga en separat, fristående visnings-app
+  som läser de exporterade filerna read-only (för att dela med släkten). Fotoscan
+  förblir kurerings-verktyget; DB-backupen (`/api/backup`) är dess interna
+  portabilitet.
 - **Datum som fritext + härledda fält.** `date_text` ("ca 1975", "sommaren 1962",
   "2003-10-01") för människor. `services/dates.parse_date_text` härleder
   `date_year`, `date_month` och `date_precision` (day/month/season/year/"") vid

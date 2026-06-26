@@ -55,15 +55,22 @@
   färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
-- [ ] **Metadata-import vid scan (filen som portabel sanningskälla).** Långsiktigt
-  mål: "har du filen har du metadatan". Scan ska kunna LÄSA tillbaka inbäddad
-  metadata (XMP/EXIF/MWG-rs) - personer, taggar, plats, datum, anteckning, källa,
-  ansiktsregioner - in i DB:n, inte bara `DateTimeOriginal`. Speglar exportens
-  mappning (`services/exporter.py`) baklänges via exiftool. Då blir exporterade
-  filer round-trippbara och externt taggade foton kan intas. Designval att ta:
-  import bara för NYA foton vs synk vid varje scan; konflikthantering DB vs fil
-  (vinnare/tidsstämpel); och om export+import-paret ska bli standardarbetsflödet
-  i stället för DB-backup som primär portabilitet.
+- [ ] **Filen som portabel sanningskälla -> separat visnings-app.** Mål: "har du
+  filen har du metadatan", och en färdig samling ska kunna delas med släkten utan
+  åtkomst till kurerings-appen. Lösning i två delar (ersätter idén om metadata-
+  import tillbaka in i fotoscan):
+  1. **Fotoscan: säkerställ komplett metadata-inbäddning vid export.** Verifiera
+     att ALLT skrivs till filen vid export (`services/exporter.py`) - personer,
+     taggar (platt + hierarkisk), plats, datum, anteckning, källa, GPS,
+     ansiktsregioner (MWG-rs). Det mesta finns; kontrollera att inget tappas så
+     den exporterade filen verkligen är komplett och självbärande.
+  2. **Ny, fristående visnings-app** (eget litet projekt, INTE i fotoscan): pekar
+     på en mapp exporterade foton, läser den inbäddade metadatan (XMP/EXIF/MWG-rs
+     via exiftool), bygger ett eget index och visar read-only galleri/personer/
+     karta/tidslinje. Ingen koppling till fotoscans DB. Tunn, delbar/hostbar för
+     släkten. Här bor metadata-LÄSningen - fotoscan förblir rent kurerings-verktyg.
+  Konsekvens: ingen round-trip-import behövs i fotoscan; DB-backup förblir
+  fotoscans interna portabilitet, export+visnings-app är delningsvägen.
 - [x] **Hantera HEIC/HEIF.** `pillow-heif` registreras i `scanner.py` så Pillow
   kan öppna iPhone-foton; `.heic`/`.heif` i SUPPORTED_EXTENSIONS. Scan, EXIF-datum,
   thumbnail, `/image` (renderas till JPEG) och export verifierade.

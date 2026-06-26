@@ -7,6 +7,17 @@
 #tree { width: 100%; height: calc(100vh - 160px); background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); }
 .f3 .card-image img, .f3 .card_image img { background: #000; }
+.ov-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.ov-card { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px;
+    background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius); cursor: pointer; color: var(--bs-body-color);
+    max-width: 240px; }
+.ov-card:hover { border-color: var(--bs-primary); }
+.ov-card.active { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+.ov-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex: 0 0 auto; }
+.ov-name { font-size: .9rem; }
+.ov-small .ov-thumb { width: 28px; height: 28px; }
+.ov-small .ov-card { padding: 2px 8px 2px 2px; }
 </style>
 {% endblock %}
 
@@ -24,6 +35,8 @@
     </div>
 </div>
 <div class="text-secondary small mb-2" id="tree-info"></div>
+
+<div id="overview" class="mb-3"></div>
 
 <div id="tree" class="f3"></div>
 <div class="alert alert-secondary mt-3 d-none" id="tree-empty">
@@ -43,6 +56,39 @@
 
     function go(id) { location.href = "/persons/tree" + (id ? "?start=" + id : ""); }
 
+    function compThumb(c) {
+        return c.region_id
+            ? `<img class="ov-thumb" src="/api/faces/${c.region_id}/thumb" alt="">`
+            : `<span class="ov-thumb d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></span>`;
+    }
+
+    function renderOverview(components, mainId) {
+        const root = document.getElementById("overview");
+        const families = components.filter(c => c.size >= 3);
+        const small = components.filter(c => c.size < 3);
+        let html = "";
+        if (families.length) {
+            html += `<div class="ov-grid">` + families.map(c =>
+                `<button class="ov-card${String(c.main) === String(mainId) ? " active" : ""}" data-main="${c.main}" title="${escapeHtml(c.name)}">
+                    ${compThumb(c)}
+                    <span class="ov-name text-truncate">${escapeHtml(c.name)}</span>
+                    <span class="badge text-bg-secondary">${c.size}</span>
+                 </button>`).join("") + `</div>`;
+        }
+        if (small.length) {
+            html += `<div class="small text-secondary mt-2 mb-1">Övriga (par och enstaka länkar)</div>`;
+            html += `<div class="ov-grid ov-small">` + small.map(c =>
+                `<button class="ov-card${String(c.main) === String(mainId) ? " active" : ""}" data-main="${c.main}" title="${escapeHtml(c.name)}">
+                    ${compThumb(c)}
+                    <span class="ov-name text-truncate">${escapeHtml(c.name)}</span>
+                    <span class="badge text-bg-secondary">${c.size}</span>
+                 </button>`).join("") + `</div>`;
+        }
+        root.innerHTML = html;
+        root.querySelectorAll(".ov-card").forEach(b =>
+            b.addEventListener("click", () => go(b.dataset.main)));
+    }
+
     async function load() {
         let res;
         try { res = await apiFetch("/api/persons/tree-data" + (startId ? "?start=" + startId : "")); }
@@ -56,6 +102,8 @@
         const parts = [`${res.components.length} släkt${res.components.length !== 1 ? "er" : ""}`];
         if (res.unlinked) parts.push(`${res.unlinked} personer utan familjelänkar (visas ej)`);
         info.textContent = parts.join(" · ");
+
+        renderOverview(res.components, res.main_id);
 
         if (!res.data.length) {
             document.getElementById("tree").classList.add("d-none");

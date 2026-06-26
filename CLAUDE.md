@@ -99,7 +99,9 @@ photos/                exempel/testbilder (gitignored)
   tree-data` bygger family-chart-JSON ur `PersonLink` (union-find -> komponenter;
   partners->spouses, parent->children + father/mother godtyckligt då kön ej spåras).
   Komponent-väljare + personsök byter släkt (`?start=id`); klick på kort öppnar
-  `/persons/{id}`. OBS: `/persons/tree` MÅSTE definieras före `/persons/{tag_id}`
+  `/persons/{id}`. Ovanför trädet en **släkt-översikt** (plan C): kort per släkt
+  (≥3 personer) + "Övriga" (par/enstaka), klick laddar släkten - drill-in.
+  OBS: `/persons/tree` MÅSTE definieras före `/persons/{tag_id}`
   (int-validering sker efter path-matchning -> annars 422).
 - **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
   unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett

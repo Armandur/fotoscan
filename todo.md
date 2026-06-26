@@ -30,14 +30,12 @@
   taget ur `PersonLink` (`/api/persons/tree-data`, union-find -> komponenter).
   Komponent-väljare + personsök byter släkt (`?start=id`), klick på kort öppnar
   `/persons/{id}`, olänkade personer räknas men visas ej.
-- [ ] **Släkt-översikt på /persons/tree (plan C).** Visuell översikt över ALLA
-  släkter ovanför trädet i stället för bara dropdown: ett kort per komponent
-  (representativ person - tumnagel + namn + antal personer, störst först), klick
-  -> laddar den släkten i family-chart-vyn (`?start=rep`). Enstaka/par i en egen
-  "Övriga"-sektion. Återanvänder `/api/persons/tree-data`s komponentlista (lägg
-  till `region_id` per representant). Drill-in-modell: översikt för att hitta
-  släkten, family-chart för att utforska den. (family-chart visar en komponent
-  i taget, så detta ersätter "rita alla parallellt".)
+- [x] **Släkt-översikt på /persons/tree (plan C).** Visuell översikt ovanför
+  trädet: kort per släkt (representant-tumnagel + namn + antal, störst först,
+  ≥3 personer); par/enstaka i egen "Övriga"-sektion. Klick laddar släkten i
+  family-chart-vyn (`?start=rep`). Drill-in: översikt för att hitta, family-chart
+  för att utforska. Komponentlistan i `/api/persons/tree-data` har `name`/
+  `region_id` per representant.
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

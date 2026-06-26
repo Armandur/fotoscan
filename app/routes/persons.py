@@ -555,9 +555,14 @@ def persons_tree_data(start: int | None = None, db: Session = Depends(get_db)):
     # Komponent-lista för växlaren.
     comp_list = []
     for comp in comps:
-        r = db.get(Tag, rep(comp))
-        comp_list.append({"main": rep(comp), "size": len(comp),
-                          "label": (r.name if r else "?") + f" ({len(comp)})"})
+        rid_person = rep(comp)
+        r = db.get(Tag, rid_person)
+        comp_list.append({
+            "main": rid_person, "size": len(comp),
+            "name": r.name if r else "?",
+            "label": (r.name if r else "?") + f" ({len(comp)})",
+            "region_id": _avatar_region_id(db, r) if r else None,
+        })
 
     if not comps:
         return JSONResponse({"data": [], "main_id": None, "components": [],

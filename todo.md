@@ -13,6 +13,12 @@
 - [x] **Släktträd-vy på /persons/{n}.** Familj-sektionen visar nu föräldrar/
   personen+partner/barn som ett litet träd med tumnaglar (`_relations` ger
   `region_id`).
+- [ ] **Smartare familjelänkar (partner/barn-symmetri).** När man lägger till ett
+  barn till en person som har en partner: föreslå att lägga barnet även till
+  partnern (samma barn -> båda föräldrarna). När man lägger till en partner:
+  föreslå att koppla personens befintliga barn även till den nya partnern (välj
+  vilka i en lista). Bygger på `PersonLink` (parent-relationer) - lägg till
+  motsvarande länkar efter bekräftelse, inte automatiskt.
 
 ### Karta/GPS
 - [ ] **Förvald kartposition från Plats.** När GPS-kartan öppnas i detaljvyn och

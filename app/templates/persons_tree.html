@@ -123,10 +123,15 @@
         // Klick på kort = family-charts standardnavigering (centrera om/expandera).
         // För att öppna personsidan läggs en liten länk i kortets hörn i stället.
         card.setOnCardUpdate(function (d) {
-            const el = this;
-            if (!el || !el.querySelector || el.querySelector(".tree-open-link")) return;
+            const wrap = this;
+            if (!wrap || !wrap.querySelector) return;
+            const cardEl = wrap.querySelector(".card");
+            // HTML-kort krävs för en HTML-länk; SVG-kort hanteras ej här.
+            if (!(cardEl instanceof HTMLElement)) return;
+            if (cardEl.querySelector(".tree-open-link")) return;
             const pid = (d && d.data && d.data.id) || (d && d.id);
             if (!pid) return;
+            cardEl.style.position = "relative";
             const a = document.createElement("a");
             a.className = "tree-open-link";
             a.href = "/persons/" + pid;
@@ -134,7 +139,7 @@
             a.title = "Öppna personsida";
             a.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
             a.addEventListener("click", (e) => e.stopPropagation());  // ej recenter
-            el.appendChild(a);
+            cardEl.appendChild(a);
         });
         chart.updateTree({ initial: true });
     }

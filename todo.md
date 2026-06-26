@@ -28,10 +28,12 @@
 - [ ] **Global släktträdsvy (`/persons/tree`).** Rita hela släktgrafen ur
   `PersonLink`: sammanhängande komponenter (släkter) parallellt, personer utan
   länkar grupperade för sig. Noder med tumnaglar, klickbara till `/persons/{n}`.
-  **Använd ett befintligt självhostat lib i stället för egen graf-layout:**
-  family-chart (donatso, MIT, d3 - matas med JSON vi bygger ur PersonLink) eller
-  Topola (d3, läser GEDCOM direkt -> nästan gratis om GEDCOM-exporten finns).
-  Vendora libbet under `static/vendor/` (ingen CDN).
+  **Valt lib: family-chart** (donatso, MIT, d3; https://github.com/donatso/family-chart
+  , demo https://donatso.github.io/family-chart-doc/). Matas med en JSON-array
+  byggd ur PersonLink - behöver INTE GEDCOM, så trädvyn är ett eget spår.
+  Modell-mappning: partners -> `spouses`, parent-länkar -> `children`/`father`+
+  `mother` (vi spårar inte kön -> tilldela father/mother godtyckligt, påverkar
+  bara vänster/höger-placering). Vendora libbet under `static/vendor/` (ingen CDN).
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

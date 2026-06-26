@@ -29,9 +29,15 @@
   `static/vendor/family-chart/`) renderar en släkt (sammanhängande komponent) i
   taget ur `PersonLink` (`/api/persons/tree-data`, union-find -> komponenter).
   Komponent-väljare + personsök byter släkt (`?start=id`), klick på kort öppnar
-  `/persons/{id}`, olänkade personer räknas men visas ej. (Möjlig förfining: rita
-  flera komponenter parallellt samtidigt + grupperade singlar - family-chart visar
-  en komponent i taget.)
+  `/persons/{id}`, olänkade personer räknas men visas ej.
+- [ ] **Släkt-översikt på /persons/tree (plan C).** Visuell översikt över ALLA
+  släkter ovanför trädet i stället för bara dropdown: ett kort per komponent
+  (representativ person - tumnagel + namn + antal personer, störst först), klick
+  -> laddar den släkten i family-chart-vyn (`?start=rep`). Enstaka/par i en egen
+  "Övriga"-sektion. Återanvänder `/api/persons/tree-data`s komponentlista (lägg
+  till `region_id` per representant). Drill-in-modell: översikt för att hitta
+  släkten, family-chart för att utforska den. (family-chart visar en komponent
+  i taget, så detta ersätter "rita alla parallellt".)
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

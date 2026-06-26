@@ -31,10 +31,13 @@
   enkel layout, förfina sen.
 
 ### Karta/GPS
-- [ ] **Förvald kartposition från Plats.** När GPS-kartan öppnas i detaljvyn och
-  fotot har en Plats med beräknad medelposition (`place_avg_gps`, visas redan i
-  detaljvyns `place_gps`), zooma Leaflet direkt dit i stället för default-vyn -
-  så slipper man adressök som ett extra moment. Återanvänd den positionen.
+- [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):
+  `map.js` centrerar på fotots egen GPS, annars platsens medel-GPS (`place_gps` ->
+  `#map` data-attribut), annars default-vyn.
+- [ ] **Geokoda platsnamn som kart-fallback.** När fotot saknar egen GPS OCH
+  platsen saknar medel-GPS (inget annat foto på platsen har position än), auto-
+  geokoda platsens *namn* (`/api/geocode`) när kartan öppnas och centrera dit -
+  så slipper man adressök även för platsens första foto.
 
 ### AI-ansiktsigenkänning - vidareutveckling
 - [x] **Klustra okända ansikten.** `/faces/clusters` + `/api/faces/ai/clusters`

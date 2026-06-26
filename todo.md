@@ -2,6 +2,18 @@
 
 ## Planerat
 
+### Personvyn (/persons + /persons/{n})
+- [ ] **Sök, filtrering & sortering i /persons.** Sök på namn/alias, filtrera
+  (t.ex. identifierade/oidentifierade, har foton, har familjelänkar), sortera
+  (namn, antal foton, född/död). Bör återanvända befintlig sektionspaginering.
+- [ ] **Kort- vs listvy i /persons.** Växla mellan dagens tumnagel-kort och en
+  kompakt listvy (rad per person). Spara valet (localStorage, som S/M/L).
+- [ ] **Mer metadata på personkort + i listvy.** Visa t.ex. född/död, antal foton,
+  alias, ev. relationer - inte bara namn + tumnagel + antal. I listvyn som kolumner.
+- [ ] **Släktträd-vy på /persons/{n}.** Förbättra Familj-sektionen: visa relationer
+  (föräldrar/barn/partner) som ett litet släktträd med **tumnaglar** i stället för
+  bara namn-chips. Bygger på `PersonLink` + `_relations`.
+
 ### AI-ansiktsigenkänning - vidareutveckling
 - [x] **Klustra okända ansikten.** `/faces/clusters` + `/api/faces/ai/clusters`
   grupperar obekräftade AI-ansikten på embedding-likhet (`cluster_embeddings`,

@@ -30,7 +30,7 @@ app/
     export.py          POST /api/photos/{id}/export, POST /api/export
     faces.py           ansiktsregioner: CRUD, /api/persons, /api/faces/{id}/thumb
     faces_ai.py        AI-ansiktsjobb (bakgrundstråd) + granskning (/faces/review fotolista, /faces/review/{id} per foto)
-    persons.py         personvy (lista/detalj), namnbyte, merge, borttagning
+    persons.py         personvy (lista/detalj/släktträd), namnbyte, merge, borttagning, familjelänkar
     tags.py            /api/tags (autocomplete) + taggvy (lista/detalj/skapa/byt namn/ta bort)
     places.py          Place-tabell: vy (lista/detalj), byt namn/merge, ta bort, get_or_create_place, /map + /api/map/points
     albums.py          Album + AlbumPhoto: vy (lista/detalj=foto-ordning), layoutvy (WYSIWYG-sidor + avsnitt), inställningar, PDF
@@ -93,7 +93,14 @@ photos/                exempel/testbilder (gitignored)
   Person-väljaren för nya länkar är ett tumnagel-sök (`/api/persons`), inte en
   dropdown. Efter att en länk lagts till föreslås **kompletterande förälder-länkar**
   (`relation-suggestions` -> modal, bekräftas via `relations/apply`) så delade barn
-  mellan partners blir symmetriska - aldrig automatiskt.
+  mellan partners blir symmetriska - aldrig automatiskt. **Släktträdsvy**
+  (`/persons/tree`): family-chart (vendorad under `static/vendor/family-chart/`,
+  kräver d3) renderar en släkt (sammanhängande komponent) i taget; `/api/persons/
+  tree-data` bygger family-chart-JSON ur `PersonLink` (union-find -> komponenter;
+  partners->spouses, parent->children + father/mother godtyckligt då kön ej spåras).
+  Komponent-väljare + personsök byter släkt (`?start=id`); klick på kort öppnar
+  `/persons/{id}`. OBS: `/persons/tree` MÅSTE definieras före `/persons/{tag_id}`
+  (int-validering sker efter path-matchning -> annars 422).
 - **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
   unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett
   träd-UI där förälder kan väljas med cykelskydd. Detaljvyn (`/tags/{id}`) visar

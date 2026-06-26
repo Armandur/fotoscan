@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Släktträd - Fotoscan{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/family-chart/family-chart.css">
+<style>
+#tree { width: 100%; height: calc(100vh - 160px); background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); }
+.f3 .card-image img, .f3 .card_image img { background: #000; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    <h1 class="h4 mb-0">Släktträd</h1>
+    <div class="d-flex gap-2 align-items-center">
+        <select id="comp-select" class="form-select form-select-sm" style="width:auto" title="Välj släkt"></select>
+        <div class="position-relative">
+            <input type="text" class="form-control form-control-sm" id="tree-search"
+                   placeholder="Sök person..." autocomplete="off" style="min-width:200px">
+            <div class="face-ac" id="tree-ac" style="position:absolute;left:0;right:0;z-index:30"></div>
+        </div>
+        <a href="/persons" class="btn btn-outline-secondary btn-sm"><i class="bi bi-people"></i> Lista</a>
+    </div>
+</div>
+<div class="text-secondary small mb-2" id="tree-info"></div>
+
+<div id="tree" class="f3"></div>
+<div class="alert alert-secondary mt-3 d-none" id="tree-empty">
+    Inga familjelänkar än. Koppla föräldrar/barn/partner på en persons sida
+    (<a href="/persons">Personer</a>) så ritas trädet här.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/vendor/family-chart/d3.v7.min.js"></script>
+<script src="/static/vendor/family-chart/family-chart.js"></script>
+<script>
+(() => {
+    const startId = "{{ start }}";
+    const info = document.getElementById("tree-info");
+    const compSel = document.getElementById("comp-select");
+
+    function go(id) { location.href = "/persons/tree" + (id ? "?start=" + id : ""); }
+
+    async function load() {
+        let res;
+        try { res = await apiFetch("/api/persons/tree-data" + (startId ? "?start=" + startId : "")); }
+        catch (e) { info.textContent = "Kunde inte ladda."; return; }
+
+        // Komponent-växlare.
+        compSel.innerHTML = res.components.map(c =>
+            `<option value="${c.main}" ${String(c.main) === String(res.main_id) ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
+        compSel.onchange = () => go(compSel.value);
+
+        const parts = [`${res.components.length} släkt${res.components.length !== 1 ? "er" : ""}`];
+        if (res.unlinked) parts.push(`${res.unlinked} personer utan familjelänkar (visas ej)`);
+        info.textContent = parts.join(" · ");
+
+        if (!res.data.length) {
+            document.getElementById("tree").classList.add("d-none");
+            document.getElementById("tree-empty").classList.remove("d-none");
+            return;
+        }
+
+        // family-chart använder data[0] som "main" - lägg vald person först.
+        const data = res.data.slice();
+        const mi = data.findIndex(d => d.id === res.main_id);
+        if (mi > 0) { const [m] = data.splice(mi, 1); data.unshift(m); }
+
+        const chart = f3.createChart("#tree", data)
+            .setTransitionTime(800)
+            .setOrientationVertical();
+        const card = chart.setCardHtml()
+            .setCardDisplay([["name"], ["birthday"]])
+            .setMiniTree(true)
+            .setStyle("imageRect");
+        // Klick på kort -> öppna personsidan (mini-trädet sköter navigering).
+        card.setOnCardClick((e, d) => {
+            // Datum-formen kan variera: {id,data,rels} direkt eller d3-nod (d.data).
+            const pid = (d && d.data && d.data.id) || (d && d.id);
+            if (pid) window.open("/persons/" + pid, "_blank");
+        });
+        chart.updateTree({ initial: true });
+    }
+
+    // Personsök med tumnaglar -> hoppa till den personens släkt.
+    const search = document.getElementById("tree-search");
+    const ac = document.getElementById("tree-ac");
+    let items = [], active = -1;
+    function renderAc() {
+        ac.innerHTML = items.map((p, i) => {
+            const thumb = p.region_id
+                ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
+                : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
+            return `<div class="face-ac-item${i === active ? " active" : ""}" data-id="${p.id}">`
+                + thumb + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+                + `<span class="face-ac-count">${p.count}</span></div>`;
+        }).join("");
+        ac.classList.toggle("show", items.length > 0);
+    }
+    async function runSearch() {
+        try { items = await apiFetch(`/api/persons?q=${encodeURIComponent(search.value.trim())}`); }
+        catch (e) { items = []; }
+        active = -1; renderAc();
+    }
+    search.addEventListener("input", runSearch);
+    search.addEventListener("focus", runSearch);
+    search.addEventListener("blur", () => setTimeout(() => ac.classList.remove("show"), 150));
+    ac.addEventListener("mousedown", (e) => {
+        const it = e.target.closest(".face-ac-item");
+        if (it) { e.preventDefault(); go(it.dataset.id); }
+    });
+    search.addEventListener("keydown", (e) => {
+        if (!items.length) return;
+        if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); renderAc(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); renderAc(); }
+        else if (e.key === "Enter" && active >= 0) { e.preventDefault(); go(items[active].id); }
+    });
+
+    load();
+})();
+</script>
+{% endblock %}

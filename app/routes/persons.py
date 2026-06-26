@@ -234,6 +234,16 @@ def persons_page(
     )
 
 
+@router.get("/persons/tree", response_class=HTMLResponse)
+def persons_tree_page(request: Request, start: int | None = None,
+                      db: Session = Depends(get_db)):
+    # MÅSTE ligga före /persons/{tag_id} - annars fångar int-routen "tree"
+    # och kastar 422 (typvalidering sker efter path-matchning i FastAPI).
+    return templates.TemplateResponse(
+        request, "persons_tree.html", {"start": start or ""},
+    )
+
+
 @router.get("/persons/{tag_id}", response_class=HTMLResponse)
 def person_detail(
     tag_id: int, request: Request,
@@ -483,3 +493,115 @@ def merge_person(
     name = target.name
     _merge_person(db, source, target)
     return JSONResponse({"ok": True, "id": data.into_id, "name": name})
+
+
+def _build_family_graph(db: Session):
+    """Bygg släktgrafen ur PersonLink. Returnerar (nodes, partner_pairs,
+    parent_pairs) där nodes = set av person-id med någon länk."""
+    links = db.query(PersonLink).all()
+    nodes: set[int] = set()
+    partners: list[tuple[int, int]] = []
+    parents: list[tuple[int, int]] = []  # (förälder, barn)
+    for lk in links:
+        nodes.add(lk.person_id)
+        nodes.add(lk.related_id)
+        if lk.relation == "partner":
+            partners.append((lk.person_id, lk.related_id))
+        elif lk.relation == "parent":
+            parents.append((lk.person_id, lk.related_id))
+    return nodes, partners, parents
+
+
+def _components(nodes, partners, parents) -> list[list[int]]:
+    """Sammanhängande komponenter (union-find) över både partner- och
+    förälderkanter."""
+    parent_of = {n: n for n in nodes}
+
+    def find(x):
+        while parent_of[x] != x:
+            parent_of[x] = parent_of[parent_of[x]]
+            x = parent_of[x]
+        return x
+
+    def union(a, b):
+        parent_of[find(a)] = find(b)
+
+    for a, b in partners + parents:
+        union(a, b)
+    groups: dict[int, list[int]] = {}
+    for n in nodes:
+        groups.setdefault(find(n), []).append(n)
+    return sorted(groups.values(), key=len, reverse=True)
+
+
+@router.get("/api/persons/tree-data")
+def persons_tree_data(start: int | None = None, db: Session = Depends(get_db)):
+    """family-chart-data för EN släkt (komponent). `start` väljer vilken person
+    (och därmed komponent) som visas; annars största komponentens nav."""
+    nodes, partners, parents = _build_family_graph(db)
+    comps = _components(nodes, partners, parents)
+    unlinked = db.query(Tag).filter(
+        Tag.kind == "person", Tag.id.notin_(nodes or {-1})).count()
+
+    # Länk-räkning per person (för att välja representativt nav).
+    deg: dict[int, int] = {n: 0 for n in nodes}
+    for a, b in partners + parents:
+        deg[a] = deg.get(a, 0) + 1
+        deg[b] = deg.get(b, 0) + 1
+
+    def rep(comp):  # representativ person = flest länkar
+        return max(comp, key=lambda n: deg.get(n, 0))
+
+    # Komponent-lista för växlaren.
+    comp_list = []
+    for comp in comps:
+        r = db.get(Tag, rep(comp))
+        comp_list.append({"main": rep(comp), "size": len(comp),
+                          "label": (r.name if r else "?") + f" ({len(comp)})"})
+
+    if not comps:
+        return JSONResponse({"data": [], "main_id": None, "components": [],
+                             "unlinked": unlinked})
+
+    # Välj komponent: den som innehåller `start`, annars största.
+    chosen = comps[0]
+    if start:
+        for comp in comps:
+            if start in comp:
+                chosen = comp
+                break
+    main_id = start if (start and start in chosen) else rep(chosen)
+
+    cset = set(chosen)
+    # Bygg rels per person inom komponenten.
+    rels: dict[int, dict] = {n: {"spouses": [], "children": []} for n in chosen}
+    for a, b in partners:
+        if a in cset and b in cset:
+            if str(b) not in rels[a]["spouses"]:
+                rels[a]["spouses"].append(str(b))
+            if str(a) not in rels[b]["spouses"]:
+                rels[b]["spouses"].append(str(a))
+    for p, c in parents:
+        if p in cset and c in cset:
+            rels[p]["children"].append(str(c))
+            # Tilldela förälder till father/mother-platsen (kön spåras inte).
+            slot = "father" if "father" not in rels[c] else "mother"
+            rels[c][slot] = str(p)
+
+    data = []
+    for n in chosen:
+        t = db.get(Tag, n)
+        if not t:
+            continue
+        rid = _avatar_region_id(db, t)
+        data.append({
+            "id": str(n),
+            "data": {
+                "name": t.name,
+                "birthday": (t.born or "") + (("–" + t.died) if t.died else ""),
+                "avatar": f"/api/faces/{rid}/thumb" if rid else "",
+            },
+            "rels": rels[n],
+        })
+    return JSONResponse({"data": data, "main_id": str(main_id),
+                         "components": comp_list, "unlinked": unlinked})

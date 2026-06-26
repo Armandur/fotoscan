@@ -25,15 +25,13 @@
   verktyg (Gramps, Ancestris, webtrees, MyHeritage). Här hör rikare relationstyper
   hemma - inte i fotoscans egen modell, som hålls enkel. Bygger på en helper som
   grupperar partner-par + delade barn till FAM-poster.
-- [ ] **Global släktträdsvy (`/persons/tree`).** Rita hela släktgrafen ur
-  `PersonLink`: sammanhängande komponenter (släkter) parallellt, personer utan
-  länkar grupperade för sig. Noder med tumnaglar, klickbara till `/persons/{n}`.
-  **Valt lib: family-chart** (donatso, MIT, d3; https://github.com/donatso/family-chart
-  , demo https://donatso.github.io/family-chart-doc/). Matas med en JSON-array
-  byggd ur PersonLink - behöver INTE GEDCOM, så trädvyn är ett eget spår.
-  Modell-mappning: partners -> `spouses`, parent-länkar -> `children`/`father`+
-  `mother` (vi spårar inte kön -> tilldela father/mother godtyckligt, påverkar
-  bara vänster/höger-placering). Vendora libbet under `static/vendor/` (ingen CDN).
+- [x] **Global släktträdsvy (`/persons/tree`).** family-chart (vendorad + d3 under
+  `static/vendor/family-chart/`) renderar en släkt (sammanhängande komponent) i
+  taget ur `PersonLink` (`/api/persons/tree-data`, union-find -> komponenter).
+  Komponent-väljare + personsök byter släkt (`?start=id`), klick på kort öppnar
+  `/persons/{id}`, olänkade personer räknas men visas ej. (Möjlig förfining: rita
+  flera komponenter parallellt samtidigt + grupperade singlar - family-chart visar
+  en komponent i taget.)
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

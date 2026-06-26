@@ -90,6 +90,10 @@ photos/                exempel/testbilder (gitignored)
   Redigeras i personvyn; merge pekar om länkar, delete städar dem. `/persons/{n}`
   visar familjen som ett litet **släktträd** med tumnaglar (`_relations` ger
   `region_id`): föräldrar överst, personen själv + partner i mitten, barn underst.
+  Person-väljaren för nya länkar är ett tumnagel-sök (`/api/persons`), inte en
+  dropdown. Efter att en länk lagts till föreslås **kompletterande förälder-länkar**
+  (`relation-suggestions` -> modal, bekräftas via `relations/apply`) så delade barn
+  mellan partners blir symmetriska - aldrig automatiskt.
 - **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
   unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett
   träd-UI där förälder kan väljas med cykelskydd. Detaljvyn (`/tags/{id}`) visar

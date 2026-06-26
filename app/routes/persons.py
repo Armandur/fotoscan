@@ -10,7 +10,7 @@ from app.config import BASE_DIR, ASSET_V
 from app.database import FaceRegion, PersonLink, Photo, Tag
 from app.deps import get_db
 from app.schemas import (
-    PersonMerge, PersonMeta, PersonRename, PersonThumb, RelationIn,
+    PersonMerge, PersonMeta, PersonRename, PersonThumb, RelationApply, RelationIn,
 )
 from app.services.context import context_card_qs
 from app.services.filtering import apply_dimensions, sort_order
@@ -386,6 +386,86 @@ def delete_relation(tag_id: int, link_id: int, db: Session = Depends(get_db)):
         db.delete(link)
         db.commit()
     return JSONResponse({"ok": True})
+
+
+def _partners(db: Session, pid: int) -> set[int]:
+    out = set()
+    for lk in db.query(PersonLink).filter(
+        PersonLink.relation == "partner",
+        or_(PersonLink.person_id == pid, PersonLink.related_id == pid),
+    ).all():
+        out.add(lk.related_id if lk.person_id == pid else lk.person_id)
+    return out
+
+
+def _children(db: Session, pid: int) -> set[int]:
+    return {r[0] for r in db.query(PersonLink.related_id).filter(
+        PersonLink.person_id == pid, PersonLink.relation == "parent").all()}
+
+
+def _is_parent(db: Session, parent_id: int, child_id: int) -> bool:
+    return db.query(PersonLink).filter(
+        PersonLink.person_id == parent_id, PersonLink.related_id == child_id,
+        PersonLink.relation == "parent",
+    ).first() is not None
+
+
+def _suggest_parent(db: Session, parent_id: int, child_id: int, out: list, seen: set):
+    """Lägg ett förslag (parent_id är förälder till child_id) om det inte redan
+    finns och inte redan föreslagits."""
+    key = (parent_id, child_id)
+    if key in seen or parent_id == child_id or _is_parent(db, parent_id, child_id):
+        return
+    p, c = db.get(Tag, parent_id), db.get(Tag, child_id)
+    if not p or not c:
+        return
+    seen.add(key)
+    out.append({
+        "person_id": parent_id, "related_id": child_id,
+        "parent_name": p.name, "parent_region_id": _avatar_region_id(db, p),
+        "child_name": c.name, "child_region_id": _avatar_region_id(db, c),
+    })
+
+
+@router.get("/api/persons/{tag_id}/relation-suggestions")
+def relation_suggestions(tag_id: int, related_id: int, relation: str,
+                         db: Session = Depends(get_db)):
+    """Föreslå kompletterande förälder-länkar efter att en relation lagts till,
+    så familjen blir symmetrisk (delade barn mellan partners)."""
+    out: list = []
+    seen: set = set()
+    if relation == "parent_of":
+        # tag är förälder till related_id (barnet) -> tags partners också förälder.
+        for pa in _partners(db, tag_id):
+            _suggest_parent(db, pa, related_id, out, seen)
+    elif relation == "child_of":
+        # related_id är förälder till tag -> related_ids partners också förälder.
+        for pa in _partners(db, related_id):
+            _suggest_parent(db, pa, tag_id, out, seen)
+    elif relation == "partner":
+        # tag & related_id är partners -> dela bådas barn med den andra.
+        for c in _children(db, tag_id):
+            _suggest_parent(db, related_id, c, out, seen)
+        for c in _children(db, related_id):
+            _suggest_parent(db, tag_id, c, out, seen)
+    return JSONResponse({"suggestions": out})
+
+
+@router.post("/api/persons/{tag_id}/relations/apply")
+def apply_relations(tag_id: int, data: RelationApply, db: Session = Depends(get_db)):
+    """Skapa flera förälder-länkar på en gång (från förslagen). Dedupar."""
+    added = 0
+    for lk in data.links:
+        p, c = db.get(Tag, lk.person_id), db.get(Tag, lk.related_id)
+        if not p or p.kind != "person" or not c or c.kind != "person":
+            continue
+        if lk.person_id == lk.related_id or _is_parent(db, lk.person_id, lk.related_id):
+            continue
+        db.add(PersonLink(person_id=lk.person_id, related_id=lk.related_id,
+                          relation="parent"))
+        added += 1
+    db.commit()
+    return JSONResponse({"ok": True, "added": added})
 
 
 @router.post("/api/persons/{tag_id}/merge")

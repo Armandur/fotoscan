@@ -45,6 +45,15 @@ class RelationIn(BaseModel):
     relation: str  # "parent_of" | "child_of" | "partner"
 
 
+class LinkPair(BaseModel):
+    person_id: int   # förälder
+    related_id: int  # barn
+
+
+class RelationApply(BaseModel):
+    links: list[LinkPair] = Field(default_factory=list)
+
+
 class FaceBox(BaseModel):
     x: float
     y: float

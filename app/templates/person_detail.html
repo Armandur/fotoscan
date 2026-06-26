@@ -126,6 +126,25 @@
     </div>
 </div>
 
+<div class="modal fade" id="rel-suggest-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Komplettera familjen?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-2">Följande förälder-länkar verkar saknas. Bocka för dem du vill lägga till:</p>
+                <div id="rel-suggest-list" class="d-flex flex-column gap-1"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="rel-suggest-skip">Hoppa över</button>
+                <button type="button" class="btn btn-primary" id="rel-suggest-apply">Lägg till valda</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if regions %}
 <div class="mb-3">
     <div class="small text-secondary mb-1">Tumnagel (klicka för att välja):</div>
@@ -239,9 +258,45 @@ relAddBtn.addEventListener("click", async () => {
     const relation = document.getElementById("rel-type").value;
     try {
         await apiFetch(`/api/persons/${personId}/relations`, { method: "POST", body: { related_id: relPick, relation } });
-        location.reload();
+        // Föreslå kompletterande förälder-länkar (delade barn mellan partners).
+        let sugg = [];
+        try {
+            const res = await apiFetch(`/api/persons/${personId}/relation-suggestions?related_id=${relPick}&relation=${relation}`);
+            sugg = res.suggestions || [];
+        } catch (e) { /* hoppa över förslag vid fel */ }
+        if (sugg.length) showRelSuggest(sugg);
+        else location.reload();
     } catch (err) { showToast("Kunde inte länka: " + err.message, true); }
 });
+
+function showRelSuggest(sugg) {
+    const list = document.getElementById("rel-suggest-list");
+    const thumb = (rid) => rid
+        ? `<img class="face-ac-thumb" src="/api/faces/${rid}/thumb" alt="" style="width:32px;height:32px">`
+        : `<span class="face-ac-thumb empty" style="width:32px;height:32px"><i class="bi bi-person"></i></span>`;
+    list.innerHTML = sugg.map((s, i) =>
+        `<label class="d-flex align-items-center gap-2 small">
+            <input type="checkbox" class="form-check-input mt-0 rel-sugg-cb" data-i="${i}" checked>
+            ${thumb(s.parent_region_id)}
+            <span><strong>${escapeHtml(s.parent_name)}</strong> som förälder till <strong>${escapeHtml(s.child_name)}</strong></span>
+        </label>`).join("");
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("rel-suggest-modal"));
+    document.getElementById("rel-suggest-apply").onclick = async () => {
+        const picks = [...document.querySelectorAll(".rel-sugg-cb")]
+            .filter(cb => cb.checked).map(cb => sugg[+cb.dataset.i]);
+        if (picks.length) {
+            try {
+                await apiFetch(`/api/persons/${personId}/relations/apply`, {
+                    method: "POST",
+                    body: { links: picks.map(s => ({ person_id: s.person_id, related_id: s.related_id })) },
+                });
+            } catch (e) { showToast("Kunde inte lägga till: " + e.message, true); }
+        }
+        location.reload();
+    };
+    document.getElementById("rel-suggest-skip").onclick = () => location.reload();
+    modal.show();
+}
 document.querySelectorAll(".rel-del").forEach(a => {
     a.addEventListener("click", async (e) => {
         e.preventDefault();

@@ -80,10 +80,13 @@ inget byggs in i imagen. Appen ser mounten som en vanlig mapp.
    client_id rekommenderas för att slippa kvotstrul).
 2. Montera read-only med `--allow-other` (+ `user_allow_other` i `/etc/fuse.conf`)
    så containern (annan uid) kan läsa, och `--vfs-cache-mode full` för att cacha
-   lästa filer lokalt. Montera till en egen sökväg, t.ex. `/mnt/disks/gdrive`
-   (undvik `/mnt/user/...` - shfs + FUSE krånglar).
-3. Bind-montera mounten in i containern som `/photos:ro` **med slave-propagation**
-   (annars ser containern en tom/stale mapp). Mounten måste finnas innan
+   lästa filer lokalt. **Mountpoint:** använd `/mnt/user/mount_rclone/<remote>` -
+   det är community-standarden (BinsonBuzz/DZMM-skripten, SpaceInvaderOne).
+   `/mnt/disks/...` fungerar bara om Unassigned Devices-pluginet är installerat
+   (det äger den mappen, finns inte annars). Lägg VFS-cachen separat (`/mnt/cache/...`).
+3. Bind-montera mounten in i containern som `/photos:ro` **med Slave-propagation**
+   (Unraid container-mall: Access Mode = RO/Slave). Default "private" gör att
+   containern ser en TOM mapp - känt Unraid-problem. Mounten måste finnas innan
    containern startar.
 
 **Prestanda:** thumbnails, renderingar och ansikts-crops cachas i `/data` efter

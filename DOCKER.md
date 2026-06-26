@@ -67,3 +67,29 @@ thumbnails regenereras automatiskt ur fotomappen vid behov.
 Rebaseringen utgår från `PHOTO_DIR/folder/filename`. Den hanterar att hela
 fotoroten flyttas (annan mount-punkt), men inte att enskilda undermappar döps
 om. Behåll samma relativa struktur under `/photos`, så stämmer allt.
+
+## Originalen i Google Drive (rclone-mount)
+
+Fotoscan rör aldrig originalfilerna, så fotomappen kan ligga i molnet via en
+**read-only rclone-mount** på Unraid-hosten - originalen bor kvar i Google Drive,
+inget byggs in i imagen. Appen ser mounten som en vanlig mapp.
+
+**Princip:**
+1. Installera/konfigurera rclone på hosten (Unraid: pluginet "rclone" eller
+   binär), skapa ett gdrive-remote (`drive.readonly`-scope räcker, eget OAuth
+   client_id rekommenderas för att slippa kvotstrul).
+2. Montera read-only med `--allow-other` (+ `user_allow_other` i `/etc/fuse.conf`)
+   så containern (annan uid) kan läsa, och `--vfs-cache-mode full` för att cacha
+   lästa filer lokalt. Montera till en egen sökväg, t.ex. `/mnt/disks/gdrive`
+   (undvik `/mnt/user/...` - shfs + FUSE krånglar).
+3. Bind-montera mounten in i containern som `/photos:ro` **med slave-propagation**
+   (annars ser containern en tom/stale mapp). Mounten måste finnas innan
+   containern startar.
+
+**Prestanda:** thumbnails, renderingar och ansikts-crops cachas i `/data` efter
+första bearbetningen, så GDrive läses tungt bara vid första scan/thumbnail-
+genereringen; därefter träffar bläddring nästan aldrig nätet. Värm gärna cachen
+med en scan direkt efter mount.
+
+Steg-för-steg-guide (efemär, byggs vid behov med
+`obscura`/`python -m http.server` i `tmp/`) - be om "rclone-Unraid-guiden".

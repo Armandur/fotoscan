@@ -55,6 +55,15 @@
   färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
   reglage inkl. gamma/per-kanal är klar via server-render-preview.)
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
+- [ ] **Metadata-import vid scan (filen som portabel sanningskälla).** Långsiktigt
+  mål: "har du filen har du metadatan". Scan ska kunna LÄSA tillbaka inbäddad
+  metadata (XMP/EXIF/MWG-rs) - personer, taggar, plats, datum, anteckning, källa,
+  ansiktsregioner - in i DB:n, inte bara `DateTimeOriginal`. Speglar exportens
+  mappning (`services/exporter.py`) baklänges via exiftool. Då blir exporterade
+  filer round-trippbara och externt taggade foton kan intas. Designval att ta:
+  import bara för NYA foton vs synk vid varje scan; konflikthantering DB vs fil
+  (vinnare/tidsstämpel); och om export+import-paret ska bli standardarbetsflödet
+  i stället för DB-backup som primär portabilitet.
 - [x] **Hantera HEIC/HEIF.** `pillow-heif` registreras i `scanner.py` så Pillow
   kan öppna iPhone-foton; `.heic`/`.heif` i SUPPORTED_EXTENSIONS. Scan, EXIF-datum,
   thumbnail, `/image` (renderas till JPEG) och export verifierade.

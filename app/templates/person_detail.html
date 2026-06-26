@@ -108,16 +108,19 @@
             {% else %}
             <div class="text-secondary small mb-2">Inga familjelänkar än.</div>
             {% endif %}
-            <div class="input-group input-group-sm mt-2">
-                <select class="form-select" id="rel-type" style="max-width:130px">
-                    <option value="parent_of">Förälder till</option>
-                    <option value="child_of">Barn till</option>
-                    <option value="partner">Partner</option>
-                </select>
-                <select class="form-select" id="rel-person">
-                    {% for pp in all_persons %}{% if pp.id != person.id %}<option value="{{ pp.id }}">{{ pp.name }}</option>{% endif %}{% endfor %}
-                </select>
-                <button class="btn btn-outline-primary" id="rel-add">Lägg till</button>
+            <div class="position-relative mt-2">
+                <div class="input-group input-group-sm">
+                    <select class="form-select" id="rel-type" style="max-width:130px">
+                        <option value="parent_of">Förälder till</option>
+                        <option value="child_of">Barn till</option>
+                        <option value="partner">Partner</option>
+                    </select>
+                    <input type="text" class="form-control" id="rel-search"
+                           placeholder="Sök person..." autocomplete="off">
+                    <button class="btn btn-outline-primary" id="rel-add" disabled>Lägg till</button>
+                </div>
+                <div class="face-ac" id="rel-ac" style="position:absolute;left:0;right:0;z-index:30"></div>
+                <div class="form-text" id="rel-chosen"></div>
             </div>
         </div></div>
     </div>
@@ -182,12 +185,60 @@ document.getElementById("pm-save").addEventListener("click", async (e) => {
 });
 
 // Familjelänkar
-document.getElementById("rel-add").addEventListener("click", async () => {
-    const related_id = parseInt(document.getElementById("rel-person").value, 10);
-    const relation = document.getElementById("rel-type").value;
-    if (!related_id) { showToast("Välj en person", true); return; }
+// Familjelänk: sök person med tumnaglar (som övriga personsök).
+const relSearch = document.getElementById("rel-search");
+const relAc = document.getElementById("rel-ac");
+const relAddBtn = document.getElementById("rel-add");
+const relChosen = document.getElementById("rel-chosen");
+let relItems = [], relActive = -1, relPick = null;
+
+function renderRel() {
+    relAc.innerHTML = relItems.map((p, i) => {
+        const thumb = p.region_id
+            ? `<img class="face-ac-thumb" src="/api/faces/${p.region_id}/thumb" alt="">`
+            : `<span class="face-ac-thumb empty"><i class="bi bi-person"></i></span>`;
+        return `<div class="face-ac-item${i === relActive ? " active" : ""}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">`
+            + thumb + `<span class="face-ac-name">${escapeHtml(p.name)}</span>`
+            + `<span class="face-ac-count">${p.count}</span></div>`;
+    }).join("");
+    relAc.classList.toggle("show", relItems.length > 0);
+}
+async function relSearchRun() {
+    relPick = null; relAddBtn.disabled = true; relChosen.textContent = "";
     try {
-        await apiFetch(`/api/persons/${personId}/relations`, { method: "POST", body: { related_id, relation } });
+        const all = await apiFetch(`/api/persons?q=${encodeURIComponent(relSearch.value.trim())}`);
+        relItems = all.filter(p => String(p.id) !== String(personId));
+    } catch (e) { relItems = []; }
+    relActive = -1; renderRel();
+}
+function relChoose(id, name) {
+    relPick = parseInt(id, 10);
+    relSearch.value = name;
+    relChosen.textContent = "Vald: " + name;
+    relAddBtn.disabled = false;
+    relAc.classList.remove("show");
+}
+relSearch.addEventListener("input", relSearchRun);
+relSearch.addEventListener("focus", relSearchRun);
+relSearch.addEventListener("blur", () => setTimeout(() => relAc.classList.remove("show"), 150));
+relAc.addEventListener("mousedown", (e) => {
+    const item = e.target.closest(".face-ac-item");
+    if (item) { e.preventDefault(); relChoose(item.dataset.id, item.dataset.name); }
+});
+relSearch.addEventListener("keydown", (e) => {
+    if (!relItems.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); relActive = Math.min(relActive + 1, relItems.length - 1); renderRel(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); relActive = Math.max(relActive - 1, 0); renderRel(); }
+    else if (e.key === "Enter" && relActive >= 0) {
+        e.preventDefault();
+        relChoose(relItems[relActive].id, relItems[relActive].name);
+    }
+});
+relAddBtn.addEventListener("click", async () => {
+    if (!relPick) { showToast("Sök och välj en person", true); return; }
+    const relation = document.getElementById("rel-type").value;
+    try {
+        await apiFetch(`/api/persons/${personId}/relations`, { method: "POST", body: { related_id: relPick, relation } });
         location.reload();
     } catch (err) { showToast("Kunde inte länka: " + err.message, true); }
 });

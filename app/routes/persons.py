@@ -268,7 +268,6 @@ def person_detail(
          "region_id": _avatar_region_id(db, tag),
          "regions": _person_regions(db, tag),
          "relations": _relations(db, tag),
-         "all_persons": db.query(Tag).filter(Tag.kind == "person").order_by(Tag.name).all(),
          "prev_id": prev_id, "next_id": next_id, "pos": pos, "total": total,
          "section": "Oidentifierade" if tag.placeholder else "Identifierade",
          "reviewed": reviewed, "ptype": ptype, "paired": paired,

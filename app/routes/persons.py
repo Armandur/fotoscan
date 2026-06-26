@@ -124,7 +124,9 @@ def _relations(db: Session, tag: Tag) -> dict:
         other = db.get(Tag, other_id)
         if not other:
             continue
-        item = {"link_id": lk.id, "id": other.id, "name": other.name}
+        item = {"link_id": lk.id, "id": other.id, "name": other.name,
+                "region_id": _avatar_region_id(db, other),
+                "placeholder": bool(other.placeholder)}
         if lk.relation == "partner":
             partners.append(item)
         elif lk.relation == "parent":
@@ -136,9 +138,28 @@ def _relations(db: Session, tag: Tag) -> dict:
 _PERSONS_PAGE = 60
 
 
+def _lead_year(text: str | None) -> int:
+    """Första 4-siffriga året i en fritext (för sortering); saknas -> stort tal
+    så tomma hamnar sist."""
+    if text:
+        m = re.search(r"(\d{4})", text)
+        if m:
+            return int(m.group(1))
+    return 10 ** 9
+
+
 @router.get("/persons", response_class=HTMLResponse)
-def persons_page(request: Request, ip: int = 1, up: int = 1, db: Session = Depends(get_db)):
-    persons = db.query(Tag).filter(Tag.kind == "person").order_by(Tag.name).all()
+def persons_page(
+    request: Request, q: str = "", filt: str = "all", sort: str = "name",
+    ip: int = 1, up: int = 1, db: Session = Depends(get_db),
+):
+    persons = db.query(Tag).filter(Tag.kind == "person").all()
+    # Familjelänk-antal per person i ett svep (för filter/visning).
+    link_counts: dict[int, int] = {}
+    for lk in db.query(PersonLink.person_id, PersonLink.related_id).all():
+        link_counts[lk[0]] = link_counts.get(lk[0], 0) + 1
+        link_counts[lk[1]] = link_counts.get(lk[1], 0) + 1
+
     rows = []
     for tag in persons:
         ids = _person_photo_ids(db, tag)
@@ -149,13 +170,50 @@ def persons_page(request: Request, ip: int = 1, up: int = 1, db: Session = Depen
             "region_id": _avatar_region_id(db, tag),
             "sample_photo": min(ids) if ids else None,
             "placeholder": bool(tag.placeholder),
+            "born": tag.born or "",
+            "died": tag.died or "",
+            "aliases": tag.aliases or "",
+            "rel_count": link_counts.get(tag.id, 0),
         })
-    identified = sorted((r for r in rows if not r["placeholder"]), key=lambda r: r["name"].lower())
-    # Oidentifierade ("Okänd-N") sorteras på sitt nummer.
-    def _uk(r):
+
+    # Sök (namn + alias).
+    if q.strip():
+        ql = q.strip().lower()
+        rows = [r for r in rows
+                if ql in r["name"].lower() or ql in r["aliases"].lower()]
+
+    # Filter.
+    if filt == "has_photos":
+        rows = [r for r in rows if r["count"] > 0]
+    elif filt == "no_photos":
+        rows = [r for r in rows if r["count"] == 0]
+    elif filt == "has_family":
+        rows = [r for r in rows if r["rel_count"] > 0]
+    # (identified/unknown styrs av sektionerna nedan + show_*)
+
+    def _uk(r):  # Okänd-N på nummer
         m = re.search(r"(\d+)$", r["name"])
         return int(m.group(1)) if m else 10 ** 9
-    unknown = sorted((r for r in rows if r["placeholder"]), key=_uk)
+
+    def _sorted(items):
+        if sort == "count":
+            return sorted(items, key=lambda r: (-r["count"], r["name"].lower()))
+        if sort == "born":
+            return sorted(items, key=lambda r: (_lead_year(r["born"]), r["name"].lower()))
+        if sort == "died":
+            return sorted(items, key=lambda r: (_lead_year(r["died"]), r["name"].lower()))
+        return None  # "name" -> sektionsspecifik nedan
+
+    identified = [r for r in rows if not r["placeholder"]]
+    unknown = [r for r in rows if r["placeholder"]]
+    if _sorted(identified) is not None:
+        identified, unknown = _sorted(identified), _sorted(unknown)
+    else:
+        identified = sorted(identified, key=lambda r: r["name"].lower())
+        unknown = sorted(unknown, key=_uk)
+
+    show_id = filt != "unknown"
+    show_uk = filt != "identified"
 
     def _page(items, page):
         pages = max(1, (len(items) + _PERSONS_PAGE - 1) // _PERSONS_PAGE)
@@ -167,9 +225,12 @@ def persons_page(request: Request, ip: int = 1, up: int = 1, db: Session = Depen
     uk_items, up, u_pages = _page(unknown, up)
     return templates.TemplateResponse(
         request, "persons.html",
-        {"identified": id_items, "unknown": uk_items,
-         "i_total": len(identified), "u_total": len(unknown),
-         "ip": ip, "up": up, "i_pages": i_pages, "u_pages": u_pages},
+        {"identified": id_items if show_id else [],
+         "unknown": uk_items if show_uk else [],
+         "i_total": len(identified) if show_id else 0,
+         "u_total": len(unknown) if show_uk else 0,
+         "ip": ip, "up": up, "i_pages": i_pages, "u_pages": u_pages,
+         "q": q, "filt": filt, "sort": sort},
     )
 
 

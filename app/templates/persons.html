@@ -1,61 +1,140 @@
 {% extends "base.html" %}
 {% block title %}Personer - Fotoscan{% endblock %}
 
+{% macro meta_line(p) %}
+{%- set bits = [] -%}
+{%- if p.born or p.died %}{% set _ = bits.append((p.born or '?') ~ '–' ~ (p.died or '')) %}{% endif -%}
+{%- set _ = bits.append(p.count ~ ' foto' ~ ('n' if p.count != 1 else '')) -%}
+{%- if p.rel_count %}{% set _ = bits.append(p.rel_count ~ ' familjelänk' ~ ('ar' if p.rel_count != 1 else '')) %}{% endif -%}
+{{ bits | join(' · ') }}
+{%- endmacro %}
+
+{% macro personthumb(p, cls) %}
+{% if p.region_id %}<img loading="lazy" class="{{ cls }}" src="/api/faces/{{ p.region_id }}/thumb" alt="{{ p.name }}">
+{% elif p.sample_photo %}<img loading="lazy" class="{{ cls }}" src="/thumb/{{ p.sample_photo }}" alt="{{ p.name }}">
+{% else %}<div class="{{ cls }} d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></div>{% endif %}
+{% endmacro %}
+
 {% macro personcard(p) %}
 <a class="card photo-card text-decoration-none {% if p.placeholder %}opacity-75{% endif %}" href="/persons/{{ p.id }}">
-    {% if p.region_id %}
-    <img loading="lazy" class="card-img-top" src="/api/faces/{{ p.region_id }}/thumb" alt="{{ p.name }}">
-    {% elif p.sample_photo %}
-    <img loading="lazy" class="card-img-top" src="/thumb/{{ p.sample_photo }}" alt="{{ p.name }}">
-    {% else %}
-    <div class="card-img-top d-flex align-items-center justify-content-center text-secondary"
-         style="aspect-ratio:1;background:#000;font-size:2rem"><i class="bi bi-person"></i></div>
-    {% endif %}
+    {{ personthumb(p, "card-img-top") }}
     <div class="card-body p-2">
         <div class="text-truncate {% if p.placeholder %}fst-italic text-secondary{% endif %}">{{ p.name }}</div>
-        <div class="text-secondary small">{{ p.count }} foto{{ 'n' if p.count != 1 else '' }}</div>
+        <div class="text-secondary small text-truncate">{{ meta_line(p) }}</div>
+        {% if p.aliases %}<div class="text-secondary small text-truncate fst-italic">{{ p.aliases }}</div>{% endif %}
     </div>
+</a>
+{% endmacro %}
+
+{% macro personrow(p) %}
+<a class="list-group-item list-group-item-action d-flex align-items-center gap-2 {% if p.placeholder %}opacity-75{% endif %}" href="/persons/{{ p.id }}">
+    {{ personthumb(p, "person-row-thumb") }}
+    <div class="flex-grow-1 min-w-0">
+        <div class="text-truncate {% if p.placeholder %}fst-italic{% endif %}">{{ p.name }}</div>
+        {% if p.aliases %}<div class="text-secondary small text-truncate fst-italic">{{ p.aliases }}</div>{% endif %}
+    </div>
+    <div class="text-secondary small text-end" style="white-space:nowrap">{{ meta_line(p) }}</div>
 </a>
 {% endmacro %}
 
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <h1 class="h4 mb-0">Personer</h1>
-    <a href="/persons/duplicates" class="btn btn-outline-secondary btn-sm"
-       title="Hitta personer som troligen är samma (via AI-ansiktslikhet)">
-        <i class="bi bi-people-fill"></i> Möjliga dubbletter
-    </a>
+    <div class="d-flex gap-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Vy" id="persons-view">
+            <button type="button" class="btn btn-outline-secondary" data-view="cards" title="Kortvy"><i class="bi bi-grid-3x3-gap"></i></button>
+            <button type="button" class="btn btn-outline-secondary" data-view="list" title="Listvy"><i class="bi bi-list-ul"></i></button>
+        </div>
+        <a href="/persons/duplicates" class="btn btn-outline-secondary btn-sm"
+           title="Hitta personer som troligen är samma (via AI-ansiktslikhet)">
+            <i class="bi bi-people-fill"></i> Möjliga dubbletter
+        </a>
+    </div>
 </div>
 
-{% if not identified and not unknown %}
-    <div class="alert alert-secondary">
-        Inga personer än. Tagga personer på foton eller markera ansikten i detaljvyn.
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-sm">
+        <input type="search" class="form-control form-control-sm" name="q" value="{{ q }}"
+               placeholder="Sök namn eller alias...">
     </div>
+    <div class="col-6 col-sm-auto">
+        <select class="form-select form-select-sm" name="filt" onchange="this.form.submit()">
+            <option value="all" {{ 'selected' if filt == 'all' }}>Alla</option>
+            <option value="identified" {{ 'selected' if filt == 'identified' }}>Identifierade</option>
+            <option value="unknown" {{ 'selected' if filt == 'unknown' }}>Oidentifierade</option>
+            <option value="has_photos" {{ 'selected' if filt == 'has_photos' }}>Har foton</option>
+            <option value="no_photos" {{ 'selected' if filt == 'no_photos' }}>Saknar foton</option>
+            <option value="has_family" {{ 'selected' if filt == 'has_family' }}>Har familjelänkar</option>
+        </select>
+    </div>
+    <div class="col-6 col-sm-auto">
+        <select class="form-select form-select-sm" name="sort" onchange="this.form.submit()">
+            <option value="name" {{ 'selected' if sort == 'name' }}>Sortera: namn</option>
+            <option value="count" {{ 'selected' if sort == 'count' }}>Sortera: antal foton</option>
+            <option value="born" {{ 'selected' if sort == 'born' }}>Sortera: född</option>
+            <option value="died" {{ 'selected' if sort == 'died' }}>Sortera: död</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+    </div>
+</form>
+
+{% if not identified and not unknown %}
+    <div class="alert alert-secondary">Inga personer matchar.</div>
 {% endif %}
 
-{% macro pager(cur, pages, param, other_param, other_val) %}
+{% macro pager(cur, pages, param, others) %}
 {% if pages > 1 %}
 <nav class="mb-4"><ul class="pagination pagination-sm justify-content-center mb-0">
-    <li class="page-item {% if cur <= 1 %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur - 1 }}&{{ other_param }}={{ other_val }}">Föregående</a></li>
+    <li class="page-item {% if cur <= 1 %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur - 1 }}{{ others }}">Föregående</a></li>
     <li class="page-item disabled"><span class="page-link">Sida {{ cur }} / {{ pages }}</span></li>
-    <li class="page-item {% if cur >= pages %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur + 1 }}&{{ other_param }}={{ other_val }}">Nästa</a></li>
+    <li class="page-item {% if cur >= pages %}disabled{% endif %}"><a class="page-link" href="?{{ param }}={{ cur + 1 }}{{ others }}">Nästa</a></li>
 </ul></nav>
 {% endif %}
 {% endmacro %}
 
+{% set qs = "&q=" ~ (q | urlencode) ~ "&filt=" ~ filt ~ "&sort=" ~ sort %}
+
+<div id="persons-wrap" class="view-cards">
 {% if i_total %}
 <h2 class="h6 text-secondary mb-2">Identifierade <span class="badge text-bg-secondary">{{ i_total }}</span></h2>
-<div class="gallery-grid mb-3">
+<div class="gallery-grid mb-3 persons-cards">
     {% for p in identified %}{{ personcard(p) }}{% endfor %}
 </div>
-{{ pager(ip, i_pages, "ip", "up", up) }}
+<div class="list-group mb-3 persons-list">
+    {% for p in identified %}{{ personrow(p) }}{% endfor %}
+</div>
+{{ pager(ip, i_pages, "ip", "&up=" ~ up ~ qs) }}
 {% endif %}
 
 {% if u_total %}
 <h2 class="h6 text-secondary mb-2"><i class="bi bi-person-dash"></i> Oidentifierade <span class="badge text-bg-secondary">{{ u_total }}</span></h2>
-<div class="gallery-grid mb-3">
+<div class="gallery-grid mb-3 persons-cards">
     {% for p in unknown %}{{ personcard(p) }}{% endfor %}
 </div>
-{{ pager(up, u_pages, "up", "ip", ip) }}
+<div class="list-group mb-3 persons-list">
+    {% for p in unknown %}{{ personrow(p) }}{% endfor %}
+</div>
+{{ pager(up, u_pages, "up", "&ip=" ~ ip ~ qs) }}
 {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const wrap = document.getElementById("persons-wrap");
+    const btns = document.querySelectorAll("#persons-view button");
+    function apply(v) {
+        wrap.classList.toggle("view-list", v === "list");
+        wrap.classList.toggle("view-cards", v !== "list");
+        btns.forEach(b => b.classList.toggle("active", b.dataset.view === v));
+    }
+    btns.forEach(b => b.addEventListener("click", () => {
+        localStorage.setItem("personsView", b.dataset.view); apply(b.dataset.view);
+    }));
+    apply(localStorage.getItem("personsView") || "cards");
+})();
+</script>
 {% endblock %}

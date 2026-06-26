@@ -78,10 +78,18 @@ photos/                exempel/testbilder (gitignored)
   album-bildtexten, och /persons visar dem i en egen "Oidentifierade"-sektion
   (skild från "Identifierade"). Sektionerna pagineras var för sig (`ip`/`up`-
   param, 60/sida). Flaggan ersätter att tolka namnet "Okänd-N".
+- **/persons-listan** har sök (`q`, namn+alias), filter (`filt`: all/identified/
+  unknown/has_photos/no_photos/has_family) och sortering (`sort`: name/count/born/
+  died) server-side, samt kort/listvy-växling (klient, localStorage `personsView`;
+  `.view-cards`/`.view-list` på `#persons-wrap` togglar `.persons-cards`/
+  `.persons-list`). Korten/raderna visar metadata (född–död, antal foton,
+  familjelänk-antal, alias). Sektionspagineringen behålls.
 - **Personmetadata** (på `Tag`, används när kind=person): `born`/`died` (fritext),
   `aliases` (kommaseparerade, sökbara i `/api/persons`), `bio`. Familjelänkar i
   `PersonLink` (person<->person, relation "parent"/"partner"; barn = omvänd parent).
-  Redigeras i personvyn; merge pekar om länkar, delete städar dem.
+  Redigeras i personvyn; merge pekar om länkar, delete städar dem. `/persons/{n}`
+  visar familjen som ett litet **släktträd** med tumnaglar (`_relations` ger
+  `region_id`): föräldrar överst, personen själv + partner i mitten, barn underst.
 - **Hierarkiska taggar** (`Tag.parent_id`): taggar bildar ett träd. Namn förblir
   unika (leaf-namn får inte dubbleras under olika föräldrar). Tagg-vyn visar ett
   träd-UI där förälder kan väljas med cykelskydd. Detaljvyn (`/tags/{id}`) visar

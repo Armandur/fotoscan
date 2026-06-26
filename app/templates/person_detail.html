@@ -71,22 +71,41 @@
     <div class="col-md-6">
         <div class="card h-100"><div class="card-body">
             <h2 class="h6 text-secondary mb-2">Familj</h2>
-            {% macro rellist(label, items) %}
+            {% macro relnode(r) %}
+            <span class="rel-node">
+                <a href="/persons/{{ r.id }}" class="text-decoration-none" title="{{ r.name }}">
+                    {% if r.region_id %}<img class="rel-thumb" src="/api/faces/{{ r.region_id }}/thumb" alt="{{ r.name }}">
+                    {% else %}<span class="rel-thumb d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></span>{% endif %}
+                    <span class="rel-name text-truncate {% if r.placeholder %}fst-italic text-secondary{% endif %}">{{ r.name }}</span>
+                </a>
+                <a href="#" class="rel-del" data-link="{{ r.link_id }}" title="Ta bort länk">&times;</a>
+            </span>
+            {% endmacro %}
+            {% macro reltier(label, items) %}
             {% if items %}
-            <div class="small mb-1"><span class="text-secondary">{{ label }}:</span>
-                {% for r in items %}
-                <span class="badge text-bg-secondary me-1">
-                    <a href="/persons/{{ r.id }}" class="text-white text-decoration-none">{{ r.name }}</a>
-                    <a href="#" class="text-white rel-del" data-link="{{ r.link_id }}" title="Ta bort">&times;</a>
-                </span>
-                {% endfor %}
+            <div class="rel-tier">
+                <div class="rel-tier-label text-secondary small">{{ label }}</div>
+                <div class="rel-row">{% for r in items %}{{ relnode(r) }}{% endfor %}</div>
             </div>
             {% endif %}
             {% endmacro %}
-            {{ rellist("Föräldrar", relations.parents) }}
-            {{ rellist("Barn", relations.children) }}
-            {{ rellist("Partner", relations.partners) }}
-            {% if not (relations.parents or relations.children or relations.partners) %}
+            {% if relations.parents or relations.children or relations.partners %}
+            <div class="rel-tree mb-2">
+                {{ reltier("Föräldrar", relations.parents) }}
+                <div class="rel-tier">
+                    <div class="rel-tier-label text-secondary small">Den här personen{% if relations.partners %} + partner{% endif %}</div>
+                    <div class="rel-row">
+                        <span class="rel-node rel-self">
+                            {% if region_id %}<img class="rel-thumb" src="/api/faces/{{ region_id }}/thumb" alt="{{ person.name }}">
+                            {% else %}<span class="rel-thumb d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></span>{% endif %}
+                            <span class="rel-name text-truncate">{{ person.name }}</span>
+                        </span>
+                        {% for r in relations.partners %}{{ relnode(r) }}{% endfor %}
+                    </div>
+                </div>
+                {{ reltier("Barn", relations.children) }}
+            </div>
+            {% else %}
             <div class="text-secondary small mb-2">Inga familjelänkar än.</div>
             {% endif %}
             <div class="input-group input-group-sm mt-2">

@@ -3,16 +3,16 @@
 ## Planerat
 
 ### Personvyn (/persons + /persons/{n})
-- [ ] **Sök, filtrering & sortering i /persons.** Sök på namn/alias, filtrera
-  (t.ex. identifierade/oidentifierade, har foton, har familjelänkar), sortera
-  (namn, antal foton, född/död). Bör återanvända befintlig sektionspaginering.
-- [ ] **Kort- vs listvy i /persons.** Växla mellan dagens tumnagel-kort och en
-  kompakt listvy (rad per person). Spara valet (localStorage, som S/M/L).
-- [ ] **Mer metadata på personkort + i listvy.** Visa t.ex. född/död, antal foton,
-  alias, ev. relationer - inte bara namn + tumnagel + antal. I listvyn som kolumner.
-- [ ] **Släktträd-vy på /persons/{n}.** Förbättra Familj-sektionen: visa relationer
-  (föräldrar/barn/partner) som ett litet släktträd med **tumnaglar** i stället för
-  bara namn-chips. Bygger på `PersonLink` + `_relations`.
+- [x] **Sök, filtrering & sortering i /persons.** `q` (namn/alias), `filt`
+  (all/identified/unknown/has_photos/no_photos/has_family), `sort`
+  (name/count/born/died) server-side; sektionspagineringen behållen.
+- [x] **Kort- vs listvy i /persons.** Växla kort/lista, sparat i localStorage
+  (`personsView`), CSS-toggle på `#persons-wrap`.
+- [x] **Mer metadata på personkort + i listvy.** Född–död, antal foton,
+  familjelänk-antal, alias visas på kort och i listrad.
+- [x] **Släktträd-vy på /persons/{n}.** Familj-sektionen visar nu föräldrar/
+  personen+partner/barn som ett litet träd med tumnaglar (`_relations` ger
+  `region_id`).
 
 ### Karta/GPS
 - [ ] **Förvald kartposition från Plats.** När GPS-kartan öppnas i detaljvyn och

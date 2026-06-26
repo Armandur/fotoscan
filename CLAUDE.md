@@ -88,8 +88,12 @@ photos/                exempel/testbilder (gitignored)
   `aliases` (kommaseparerade, sökbara i `/api/persons`), `bio`. Familjelänkar i
   `PersonLink` (person<->person, relation "parent"/"partner"; barn = omvänd parent).
   Redigeras i personvyn; merge pekar om länkar, delete städar dem. `/persons/{n}`
-  visar familjen som ett litet **släktträd** med tumnaglar (`_relations` ger
-  `region_id`): föräldrar överst, personen själv + partner i mitten, barn underst.
+  visar familjen som en **kompakt delete-lista** (`rel-list`, chips) + ett
+  **mini family-chart-träd** (`#mini-tree`, egna kompakta kort via
+  `setCardInnerHtmlCreator` + `setCardDim`) centrerat på personen. Båda **ritas om
+  dynamiskt** (ingen sidladdning) när en länk läggs till/tas bort:
+  `refreshFamily()` hämtar `GET /api/persons/{id}/relations` (JSON) +
+  `tree-data?start=id` och re-renderar. Knapp "Öppna fullt" -> `/persons/tree`.
   Person-väljaren för nya länkar är ett tumnagel-sök (`/api/persons`), inte en
   dropdown. Efter att en länk lagts till föreslås **kompletterande förälder-länkar**
   (`relation-suggestions` -> modal, bekräftas via `relations/apply`) så delade barn

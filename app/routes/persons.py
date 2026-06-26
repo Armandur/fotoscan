@@ -398,6 +398,15 @@ def delete_relation(tag_id: int, link_id: int, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True})
 
 
+@router.get("/api/persons/{tag_id}/relations")
+def get_relations(tag_id: int, db: Session = Depends(get_db)):
+    """Familjelänkar för en person som JSON (för dynamisk omritning)."""
+    tag = db.get(Tag, tag_id)
+    if not tag or tag.kind != "person":
+        raise HTTPException(404, "Person hittades inte")
+    return JSONResponse(_relations(db, tag))
+
+
 def _partners(db: Session, pid: int) -> set[int]:
     out = set()
     for lk in db.query(PersonLink).filter(

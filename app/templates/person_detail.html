@@ -3,6 +3,28 @@
 {% from "_filterbar.html" import filterbar %}
 {% block title %}{{ person.name }} - Fotoscan{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/family-chart/family-chart.css">
+<style>
+#rel-list .rel-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 4px 4px 0;
+    padding: 2px 4px 2px 2px; background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); font-size: .85rem; }
+#rel-list .rel-chip img, #rel-list .rel-chip .rel-ph { width: 24px; height: 24px; object-fit: cover;
+    border-radius: 4px; flex: 0 0 auto; }
+#rel-list .rel-grp { margin-bottom: 4px; }
+#rel-list .rel-x { cursor: pointer; color: var(--bs-secondary); font-weight: 700; padding: 0 3px; text-decoration: none; }
+#rel-list .rel-x:hover { color: var(--bs-danger); }
+/* Kompakta egna kort i mini-trädet */
+.mini-card { display: flex; align-items: center; gap: 6px; width: 150px; height: 46px;
+    padding: 4px 6px; background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+    border-radius: 6px; overflow: hidden; }
+.mini-card.is-main { border-color: var(--bs-primary); border-width: 2px; }
+.mini-card img, .mini-card .mc-ph { width: 34px; height: 34px; object-fit: cover; border-radius: 4px;
+    flex: 0 0 auto; background: #000; display: flex; align-items: center; justify-content: center; color: #888; }
+.mini-card .mc-name { font-size: .78rem; line-height: 1.15; overflow: hidden; }
+</style>
+{% endblock %}
+
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ section }} {{ pos }}/{{ total }}</span>
     <div class="btn-group btn-group-sm">
@@ -71,43 +93,7 @@
     <div class="col-md-6">
         <div class="card h-100"><div class="card-body">
             <h2 class="h6 text-secondary mb-2">Familj</h2>
-            {% macro relnode(r) %}
-            <span class="rel-node">
-                <a href="/persons/{{ r.id }}" class="text-decoration-none" title="{{ r.name }}">
-                    {% if r.region_id %}<img class="rel-thumb" src="/api/faces/{{ r.region_id }}/thumb" alt="{{ r.name }}">
-                    {% else %}<span class="rel-thumb d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></span>{% endif %}
-                    <span class="rel-name text-truncate {% if r.placeholder %}fst-italic text-secondary{% endif %}">{{ r.name }}</span>
-                </a>
-                <a href="#" class="rel-del" data-link="{{ r.link_id }}" title="Ta bort länk">&times;</a>
-            </span>
-            {% endmacro %}
-            {% macro reltier(label, items) %}
-            {% if items %}
-            <div class="rel-tier">
-                <div class="rel-tier-label text-secondary small">{{ label }}</div>
-                <div class="rel-row">{% for r in items %}{{ relnode(r) }}{% endfor %}</div>
-            </div>
-            {% endif %}
-            {% endmacro %}
-            {% if relations.parents or relations.children or relations.partners %}
-            <div class="rel-tree mb-2">
-                {{ reltier("Föräldrar", relations.parents) }}
-                <div class="rel-tier">
-                    <div class="rel-tier-label text-secondary small">Den här personen{% if relations.partners %} + partner{% endif %}</div>
-                    <div class="rel-row">
-                        <span class="rel-node rel-self">
-                            {% if region_id %}<img class="rel-thumb" src="/api/faces/{{ region_id }}/thumb" alt="{{ person.name }}">
-                            {% else %}<span class="rel-thumb d-flex align-items-center justify-content-center text-secondary" style="background:#000"><i class="bi bi-person"></i></span>{% endif %}
-                            <span class="rel-name text-truncate">{{ person.name }}</span>
-                        </span>
-                        {% for r in relations.partners %}{{ relnode(r) }}{% endfor %}
-                    </div>
-                </div>
-                {{ reltier("Barn", relations.children) }}
-            </div>
-            {% else %}
-            <div class="text-secondary small mb-2">Inga familjelänkar än.</div>
-            {% endif %}
+            <div id="rel-list" class="mb-2"></div>
             <div class="position-relative mt-2">
                 <div class="input-group input-group-sm">
                     <select class="form-select" id="rel-type" style="max-width:130px">
@@ -123,6 +109,19 @@
                 <div class="form-text" id="rel-chosen"></div>
             </div>
         </div></div>
+    </div>
+</div>
+
+<div class="card mb-3" id="mini-tree-card">
+    <div class="card-body p-2">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <h2 class="h6 text-secondary mb-0">Släktträd</h2>
+            <a href="/persons/tree?start={{ person.id }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrows-fullscreen"></i> Öppna fullt
+            </a>
+        </div>
+        <div id="mini-tree" class="f3" style="width:100%;height:340px;background:var(--bs-body-bg);border-radius:var(--bs-border-radius)"></div>
+        <div class="text-secondary small d-none" id="mini-tree-empty">Inga familjelänkar än - lägg till ovan.</div>
     </div>
 </div>
 
@@ -185,6 +184,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/vendor/family-chart/d3.v7.min.js"></script>
+<script src="/static/vendor/family-chart/family-chart.js"></script>
 <script>
 const personId = document.querySelector("[data-person-id]").dataset.personId;
 
@@ -258,6 +259,8 @@ relAddBtn.addEventListener("click", async () => {
     const relation = document.getElementById("rel-type").value;
     try {
         await apiFetch(`/api/persons/${personId}/relations`, { method: "POST", body: { related_id: relPick, relation } });
+        // Nollställ add-fältet och rita om dynamiskt.
+        relSearch.value = ""; relChosen.textContent = ""; relAddBtn.disabled = true; relPick = null;
         // Föreslå kompletterande förälder-länkar (delade barn mellan partners).
         let sugg = [];
         try {
@@ -265,7 +268,7 @@ relAddBtn.addEventListener("click", async () => {
             sugg = res.suggestions || [];
         } catch (e) { /* hoppa över förslag vid fel */ }
         if (sugg.length) showRelSuggest(sugg);
-        else location.reload();
+        else refreshFamily();
     } catch (err) { showToast("Kunde inte länka: " + err.message, true); }
 });
 
@@ -292,20 +295,76 @@ function showRelSuggest(sugg) {
                 });
             } catch (e) { showToast("Kunde inte lägga till: " + e.message, true); }
         }
-        location.reload();
+        modal.hide();
+        refreshFamily();
     };
-    document.getElementById("rel-suggest-skip").onclick = () => location.reload();
+    document.getElementById("rel-suggest-skip").onclick = () => { modal.hide(); refreshFamily(); };
     modal.show();
 }
-document.querySelectorAll(".rel-del").forEach(a => {
-    a.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-            await apiFetch(`/api/persons/${personId}/relations/${a.dataset.link}`, { method: "DELETE" });
-            location.reload();
-        } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
-    });
+
+// ---- Dynamisk omritning av familj (delete-lista + mini-träd) ----
+const relList = document.getElementById("rel-list");
+relList.addEventListener("click", async (e) => {
+    const x = e.target.closest(".rel-x");
+    if (!x) return;
+    e.preventDefault();
+    try {
+        await apiFetch(`/api/persons/${personId}/relations/${x.dataset.link}`, { method: "DELETE" });
+        refreshFamily();
+    } catch (err) { showToast("Kunde inte ta bort: " + err.message, true); }
 });
+
+function relThumb(r) {
+    return r.region_id
+        ? `<img src="/api/faces/${r.region_id}/thumb" alt="">`
+        : `<span class="rel-ph d-flex align-items-center justify-content-center text-secondary"><i class="bi bi-person"></i></span>`;
+}
+function renderRelList(rel) {
+    const grp = (label, items) => items.length
+        ? `<div class="rel-grp"><span class="small text-secondary">${label}:</span> ` + items.map(r =>
+            `<span class="rel-chip">${relThumb(r)}<a href="/persons/${r.id}" class="text-decoration-none text-truncate" style="max-width:120px">${escapeHtml(r.name)}</a>`
+            + `<a href="#" class="rel-x" data-link="${r.link_id}" title="Ta bort länk">&times;</a></span>`).join(" ") + `</div>`
+        : "";
+    const html = grp("Föräldrar", rel.parents) + grp("Partner", rel.partners) + grp("Barn", rel.children);
+    relList.innerHTML = html || `<div class="text-secondary small">Inga familjelänkar än.</div>`;
+}
+
+let miniChart = null;
+function renderMiniTree(data, mainId) {
+    const cont = document.getElementById("mini-tree");
+    const empty = document.getElementById("mini-tree-empty");
+    if (!data || !data.length) {
+        cont.classList.add("d-none"); empty.classList.remove("d-none"); return;
+    }
+    cont.classList.remove("d-none"); empty.classList.add("d-none");
+    cont.innerHTML = "";  // ny chart varje gång (undvik dubbel-SVG)
+    const arr = data.slice();
+    const mi = arr.findIndex(d => d.id === mainId);
+    if (mi > 0) { const [m] = arr.splice(mi, 1); arr.unshift(m); }
+    miniChart = f3.createChart("#mini-tree", arr).setTransitionTime(500).setOrientationVertical();
+    const card = miniChart.setCardHtml().setCardDim({ w: 150, h: 46 }).setMiniTree(true);
+    card.setCardInnerHtmlCreator((d) => {
+        const p = (d.data && d.data.data) || {};
+        const av = p.avatar
+            ? `<img src="${p.avatar}" alt="">`
+            : `<span class="mc-ph"><i class="bi bi-person"></i></span>`;
+        const main = String(d.data && d.data.id) === String(mainId) ? " is-main" : "";
+        return `<div class="mini-card${main}">${av}<span class="mc-name">${escapeHtml(p.name || "")}</span></div>`;
+    });
+    miniChart.updateTree({ initial: true });
+}
+
+async function refreshFamily() {
+    try {
+        const rel = await apiFetch(`/api/persons/${personId}/relations`);
+        renderRelList(rel);
+    } catch (e) { /* behåll befintlig */ }
+    try {
+        const t = await apiFetch(`/api/persons/tree-data?start=${personId}`);
+        renderMiniTree(t.data, t.main_id);
+    } catch (e) { /* behåll befintlig */ }
+}
+refreshFamily();
 
 // Tumnagel-väljare: klicka på ett ansikte (eller Auto) för att representera personen
 const thumbPicker = document.getElementById("thumb-picker");

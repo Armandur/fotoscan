@@ -36,6 +36,15 @@
   family-chart-vyn (`?start=rep`). Drill-in: översikt för att hitta, family-chart
   för att utforska. Komponentlistan i `/api/persons/tree-data` har `name`/
   `region_id` per representant.
+- [ ] **Mini-släktträd på /persons/{n}.** Visa en kompakt family-chart-vy
+  centrerad på personen i personvyn (utöver dagens enkla träd-sektion), med länk
+  till fulla `/persons/tree?start={n}`. Återanvänder family-chart + tree-data
+  (filtrera till personens komponent, sätt main=n).
+- [ ] **Live-redigera släktträdet (family-chart edit).** family-chart har inbyggd
+  redigering/liveuppdatering (lägg till/koppla släktingar direkt i trädet). Utvärdera
+  att aktivera den i `/persons/tree` och spegla ändringar till `PersonLink` via
+  våra relations-endpoints (add/apply/delete) - så man kan bygga trädet i vyn i
+  stället för fält för fält. Se docs: https://donatso.github.io/family-chart-doc/
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

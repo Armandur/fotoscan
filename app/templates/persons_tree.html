@@ -25,7 +25,6 @@
 <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
     <h1 class="h4 mb-0">Släktträd</h1>
     <div class="d-flex gap-2 align-items-center">
-        <select id="comp-select" class="form-select form-select-sm" style="width:auto" title="Välj släkt"></select>
         <div class="position-relative">
             <input type="text" class="form-control form-control-sm" id="tree-search"
                    placeholder="Sök person..." autocomplete="off" style="min-width:200px">
@@ -52,7 +51,6 @@
 (() => {
     const startId = "{{ start }}";
     const info = document.getElementById("tree-info");
-    const compSel = document.getElementById("comp-select");
 
     function go(id) { location.href = "/persons/tree" + (id ? "?start=" + id : ""); }
 
@@ -93,11 +91,6 @@
         let res;
         try { res = await apiFetch("/api/persons/tree-data" + (startId ? "?start=" + startId : "")); }
         catch (e) { info.textContent = "Kunde inte ladda."; return; }
-
-        // Komponent-växlare.
-        compSel.innerHTML = res.components.map(c =>
-            `<option value="${c.main}" ${String(c.main) === String(res.main_id) ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
-        compSel.onchange = () => go(compSel.value);
 
         const parts = [`${res.components.length} släkt${res.components.length !== 1 ? "er" : ""}`];
         if (res.unlinked) parts.push(`${res.unlinked} personer utan familjelänkar (visas ej)`);

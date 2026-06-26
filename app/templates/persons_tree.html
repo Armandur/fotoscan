@@ -18,6 +18,10 @@
 .ov-name { font-size: .9rem; }
 .ov-small .ov-thumb { width: 28px; height: 28px; }
 .ov-small .ov-card { padding: 2px 8px 2px 2px; }
+.tree-open-link { position: absolute; top: 2px; right: 2px; z-index: 5;
+    background: rgba(0,0,0,.55); color: #fff; border-radius: 4px; padding: 0 4px;
+    font-size: .8rem; line-height: 1.4; text-decoration: none; }
+.tree-open-link:hover { background: var(--bs-primary); color: #fff; }
 </style>
 {% endblock %}
 
@@ -116,11 +120,21 @@
             .setCardDisplay([["name"], ["birthday"]])
             .setMiniTree(true)
             .setStyle("imageRect");
-        // Klick på kort -> öppna personsidan (mini-trädet sköter navigering).
-        card.setOnCardClick((e, d) => {
-            // Datum-formen kan variera: {id,data,rels} direkt eller d3-nod (d.data).
+        // Klick på kort = family-charts standardnavigering (centrera om/expandera).
+        // För att öppna personsidan läggs en liten länk i kortets hörn i stället.
+        card.setOnCardUpdate(function (d) {
+            const el = this;
+            if (!el || !el.querySelector || el.querySelector(".tree-open-link")) return;
             const pid = (d && d.data && d.data.id) || (d && d.id);
-            if (pid) window.open("/persons/" + pid, "_blank");
+            if (!pid) return;
+            const a = document.createElement("a");
+            a.className = "tree-open-link";
+            a.href = "/persons/" + pid;
+            a.target = "_blank";
+            a.title = "Öppna personsida";
+            a.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
+            a.addEventListener("click", (e) => e.stopPropagation());  // ej recenter
+            el.appendChild(a);
         });
         chart.updateTree({ initial: true });
     }

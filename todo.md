@@ -14,6 +14,12 @@
   (föräldrar/barn/partner) som ett litet släktträd med **tumnaglar** i stället för
   bara namn-chips. Bygger på `PersonLink` + `_relations`.
 
+### Karta/GPS
+- [ ] **Förvald kartposition från Plats.** När GPS-kartan öppnas i detaljvyn och
+  fotot har en Plats med beräknad medelposition (`place_avg_gps`, visas redan i
+  detaljvyns `place_gps`), zooma Leaflet direkt dit i stället för default-vyn -
+  så slipper man adressök som ett extra moment. Återanvänd den positionen.
+
 ### AI-ansiktsigenkänning - vidareutveckling
 - [x] **Klustra okända ansikten.** `/faces/clusters` + `/api/faces/ai/clusters`
   grupperar obekräftade AI-ansikten på embedding-likhet (`cluster_embeddings`,

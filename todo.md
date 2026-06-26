@@ -19,6 +19,16 @@
   föreslå att koppla personens befintliga barn även till den nya partnern (välj
   vilka i en lista). Bygger på `PersonLink` (parent-relationer) - lägg till
   motsvarande länkar efter bekräftelse, inte automatiskt.
+- [ ] **Global släktträdsvy (`/persons/tree`).** En egen vy som ritar HELA
+  släktgrafen dynamiskt ur `PersonLink`: hitta sammanhängande komponenter
+  (släkter) och rita dem parallellt sida vid sida - typiskt ett stort träd
+  (egna släkten) + några sidoträd, och personer utan länkar grupperade för sig
+  ("Inga familjelänkar"). Noder med tumnaglar, klickbara till `/persons/{n}`,
+  kanter för förälder/barn/partner. Behöver layout av en generell graf (inte
+  bara ett strikt träd - partners, omgiften, delade barn) -> ev. ett litet
+  klient-bibliotek (t.ex. d3/dagre, självhostat) eller egen enkel tier-layout
+  per komponent. Stor men avgränsad funktion; börja med komponent-uppdelning +
+  enkel layout, förfina sen.
 
 ### Karta/GPS
 - [ ] **Förvald kartposition från Plats.** När GPS-kartan öppnas i detaljvyn och

@@ -34,10 +34,11 @@
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):
   `map.js` centrerar på fotots egen GPS, annars platsens medel-GPS (`place_gps` ->
   `#map` data-attribut), annars default-vyn.
-- [ ] **Geokoda platsnamn som kart-fallback.** När fotot saknar egen GPS OCH
-  platsen saknar medel-GPS (inget annat foto på platsen har position än), auto-
-  geokoda platsens *namn* (`/api/geocode`) när kartan öppnas och centrera dit -
-  så slipper man adressök även för platsens första foto.
+- [x] **Geokoda platsnamn som kart-fallback (inkl. osparad plats).** Kartan
+  centrerar nu vid öppning: egen GPS > sparad plats med medel-GPS > geokoda
+  Plats-fältets nuvarande värde (`/api/geocode`) > default. Fångar både
+  platsens första foto OCH när man skrivit/ändrat Plats utan att spara först
+  (jämför fältvärdet mot `data-place-name`). `map.js` + `data-place-name` på `#map`.
 
 ### AI-ansiktsigenkänning - vidareutveckling
 - [x] **Klustra okända ansikten.** `/faces/clusters` + `/api/faces/ai/clusters`

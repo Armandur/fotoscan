@@ -80,7 +80,7 @@
 
     mapBtn.addEventListener("click", () => modal.show());
 
-    modalEl.addEventListener("shown.bs.modal", () => {
+    modalEl.addEventListener("shown.bs.modal", async () => {
         if (!map) initMap();
         map.invalidateSize();
         // Ladda befintlig position
@@ -90,13 +90,30 @@
         if (lat && lon) {
             setPoint(parseFloat(lat), parseFloat(lon));
             map.setView([parseFloat(lat), parseFloat(lon)], 14);
-        } else {
-            // Inget eget GPS - centrera på platsens representativa position om den finns.
-            const mapEl = document.getElementById("map");
-            if (mapEl.dataset.placeLat && mapEl.dataset.placeLon) {
-                map.setView([parseFloat(mapEl.dataset.placeLat), parseFloat(mapEl.dataset.placeLon)], 12);
+            return;
+        }
+        // Inget eget GPS - centrera på platsen.
+        updateCoords();
+        const mapEl = document.getElementById("map");
+        const avg = (mapEl.dataset.placeLat && mapEl.dataset.placeLon)
+            ? [parseFloat(mapEl.dataset.placeLat), parseFloat(mapEl.dataset.placeLon)] : null;
+        const loc = (hid("location")?.value || "").trim();
+        const savedName = mapEl.dataset.placeName || "";
+
+        if (loc && loc === savedName && avg) {
+            // Sparad plats med medel-GPS (mest exakt).
+            map.setView(avg, 12);
+        } else if (loc) {
+            // Ändrad/osparad plats (eller saknar medel-GPS) - geokoda namnet.
+            try {
+                const items = await apiFetch(`/api/geocode?q=${encodeURIComponent(loc)}`);
+                if (items.length) map.setView([items[0].lat, items[0].lon], 13);
+                else if (avg) map.setView(avg, 12);
+            } catch (e) {
+                if (avg) map.setView(avg, 12);
             }
-            updateCoords();
+        } else if (avg) {
+            map.setView(avg, 12);
         }
     });
 

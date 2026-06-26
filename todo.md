@@ -18,16 +18,20 @@
   (`GET .../relation-suggestions`): lägg barn även till partnern, eller dela
   partnerns/personens befintliga barn. Användaren bockar för vilka; bekräftas via
   `POST .../relations/apply` (skapar parent-länkar, dedupar). Inget automatiskt.
-- [ ] **Global släktträdsvy (`/persons/tree`).** En egen vy som ritar HELA
-  släktgrafen dynamiskt ur `PersonLink`: hitta sammanhängande komponenter
-  (släkter) och rita dem parallellt sida vid sida - typiskt ett stort träd
-  (egna släkten) + några sidoträd, och personer utan länkar grupperade för sig
-  ("Inga familjelänkar"). Noder med tumnaglar, klickbara till `/persons/{n}`,
-  kanter för förälder/barn/partner. Behöver layout av en generell graf (inte
-  bara ett strikt träd - partners, omgiften, delade barn) -> ev. ett litet
-  klient-bibliotek (t.ex. d3/dagre, självhostat) eller egen enkel tier-layout
-  per komponent. Stor men avgränsad funktion; börja med komponent-uppdelning +
-  enkel layout, förfina sen.
+- [ ] **GEDCOM-export av släktträdet (sidoexport).** GEDCOM 7.0 är genealogi-
+  standarden. Vår `PersonLink` (parent/partner) mappar till INDI + FAM: partner-
+  par -> FAM, parent-länkar -> CHIL, `born`/`died` -> BIRT/DEAT. Exportera en
+  `.ged`-fil (ev. GEDZip med bilder) så hela trädet blir portabelt in i riktiga
+  verktyg (Gramps, Ancestris, webtrees, MyHeritage). Här hör rikare relationstyper
+  hemma - inte i fotoscans egen modell, som hålls enkel. Bygger på en helper som
+  grupperar partner-par + delade barn till FAM-poster.
+- [ ] **Global släktträdsvy (`/persons/tree`).** Rita hela släktgrafen ur
+  `PersonLink`: sammanhängande komponenter (släkter) parallellt, personer utan
+  länkar grupperade för sig. Noder med tumnaglar, klickbara till `/persons/{n}`.
+  **Använd ett befintligt självhostat lib i stället för egen graf-layout:**
+  family-chart (donatso, MIT, d3 - matas med JSON vi bygger ur PersonLink) eller
+  Topola (d3, läser GEDCOM direkt -> nästan gratis om GEDCOM-exporten finns).
+  Vendora libbet under `static/vendor/` (ingen CDN).
 
 ### Karta/GPS
 - [x] **Förvald kartposition från Plats.** Redan implementerat (sedan 2026-06-16):

@@ -61,6 +61,38 @@ def suggest_auto(img: Image.Image) -> dict:
     }
 
 
+def white_balance_from_point(img: Image.Image, x: float, y: float) -> dict:
+    """Vitbalans-pipett: ta en liten patch runt normaliserad punkt (x,y) som
+    ska vara neutralt grå/vit och räkna ut per-kanal-multiplikatorer som
+    neutraliserar färgsticket där. Returnerar adj_red/green/blue."""
+    rgb = img.convert("RGB")
+    w, h = rgb.size
+    px = _clamp(x, 0.0, 1.0) * (w - 1)
+    py = _clamp(y, 0.0, 1.0) * (h - 1)
+    rad = max(2, int(min(w, h) * 0.01))  # ~1% av kortsidan
+    box = (max(0, int(px) - rad), max(0, int(py) - rad),
+           min(w, int(px) + rad + 1), min(h, int(py) + rad + 1))
+    r, g, b = ImageStat.Stat(rgb.crop(box)).mean
+    gray = (r + g + b) / 3 or 1.0
+    return {
+        "adj_red": round(_clamp(gray / r if r else 1.0, 0.3, 2.0), 2),
+        "adj_green": round(_clamp(gray / g if g else 1.0, 0.3, 2.0), 2),
+        "adj_blue": round(_clamp(gray / b if b else 1.0, 0.3, 2.0), 2),
+    }
+
+
+def auto_white_balance(img: Image.Image) -> dict:
+    """Auto-vitbalans (grey-world) över hela bilden -> per-kanal-multiplikatorer
+    som tar bort generellt färgstick. Påverkar bara RGB-kanalerna."""
+    r, g, b = ImageStat.Stat(img.convert("RGB")).mean
+    gray = (r + g + b) / 3 or 1.0
+    return {
+        "adj_red": round(_clamp(gray / r if r else 1.0, 0.3, 2.0), 2),
+        "adj_green": round(_clamp(gray / g if g else 1.0, 0.3, 2.0), 2),
+        "adj_blue": round(_clamp(gray / b if b else 1.0, 0.3, 2.0), 2),
+    }
+
+
 def apply_adjustments(img: Image.Image, photo) -> Image.Image:
     """Applicera fotots sparade justeringar på en (redan orienterad) RGB-bild.
 

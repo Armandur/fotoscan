@@ -64,16 +64,24 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="adj-original" title="Håll inne för att se bilden utan färgjustering">
                         <i class="bi bi-eye"></i> Håll för original <kbd class="kbd-hint">O</kbd>
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" id="adj-autowb" title="Auto-vitbalans: ta bort generellt färgstick (grey-world)">
+                        <i class="bi bi-droplet-half"></i> Auto VB
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" id="adj-pipette" title="Vitbalans-pipett: klicka på något som ska vara neutralt grått/vitt i bilden">
+                        <i class="bi bi-eyedropper"></i> Pipett
+                    </button>
                     <span id="adj-status" class="small text-secondary ms-auto">Sparas automatiskt</span>
                 </div>
+                <canvas id="adj-histogram" height="60" class="w-100 mb-2"
+                        style="background:#0c0e12;border-radius:4px;display:block"></canvas>
                 {% set sliders = [
                     ('adj_brightness', 'Ljusstyrka', 0.2, 2.0, photo.adj_brightness),
                     ('adj_contrast', 'Kontrast', 0.2, 2.0, photo.adj_contrast),
                     ('adj_gamma', 'Gamma', 0.3, 3.0, photo.adj_gamma),
                     ('adj_saturation', 'Mättnad', 0.0, 2.0, photo.adj_saturation),
-                    ('adj_red', 'Röd', 0.5, 1.5, photo.adj_red),
-                    ('adj_green', 'Grön', 0.5, 1.5, photo.adj_green),
-                    ('adj_blue', 'Blå', 0.5, 1.5, photo.adj_blue),
+                    ('adj_red', 'Röd', 0.3, 2.0, photo.adj_red),
+                    ('adj_green', 'Grön', 0.3, 2.0, photo.adj_green),
+                    ('adj_blue', 'Blå', 0.3, 2.0, photo.adj_blue),
                 ] %}
                 {% for field, label, lo, hi, val in sliders %}
                 <div class="adj-row d-flex align-items-center gap-2 mb-1">

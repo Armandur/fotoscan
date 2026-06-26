@@ -195,6 +195,79 @@
         if (e.key === "o" || e.key === "O") rawOff();
     });
 
+    // ---- Auto-vitbalans (grey-world) ----
+    const autoWbBtn = document.getElementById("adj-autowb");
+    if (autoWbBtn) autoWbBtn.addEventListener("click", async () => {
+        autoWbBtn.disabled = true;
+        try {
+            const s = await apiFetch(`/api/photos/${photoId}/auto-wb`);
+            Object.entries(s).forEach(([f, v]) => setField(f, v, false));
+            onChange();
+            showToast("Auto-vitbalans ifylld");
+        } catch (err) { showToast("Auto-VB misslyckades: " + err.message, true); }
+        finally { autoWbBtn.disabled = false; }
+    });
+
+    // ---- Vitbalans-pipett: klicka på neutralt grått/vitt i bilden ----
+    const pipetteBtn = document.getElementById("adj-pipette");
+    let sampling = false;
+    function setSampling(on) {
+        sampling = on;
+        img.style.cursor = on ? "crosshair" : "";
+        if (pipetteBtn) pipetteBtn.classList.toggle("active", on);
+    }
+    if (pipetteBtn) pipetteBtn.addEventListener("click", () => setSampling(!sampling));
+    img.addEventListener("click", async (e) => {
+        if (!sampling) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = img.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+        const y = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+        setSampling(false);
+        try {
+            const s = await apiFetch(`/api/photos/${photoId}/white-balance?x=${x.toFixed(4)}&y=${y.toFixed(4)}`);
+            Object.entries(s).forEach(([f, v]) => setField(f, v, false));
+            onChange();
+            showToast("Vitbalans satt från punkt");
+        } catch (err) { showToast("Pipett misslyckades: " + err.message, true); }
+    }, true);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sampling) setSampling(false); });
+
+    // ---- Histogram: ritas live från den visade bilden (preview/fullbild) ----
+    const histCanvas = document.getElementById("adj-histogram");
+    const histScratch = document.createElement("canvas");
+    function drawHistogram() {
+        if (!histCanvas || !img.naturalWidth) return;
+        const SW = 256, SH = Math.max(1, Math.round(256 * img.naturalHeight / img.naturalWidth));
+        histScratch.width = SW; histScratch.height = SH;
+        const sctx = histScratch.getContext("2d");
+        let data;
+        try {
+            sctx.drawImage(img, 0, 0, SW, SH);
+            data = sctx.getImageData(0, 0, SW, SH).data;
+        } catch (e) { return; }  // ev. tainted -> hoppa över
+        const R = new Float32Array(256), G = new Float32Array(256), B = new Float32Array(256);
+        for (let i = 0; i < data.length; i += 4) { R[data[i]]++; G[data[i + 1]]++; B[data[i + 2]]++; }
+        let mx = 1;
+        for (let i = 0; i < 256; i++) mx = Math.max(mx, R[i], G[i], B[i]);
+        const w = histCanvas.width = histCanvas.clientWidth || 256;
+        const h = histCanvas.height;
+        const ctx = histCanvas.getContext("2d");
+        ctx.clearRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "lighter";
+        const chans = [[R, "rgba(255,80,80,.8)"], [G, "rgba(80,255,80,.7)"], [B, "rgba(90,140,255,.8)"]];
+        for (const [arr, color] of chans) {
+            ctx.fillStyle = color;
+            for (let i = 0; i < 256; i++) {
+                const bh = (arr[i] / mx) * h;
+                ctx.fillRect((i / 256) * w, h - bh, w / 256 + 1, bh);
+            }
+        }
+        ctx.globalCompositeOperation = "source-over";
+    }
+    img.addEventListener("load", drawHistogram);
+    if (img.complete) drawHistogram();
+
     // Exponera för kortkommandon i photo.js (öppnar panelen vid behov).
     window.adjToggle = () => bootstrap.Collapse.getOrCreateInstance(panel).toggle();
     window.adjAuto = () => { openPanel(); doAuto(); };

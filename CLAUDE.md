@@ -284,6 +284,12 @@ photos/                exempel/testbilder (gitignored)
   `POST /adjust` - ingen Tillämpa-knapp; en statusrad visar Ändrat/Sparar/Sparat.
   Auto fyller bara reglagen (förslag), Återställ nollar till 1.0. Kortkommandon
   C/A/X, samt O (håll) = visa bilden utan justering (`/image?raw=1`) för jämförelse.
+  **Vitbalans:** Auto-VB (grey-world, `/api/photos/{id}/auto-wb`) och pipett
+  (`/white-balance?x&y` - klicka neutralt grått/vitt i bilden, normaliserade
+  koordinater mot visad bild) sätter adj_red/green/blue; RGB-sliders går 0.3-2.0.
+  **Histogram** (`#adj-histogram`) ritas live i klienten ur den visade bilden
+  (canvas drawImage+getImageData på `#main-img` vid varje load) - reflekterar
+  aktuell preview. OBS: kan ej obscura-testas (obscura målar inga pixlar).
   Byter man bild innan debouncen sparat flushas ändringen via `navigator.sendBeacon`
   på `pagehide`. Den visade bildstorleken låses under preview (den nedskalade
   1200px-bilden skulle annars krympa i fönstret), låses upp när fullbilden laddats.

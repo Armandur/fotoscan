@@ -16,7 +16,10 @@ from app.database import Album, AlbumPhoto, Photo, Tag
 from app.database import _now
 from app.deps import get_db
 from app.schemas import BatchUpdate, PhotoAdjust, PhotoUpdate, ReorderRequest
-from app.services.adjust import apply_adjustments, has_adjustments, suggest_auto
+from app.services.adjust import (
+    apply_adjustments, auto_white_balance, has_adjustments, suggest_auto,
+    white_balance_from_point,
+)
 from app.services.context import (
     context_back, context_nav_qs, context_ordered_ids,
 )
@@ -597,6 +600,27 @@ def auto_suggest(photo_id: int, db: Session = Depends(get_db)):
     # Analysera basbilden (orienterad/roterad, utan tidigare färgjusteringar).
     img = load_oriented(Path(photo.path), photo.rotation or 0)
     return JSONResponse(suggest_auto(img))
+
+
+@router.get("/api/photos/{photo_id}/white-balance")
+def white_balance(photo_id: int, x: float, y: float, db: Session = Depends(get_db)):
+    """Vitbalans-pipett: neutralisera färgsticket vid punkt (x,y) (normaliserad,
+    relativt visad/orienterad bild). Returnerar adj_red/green/blue."""
+    photo = db.get(Photo, photo_id)
+    if not photo or not Path(photo.path).exists():
+        raise HTTPException(404, "Bildfil saknas")
+    img = load_oriented(Path(photo.path), photo.rotation or 0)
+    return JSONResponse(white_balance_from_point(img, x, y))
+
+
+@router.get("/api/photos/{photo_id}/auto-wb")
+def auto_wb(photo_id: int, db: Session = Depends(get_db)):
+    """Auto-vitbalans (grey-world) över hela bilden -> adj_red/green/blue."""
+    photo = db.get(Photo, photo_id)
+    if not photo or not Path(photo.path).exists():
+        raise HTTPException(404, "Bildfil saknas")
+    img = load_oriented(Path(photo.path), photo.rotation or 0)
+    return JSONResponse(auto_white_balance(img))
 
 
 @router.get("/api/photos/{photo_id}/preview")

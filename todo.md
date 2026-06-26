@@ -105,9 +105,10 @@
   Obekräftade AI-rutor räknas inte i katalogen. `services/faces_ai.py` +
   `routes/faces_ai.py`. (Möjlig vidareutveckling: GPU på Unraid, klustring av
   okända, automatisk omkörning vid scan.)
-- [ ] Färgkorrigering vidare: ev. histogram, manuell vitbalans-pipett, auto-
-  färgstick (OpenCV/scikit-image om Pillow inte räcker). (Live-preview för alla
-  reglage inkl. gamma/per-kanal är klar via server-render-preview.)
+- [x] **Färgkorrigering vidare.** Vitbalans-pipett (`/white-balance?x&y` - klicka
+  neutralt grått/vitt), auto-färgstick/grey-world (`/auto-wb`), och live-histogram
+  (klient-canvas ur visad bild) tillagda i justeringspanelen; RGB-sliders 0.3-2.0.
+  `services/adjust.py`: `white_balance_from_point` + `auto_white_balance`.
 - [ ] Sidecar `.xmp` som exportalternativ för format utan inbäddning (t.ex. RAW).
 - [ ] **Filen som portabel sanningskälla -> separat visnings-app.** Mål: "har du
   filen har du metadatan", och en färdig samling ska kunna delas med släkten utan

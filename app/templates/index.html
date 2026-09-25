@@ -3,12 +3,6 @@
 
 {% block headeractions %}
     <span class="text-secondary small d-none d-sm-inline">{{ reviewed_count }}/{{ total_all }} granskade</span>
-    <button id="select-btn" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-check2-square"></i> Välj
-    </button>
-    <button id="order-btn" class="btn btn-outline-secondary btn-sm" title="Dra korten för att ange manuell ordning (inom samma år/månad)">
-        <i class="bi bi-arrow-down-up"></i> Ordna
-    </button>
     <button id="export-btn" class="btn btn-outline-info btn-sm" title="Exportera granskade foton med inbäddad metadata">
         <i class="bi bi-box-arrow-up"></i> Exportera granskade
     </button>
@@ -82,6 +76,9 @@
                 <option value="name" {% if sort == 'name' %}selected{% endif %}>Filnamn</option>
                 <option value="added" {% if sort == 'added' %}selected{% endif %}>Tillagd</option>
             </select>
+            <button type="button" id="order-btn" class="btn btn-outline-secondary btn-sm" title="Dra korten för att ange manuell ordning (inom samma år/månad)">
+                <i class="bi bi-arrow-down-up"></i> Ordna
+            </button>
             <span class="text-secondary small">{{ total }} foton{% if folder != '*' %} i {{ folder if folder else '(rot)' }}{% if recursive %} + undermappar{% endif %}{% endif %}</span>
             <div class="form-check form-switch ms-auto" title="Visa negativ och foto var för sig i stället för grupperat">
                 <input class="form-check-input" type="checkbox" name="separate" value="1" id="separate-toggle" {% if separate %}checked{% endif %}>
@@ -114,7 +111,7 @@
          data-q="{{ q }}" data-reviewed="{{ reviewed }}" data-ptype="{{ ptype }}" data-paired="{{ paired }}" data-folder="{{ folder }}" data-recursive="{{ 1 if recursive else 0 }}" data-separate="{{ 1 if separate else 0 }}" data-sort="{{ sort }}" data-missing="{{ missing }}" data-total="{{ total }}" hidden>
         <span id="batch-count" class="small fw-bold">0 valda</span>
         <button class="btn btn-sm btn-outline-secondary" id="batch-page">Välj alla på sidan</button>
-        <button class="btn btn-sm btn-outline-secondary" id="batch-clear">Avmarkera</button>
+        <button class="btn btn-sm btn-outline-secondary" id="batch-clear" title="Avmarkera allt och stäng"><i class="bi bi-x-lg"></i> Avmarkera</button>
         <div class="form-check form-switch ms-2">
             <input class="form-check-input" type="checkbox" id="batch-all-filter">
             <label class="form-check-label small" for="batch-all-filter">Alla {{ total }} i filtret</label>
@@ -175,6 +172,7 @@
         {% for photo in photos %}
         <a class="card photo-card text-decoration-none {% if photo.reviewed_at %}reviewed{% endif %}"
            href="/photo/{{ photo.id }}{{ photo_qs }}" data-id="{{ photo.id }}">
+            <span class="card-check" role="checkbox" aria-label="Markera"><i class="bi bi-check-lg"></i></span>
             <div class="card-badges">
                 {% if photo.is_negative %}<span class="badge text-bg-dark border border-secondary">Negativ</span>{% endif %}
                 {% if photo.paired_with_id %}<span class="badge text-bg-info" title="Hopparad"><i class="bi bi-link-45deg"></i></span>{% endif %}
@@ -283,12 +281,13 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
 
 // ---- Urval + massåtgärder ----
 (() => {
-    const selectBtn = document.getElementById("select-btn");
     const bar = document.getElementById("batch-bar");
     const grid = document.querySelector(".gallery-grid");
-    if (!selectBtn || !grid) return;
+    if (!bar || !grid) return;
     const allFilter = document.getElementById("batch-all-filter");
     const selected = new Set();
+    // Urvalsläget startar när första kortets bockruta klickas och stängs när
+    // sista markeringen tas bort. I läget markerar klick på hela kortet.
     let selecting = false, ordering = false, dragEl = null;
 
     // Autocomplete (native datalist) för tagg/person/plats i åtgärdsmenyn.
@@ -426,16 +425,16 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         return { ids: [...selected] };
     }
 
-    selectBtn.addEventListener("click", () => {
-        selecting = !selecting;
-        bar.hidden = !selecting;
-        grid.classList.toggle("selecting", selecting);
-        selectBtn.classList.toggle("active", selecting);
-        if (!selecting) clearSel();
-    });
+    function setSelecting(on) {
+        selecting = on;
+        bar.hidden = !on;
+        grid.classList.toggle("selecting", on);
+        if (!on) clearSel();
+    }
 
     grid.addEventListener("click", (e) => {
         if (ordering) { e.preventDefault(); return; }  // ordna-läge: dra, ej navigera
+        if (!selecting && e.target.closest(".card-check")) setSelecting(true);
         if (!selecting) return;
         const card = e.target.closest(".photo-card");
         if (!card) return;
@@ -445,13 +444,14 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         else { selected.add(id); card.classList.add("selected"); }
         allFilter.checked = false;
         count();
+        if (!selected.size) setSelecting(false);
     });
 
     // ---- Ordna-läge: dra korten för manuell ordning (seq) ----
     const orderBtn = document.getElementById("order-btn");
     if (orderBtn) {
         orderBtn.addEventListener("click", () => {
-            if (!ordering && selecting) selectBtn.click();  // ömsesidigt uteslutande
+            if (!ordering && selecting) setSelecting(false);  // ömsesidigt uteslutande
             ordering = !ordering;
             grid.classList.toggle("ordering", ordering);
             orderBtn.classList.toggle("active", ordering);
@@ -494,7 +494,7 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
         });
         count();
     });
-    document.getElementById("batch-clear").addEventListener("click", clearSel);
+    document.getElementById("batch-clear").addEventListener("click", () => setSelecting(false));
     allFilter.addEventListener("change", count);
 
     // Bygg åtgärds-payload (op) för en knapp. Returnerar null om åtgärden kräver

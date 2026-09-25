@@ -43,25 +43,45 @@
     text-overflow: ellipsis;
 }
 .photo-card.selected {
-    outline: 3px solid var(--bs-info);
+    outline: 3px solid var(--bs-primary);
     outline-offset: -3px;
 }
-.photo-card.selected::after {
-    content: "\2713";
+/* d-flex har !important och trumfar annars hidden-attributet. */
+#batch-bar[hidden] { display: none !important; }
+
+/* Bockruta i kortets hörn: nästan osynlig vid hovring, blå ifylld när markerad. */
+.card-check {
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 24px;
-    height: 24px;
-    background: var(--bs-info);
-    color: #000;
+    width: 26px;
+    height: 26px;
+    border: 2px solid rgba(255, 255, 255, .85);
     border-radius: 50%;
+    background: rgba(0, 0, 0, .25);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
     z-index: 2;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity .15s, background-color .15s;
 }
+.card-check .bi { font-size: 1rem; opacity: 0; }
+.photo-card:hover .card-check { opacity: .35; }
+.card-check:hover { opacity: .9 !important; }
+.card-check:hover .bi { opacity: .6; }
+.gallery-grid.selecting .card-check { opacity: .6; }
+.photo-card.selected .card-check {
+    opacity: 1;
+    background: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+.photo-card.selected .card-check .bi { opacity: 1; }
+.gallery-grid.ordering .card-check { display: none; }
+/* Pekskärm saknar hovring: visa rutan svagt hela tiden. */
+@media (hover: none) { .card-check { opacity: .35; } }
 @keyframes skeleton-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }

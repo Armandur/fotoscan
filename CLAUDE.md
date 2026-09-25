@@ -310,7 +310,9 @@ photos/                exempel/testbilder (gitignored)
   `Photo.folder`-sökvägar) med expanderbara noder. `recursive`-toggle inkluderar
   undermappar (`folder == X OR folder LIKE X/%`). `_filtered_query` delas av
   galleri och batch-åtgärder.
-- **Massåtgärder**: urvalsläge i galleriet + `POST /api/photos/batch` (id-lista
+- **Massåtgärder**: urvalsläge i galleriet (startas av kortets bockruta
+  `.card-check` uppe till höger, stängs när sista markeringen tas bort; ingen
+  Välj-knapp) + `POST /api/photos/batch` (id-lista
   eller hela filtret), samlade i en "Åtgärder"-dropdown i batch-baren. Åtgärder
   (alla None/tom = oförändrat): `set_negative`, `set_reviewed`, `add_tags`/
   `remove_tags` (tagg el. person), `set_date` (date_text -> härledda fält),

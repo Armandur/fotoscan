@@ -36,7 +36,7 @@ app/
     albums.py          Album + AlbumPhoto: vy (lista/detalj=foto-ordning), layoutvy (WYSIWYG-sidor + avsnitt), inställningar, PDF
     timeline.py        tidslinjevy grupperad per år/månad (date_year/month/precision)
     pairing.py         para ihop negativ<->foto: kandidater, pair (merge), unpair
-    backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss, masskoppling per mapp
+    backside.py        baksides-koppling (back_of_id): kandidater, koppla, koppla loss, masskoppling
     dashboard.py       /dashboard: översikt + saknar-statistik; /review-flödet ligger i photos.py
     duplicates.py      /duplicates: grupperar liknande foton via phash (services/dupes.py); rena foto+negativ-par utesluts
     backup.py          GET /api/backup: konsekvent SQLite-snapshot (VACUUM INTO) som zip
@@ -143,8 +143,9 @@ photos/                exempel/testbilder (gitignored)
   `back_of_id != None` alltid). Hanteras i detaljvyn (`backside.py` + `backside.js`):
   visa/förstora baksidan, koppla via kandidatsök, koppla loss. Andra själv-FK:n på
   photos (efter `paired_with_id`) - inga ORM-relationer på dem, slås upp via query.
-  **Masskoppling per mapp** (`/backsides/folder?folder=X`, knapp "Koppla baksidor"
-  i galleriet när en mapp är vald): filer i följd fram, bak, fram, bak paras i
+  **Masskoppling** (`/backsides/pair?ids=...` eller `?folder=X`, galleriets
+  Åtgärder-meny "Koppla baksidor": markerade foton, eller hela mappen med "alla
+  i filtret"): filer i följd fram, bak, fram, bak paras i
   naturlig filnamnsordning (`_natural_key`, som Windows: 2 före 10). Redan
   kopplade fram- och baksidor räknas bort innan växlingen, så en ny körning
   förskjuter inte paren. Förhandsvisning med kryssrutor, sedan

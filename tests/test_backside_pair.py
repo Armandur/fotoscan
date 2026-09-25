@@ -41,8 +41,8 @@ def _ids(db):
     return {p.filename: p.id for p in db.query(Photo).filter(Photo.folder == FOLDER)}
 
 
-def _page_pairs(client, db):
-    html = client.get("/backsides/folder", params={"folder": FOLDER}).text
+def _page_pairs(client, db, **params):
+    html = client.get("/backsides/pair", params=params or {"folder": FOLDER}).text
     names = {v: k for k, v in _ids(db).items()}
     return [
         (names[int(f)], names[int(b)])
@@ -76,3 +76,9 @@ def test_link_many_rejects_whole_batch_on_conflict(client, db):
     assert r.status_code == 400
     db.rollback()
     assert db.get(Photo, ids["4.jpg"]).back_of_id is None
+
+
+def test_preview_from_selected_ids(client, db):
+    ids = _ids(db)
+    sel = ",".join(str(ids[f"{n}.jpg"]) for n in [12, 9, 10, 11])
+    assert _page_pairs(client, db, ids=sel) == [("9.jpg", "10.jpg"), ("11.jpg", "12.jpg")]

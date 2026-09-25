@@ -83,7 +83,6 @@
                 <option value="added" {% if sort == 'added' %}selected{% endif %}>Tillagd</option>
             </select>
             <span class="text-secondary small">{{ total }} foton{% if folder != '*' %} i {{ folder if folder else '(rot)' }}{% if recursive %} + undermappar{% endif %}{% endif %}</span>
-            {% if folder != '*' %}<a class="btn btn-sm btn-outline-secondary" href="/backsides/folder?folder={{ folder|urlencode }}" title="Para ihop framsidor och baksidor som ligger i följd i mappen"><i class="bi bi-arrow-left-right"></i> Koppla baksidor</a>{% endif %}
             <div class="form-check form-switch ms-auto" title="Visa negativ och foto var för sig i stället för grupperat">
                 <input class="form-check-input" type="checkbox" name="separate" value="1" id="separate-toggle" {% if separate %}checked{% endif %}>
                 <label class="form-check-label small" for="separate-toggle">Visa hopparade separat</label>
@@ -157,6 +156,10 @@
                     <select class="form-select" id="batch-album-select"><option value="">Välj album...</option></select>
                     <button class="btn btn-outline-primary" type="button" id="batch-album-add">Lägg till i album</button>
                 </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" type="button" id="batch-backsides" title="Filerna paras i filnamnsordning: framsida, baksida, framsida, baksida ...">
+                    <i class="bi bi-arrow-left-right"></i> Koppla baksidor (fram, bak i följd)
+                </button>
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item text-danger" type="button" data-batch="delete">
                     <i class="bi bi-trash"></i> Ta bort ur katalogen
@@ -338,6 +341,21 @@ document.getElementById("scan-btn").addEventListener("click", async (e) => {
             } catch (err) { showToast("Kunde inte lägga till: " + err.message, true); }
         });
     }
+
+    // Koppla baksidor: öppna förhandsvisningen för markerade foton, eller hela
+    // mappen när "alla i filtret" är på (kräver en vald mapp).
+    document.getElementById("batch-backsides").addEventListener("click", () => {
+        if (allFilter.checked) {
+            if (bar.dataset.folder === "*" || bar.dataset.recursive === "1") {
+                showToast("Välj en enskild mapp, eller markera foton", true);
+                return;
+            }
+            location.href = "/backsides/pair?folder=" + encodeURIComponent(bar.dataset.folder);
+            return;
+        }
+        if (selected.size < 2) { showToast("Markera minst två foton", true); return; }
+        location.href = "/backsides/pair?ids=" + [...selected].join(",");
+    });
 
     // Person: egen autocomplete med ansikts-thumbnails (som "Slå ihop med").
     const personInput = document.getElementById("batch-person-input");

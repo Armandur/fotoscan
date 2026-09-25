@@ -86,39 +86,55 @@ def _natural_key(name: str) -> list:
     return [int(t) if t.isdigit() else t.casefold() for t in re.split(r"(\d+)", name)]
 
 
-def _folder_plan(db: Session, folder: str) -> dict:
-    """Föreslå par fram/bak för en mapp där filerna ligger i ordningen
-    framsida, baksida, framsida, baksida ... Foton som redan är baksidor, eller
-    redan har en baksida, räknas bort innan växlingen - annars skulle en andra
-    körning para ihop två framsidor."""
-    photos = db.query(Photo).filter(Photo.folder == folder).all()
+def _order_key(p: Photo) -> tuple:
+    return (_natural_key(p.folder or ""), _natural_key(p.filename))
+
+
+def _pair_plan(db: Session, photos: list[Photo]) -> dict:
+    """Föreslå par fram/bak ur foton som ligger i ordningen framsida, baksida,
+    framsida, baksida ... (mapp, sedan filnamn). Foton som redan är baksidor,
+    eller redan har en baksida, räknas bort innan växlingen - annars skulle en
+    andra körning para ihop två framsidor."""
     ids = [p.id for p in photos]
-    has_back = {
-        fid for (fid,) in
-        db.query(Photo.back_of_id).filter(Photo.back_of_id.in_(ids)).distinct()
-    }
+    backs_of = db.query(Photo).filter(Photo.back_of_id.in_(ids)).all()
+    has_back = {b.back_of_id for b in backs_of}
     by_id = {p.id: p for p in photos}
-    linked = [
-        (by_id.get(p.back_of_id) or db.get(Photo, p.back_of_id), p)
-        for p in photos if p.back_of_id
-    ]
-    linked.sort(key=lambda fb: _natural_key(fb[1].filename))
+    linked = {
+        b.id: (by_id.get(b.back_of_id) or db.get(Photo, b.back_of_id), b)
+        for b in [p for p in photos if p.back_of_id] + backs_of
+    }
     free = sorted(
         (p for p in photos if not p.back_of_id and p.id not in has_back),
-        key=lambda p: _natural_key(p.filename),
+        key=_order_key,
     )
     return {
         "pairs": list(zip(free[0::2], free[1::2])),
         "leftover": free[-1] if len(free) % 2 else None,
-        "linked": linked,
+        "linked": sorted(linked.values(), key=lambda fb: _order_key(fb[1])),
     }
 
 
-@router.get("/backsides/folder", response_class=HTMLResponse)
-def backside_folder_page(request: Request, folder: str, db: Session = Depends(get_db)):
-    plan = _folder_plan(db, folder)
+@router.get("/backsides/pair", response_class=HTMLResponse)
+def backside_pair_page(
+    request: Request, folder: str | None = None, ids: str = "",
+    db: Session = Depends(get_db),
+):
+    """Förhandsvisning: antingen en hel mapp (folder) eller markerade foton
+    (ids, kommaseparerade) från galleriets Åtgärder-meny."""
+    if ids:
+        try:
+            id_list = [int(x) for x in ids.split(",") if x.strip()]
+        except ValueError:
+            raise HTTPException(400, "Ogiltig lista med foton")
+        photos = db.query(Photo).filter(Photo.id.in_(id_list)).all()
+    elif folder is not None:
+        photos = db.query(Photo).filter(Photo.folder == folder).all()
+    else:
+        raise HTTPException(400, "Välj en mapp eller markera foton")
     return templates.TemplateResponse(
-        request, "backside_folder.html", {"folder": folder, **plan},
+        request, "backside_pair.html",
+        {"folder": folder if not ids else None, "selected": len(photos) if ids else 0,
+         **_pair_plan(db, photos)},
     )
 
 

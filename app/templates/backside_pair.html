@@ -11,11 +11,12 @@
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
     <h1 class="h4 mb-0">Koppla baksidor</h1>
-    <a class="btn btn-sm btn-outline-secondary" href="/?folder={{ folder|urlencode }}"><i class="bi bi-arrow-left"></i> Till mappen</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/" onclick="if (history.length > 1) { history.back(); return false; }"><i class="bi bi-arrow-left"></i> Tillbaka</a>
 </div>
 <p class="text-secondary small mb-3">
-    <i class="bi bi-folder"></i> {{ folder if folder else '(rot)' }} - filerna paras i filnamnsordning
-    (som i Windows): första filen är framsidan, nästa är dess baksida. Kontrollera paren innan du kopplar.
+    {% if folder is not none %}<i class="bi bi-folder"></i> {{ folder if folder else '(rot)' }}{% else %}<i class="bi bi-check2-square"></i> {{ selected }} markerade foton{% endif %}
+    - filerna paras i filnamnsordning (som i Windows): första filen är framsidan, nästa är dess baksida.
+    Kontrollera paren innan du kopplar.
 </p>
 
 {% if leftover %}
@@ -50,7 +51,7 @@
 
 {% if linked %}
 <details class="mb-4">
-    <summary class="text-secondary small">{{ linked|length }} redan kopplade i mappen</summary>
+    <summary class="text-secondary small">{{ linked|length }} redan kopplade</summary>
     <div class="bs-pairs mt-2">
         {% for front, back in linked %}
         <div class="bs-pair card"><div class="card-body d-flex align-items-center gap-2 p-2">

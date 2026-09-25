@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Koppla baksidor - Fotoscan{% endblock %}
+
+{% macro side(photo, label) %}
+<a class="bs-side" href="/image/{{ photo.id }}" target="_blank" title="{{ photo.filename }}">
+    <img src="/thumb/{{ photo.id }}" alt="{{ label }}: {{ photo.filename }}" loading="lazy">
+    <span class="small text-secondary text-break d-block">{{ label }}: {{ photo.filename }}</span>
+</a>
+{% endmacro %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    <h1 class="h4 mb-0">Koppla baksidor</h1>
+    <a class="btn btn-sm btn-outline-secondary" href="/?folder={{ folder|urlencode }}"><i class="bi bi-arrow-left"></i> Till mappen</a>
+</div>
+<p class="text-secondary small mb-3">
+    <i class="bi bi-folder"></i> {{ folder if folder else '(rot)' }} - filerna paras i filnamnsordning
+    (som i Windows): första filen är framsidan, nästa är dess baksida. Kontrollera paren innan du kopplar.
+</p>
+
+{% if leftover %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> Udda antal filer: <strong>{{ leftover.filename }}</strong> blir över.
+    Saknas en baksida någonstans förskjuts alla par efter den - titta extra noga.
+</div>
+{% endif %}
+
+{% if not pairs %}
+<div class="alert alert-secondary">Inga okopplade par att föreslå i den här mappen.</div>
+{% else %}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <button class="btn btn-primary btn-sm" id="bs-apply"><i class="bi bi-link-45deg"></i> Koppla <span id="bs-count">{{ pairs|length }}</span> par</button>
+    <button class="btn btn-outline-secondary btn-sm" id="bs-all">Markera alla</button>
+    <button class="btn btn-outline-secondary btn-sm" id="bs-none">Avmarkera alla</button>
+</div>
+<div class="bs-pairs mb-4">
+    {% for front, back in pairs %}
+    <label class="bs-pair card">
+        <div class="card-body d-flex align-items-center gap-2 p-2">
+            <input class="form-check-input flex-shrink-0 bs-check" type="checkbox" checked
+                   data-front="{{ front.id }}" data-back="{{ back.id }}">
+            <span class="text-secondary small bs-num">{{ loop.index }}</span>
+            {{ side(front, "Fram") }}
+            {{ side(back, "Bak") }}
+        </div>
+    </label>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if linked %}
+<details class="mb-4">
+    <summary class="text-secondary small">{{ linked|length }} redan kopplade i mappen</summary>
+    <div class="bs-pairs mt-2">
+        {% for front, back in linked %}
+        <div class="bs-pair card"><div class="card-body d-flex align-items-center gap-2 p-2">
+            {{ side(front, "Fram") }}
+            {{ side(back, "Bak") }}
+        </div></div>
+        {% endfor %}
+    </div>
+</details>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const btn = document.getElementById("bs-apply");
+    if (!btn) return;
+    const checks = () => Array.from(document.querySelectorAll(".bs-check"));
+    const update = () => {
+        const n = checks().filter(c => c.checked).length;
+        document.getElementById("bs-count").textContent = n;
+        btn.disabled = n === 0;
+    };
+    checks().forEach(c => c.addEventListener("change", update));
+    document.getElementById("bs-all").addEventListener("click", () => { checks().forEach(c => { c.checked = true; }); update(); });
+    document.getElementById("bs-none").addEventListener("click", () => { checks().forEach(c => { c.checked = false; }); update(); });
+
+    btn.addEventListener("click", async () => {
+        const pairs = checks().filter(c => c.checked)
+            .map(c => ({ front_id: Number(c.dataset.front), back_id: Number(c.dataset.back) }));
+        if (!pairs.length) return;
+        const ok = await showConfirm(`Koppla ${pairs.length} baksidor? De döljs sedan ur galleriet och visas under framsidan.`,
+            { okLabel: "Koppla" });
+        if (!ok) return;
+        btn.disabled = true;
+        try {
+            const res = await apiFetch("/api/backsides/link-many", { method: "POST", body: { pairs } });
+            showToast(`${res.count} baksidor kopplade`);
+            location.reload();
+        } catch (e) {
+            showToast(e.message, true);
+            btn.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

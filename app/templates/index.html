@@ -83,6 +83,7 @@
                 <option value="added" {% if sort == 'added' %}selected{% endif %}>Tillagd</option>
             </select>
             <span class="text-secondary small">{{ total }} foton{% if folder != '*' %} i {{ folder if folder else '(rot)' }}{% if recursive %} + undermappar{% endif %}{% endif %}</span>
+            {% if folder != '*' %}<a class="btn btn-sm btn-outline-secondary" href="/backsides/folder?folder={{ folder|urlencode }}" title="Para ihop framsidor och baksidor som ligger i följd i mappen"><i class="bi bi-arrow-left-right"></i> Koppla baksidor</a>{% endif %}
             <div class="form-check form-switch ms-auto" title="Visa negativ och foto var för sig i stället för grupperat">
                 <input class="form-check-input" type="checkbox" name="separate" value="1" id="separate-toggle" {% if separate %}checked{% endif %}>
                 <label class="form-check-label small" for="separate-toggle">Visa hopparade separat</label>

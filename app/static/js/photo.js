@@ -164,6 +164,18 @@
     document.getElementById("rot-cw").addEventListener("click", () => rotate("cw"));
     document.getElementById("rot-ccw").addEventListener("click", () => rotate("ccw"));
 
+    const reloadBtn = document.getElementById("reload-file-btn");
+    reloadBtn.addEventListener("click", async () => {
+        reloadBtn.disabled = true;
+        try {
+            await apiFetch(`/api/photos/${photoId}/reload`, { method: "POST" });
+            location.reload();
+        } catch (err) {
+            showToast("Kunde inte läsa om filen: " + err.message, true);
+            reloadBtn.disabled = false;
+        }
+    });
+
     // ---- Lightbox (förstora) ----
     const lbBtn = document.getElementById("lightbox-btn");
     if (lbBtn) {

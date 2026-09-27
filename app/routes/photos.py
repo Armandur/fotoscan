@@ -24,6 +24,7 @@ from app.services.context import (
     context_back, context_nav_qs, context_ordered_ids,
 )
 from app.services.dates import parse_date_text
+from app.services.dupes import dhash_from_path
 from app.services.filtering import apply_dimensions, sort_order as _sort_order
 from app.routes.places import get_or_create_place, place_avg_gps
 from app.services.scanner import (
@@ -501,6 +502,25 @@ def rotate_photo(
     if Path(photo.path).exists():
         refresh_derived(photo)
     return JSONResponse({"ok": True, "rotation": photo.rotation})
+
+
+@router.post("/api/photos/{photo_id}/reload")
+def reload_photo(photo_id: int, db: Session = Depends(get_db)):
+    """Läs om originalfilen efter att den ersatts på disk: bygg om thumbnail,
+    render-cache, ansikts-crops och phash. updated_at bumpas så webbläsaren
+    hämtar nya versioner (?v= i bild-URL:erna)."""
+    photo = db.get(Photo, photo_id)
+    if not photo:
+        raise HTTPException(404, "Foto hittades inte")
+    if not Path(photo.path).exists():
+        raise HTTPException(404, "Originalfilen saknas")
+    refresh_derived(photo)
+    for f in photo.faces:
+        invalidate_face_thumb(f.id)
+    photo.phash = dhash_from_path(THUMB_DIR / f"{photo.id}.jpg")
+    photo.updated_at = _now()
+    db.commit()
+    return JSONResponse({"ok": True})
 
 
 def _delete_photo(db: Session, photo: Photo, del_ids: set[int]) -> list[int]:

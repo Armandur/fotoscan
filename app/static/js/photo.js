@@ -97,7 +97,8 @@
     });
 
     // ---- Ta bort foto ur katalogen ----
-    document.getElementById("delete-photo-btn").addEventListener("click", async (e) => {
+    const deleteBtn = document.getElementById("delete-photo-btn");
+    deleteBtn.addEventListener("click", async () => {
         const ok = await showConfirm(
             "Ta bort fotot ur katalogen? Metadata, taggar, ansiktsrutor och " +
             "album-medlemskap för fotot tas bort. Originalfilen på disk rörs " +
@@ -106,14 +107,14 @@
             { okLabel: "Ta bort", okClass: "btn-danger" }
         );
         if (!ok) return;
-        e.currentTarget.disabled = true;
+        deleteBtn.disabled = true;
         try {
             await apiFetch(`/api/photos/${photoId}`, { method: "DELETE" });
             showToast("Fotot togs bort ur katalogen");
             setTimeout(() => { location.href = "/" + navQs; }, 400);
         } catch (err) {
             showToast("Borttagning misslyckades: " + err.message, true);
-            e.currentTarget.disabled = false;
+            deleteBtn.disabled = false;
         }
     });
 

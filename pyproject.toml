@@ -15,6 +15,7 @@ dependencies = [
     "pillow-heif>=1.4.0",
     "insightface>=1.0.1",
     "onnxruntime>=1.27.0",
+    "python-docx>=1.2.0",
 ]
 
 [tool.uv]

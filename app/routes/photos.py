@@ -343,6 +343,8 @@ def photo_detail(
         ids = _ordered_ids(
             db, q, reviewed, ptype, paired, folder, recursive, separate, sort, missing
         )
+    if ctx == "album" and ctx_id and photo_id not in ids:
+        return RedirectResponse(f"/albums/{ctx_id}", status_code=303)
     if photo_id not in ids:
         ids = _ordered_ids(db, "", "", "", "", "*", False, True, sort)
         in_ctx = False

@@ -1,0 +1,11 @@
+<div class="card card-body mb-3 p-2" id="album-selection" data-photo-id="{{ photo.id }}">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <label for="active-album" class="small">Snabbval till album</label>
+        <select id="active-album" class="form-select form-select-sm w-auto" style="max-width:100%" aria-label="Aktivt album" disabled>
+            <option value="">Välj album...</option>
+        </select>
+        <button id="album-toggle" class="btn btn-outline-primary btn-sm" type="button" aria-pressed="false" disabled>Välj album först (B)</button>
+        <a id="active-album-link" class="small" href="/albums">Hantera album</a>
+        <span id="album-state" class="small text-secondary" role="status" aria-live="polite">Hämtar albumval…</span>
+    </div>
+</div>

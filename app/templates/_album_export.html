@@ -1,0 +1,24 @@
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#package-modal" {% if not entries %}disabled{% endif %}>Ladda ner bilder och bildlista</button>
+<div class="modal fade" id="package-modal" tabindex="-1" aria-labelledby="package-title">
+    <div class="modal-dialog"><div class="modal-content">
+        <form id="package-form" action="/api/albums/{{ album.id }}/export-package" method="post">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="package-title">Bilder och Word-bildlista</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Stäng"></button>
+            </div>
+            <div class="modal-body">
+                <p>ZIP med albumets bilder som JPEG, högst 3840 pixlar, och ett Word-dokument med miniatyrer och filhänvisningar.</p>
+                <p>Välj metadata från de sparade bilduppgifterna:</p>
+                {% for key, label in [('date','Datum'),('place','Plats'),('persons','Personer'),('source','Källa'),('tags','Taggar'),('notes','Anteckningar')] %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="fields" value="{{ key }}" id="package-{{ key }}" {% if key in ['date','place','persons','source'] %}checked{% endif %}>
+                    <label class="form-check-label" for="package-{{ key }}">{{ label }}</label>
+                </div>
+                {% endfor %}
+                <p class="small text-secondary mt-3">Kontrollera anteckningarna innan du delar dem. Originalfilerna förblir orörda.</p>
+                <div id="package-status" role="status" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-primary" id="package-submit" type="submit">Skapa och ladda ner ZIP</button></div>
+        </form>
+    </div></div>
+</div>

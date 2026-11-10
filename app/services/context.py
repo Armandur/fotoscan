@@ -71,7 +71,7 @@ def context_ordered_ids(
             .order_by(AlbumPhoto.position)
             .all()
         )
-        return [r[0] for r in rows] or None
+        return [r[0] for r in rows]
 
     query = context_query(db, ctx, ctx_id)
     if query is None:

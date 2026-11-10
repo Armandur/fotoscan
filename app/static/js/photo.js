@@ -200,7 +200,7 @@
 
     // ---- Navigering ---- (bär med filterkontexten från galleriet)
     const navQs = detail.dataset.nav || "";
-    function go(id) { if (id) location.href = `/photo/${id}${navQs}`; }
+    function go(id) { if (id) window.albumNavigate(`/photo/${id}${navQs}`); }
 
     // ---- Hjälp-modal ----
     const helpModal = bootstrap.Modal.getOrCreateInstance("#help-modal");
@@ -274,7 +274,7 @@
     };
     document.addEventListener("keydown", (e) => {
         const el = document.activeElement;
-        const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+        const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
         // Spara fungerar även när man skriver.
         if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(false); return; }
@@ -291,7 +291,7 @@
         if (e.key === "R") { e.preventDefault(); rotate("ccw"); return; }
         if (e.key === "f") { e.preventDefault(); window.toggleFaceDraw && window.toggleFaceDraw(); return; }
         if (e.key === "m") { e.preventDefault(); window.openPairModal && window.openPairModal(); return; }
-        if (e.key === "g") { e.preventDefault(); location.href = "/" + navQs; return; }
+        if (e.key === "g") { e.preventDefault(); window.albumNavigate(document.querySelector(".detail").dataset.back); return; }
         if (e.key === "p") { e.preventDefault(); peopleTF && peopleTF.focus(); return; }
         if (e.key === "t") { e.preventDefault(); tagsTF && tagsTF.focus(); return; }
         // Färgjustering

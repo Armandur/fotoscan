@@ -137,9 +137,10 @@ def album_pdf(
 
 
 @router.get("/api/albums")
-def list_albums_api(db: Session = Depends(get_db)):
+def list_albums_api(photo_id: int | None = None, db: Session = Depends(get_db)):
     return [
-        {"id": a.id, "name": a.name, "count": len(a.entries)}
+        {"id": a.id, "name": a.name, "count": len(a.entries),
+         "contains": any(e.photo_id == photo_id for e in a.entries)}
         for a in db.query(Album).order_by(Album.name).all()
     ]
 
@@ -183,6 +184,8 @@ def add_photos(album_id: int, data: AlbumPhotosIn, db: Session = Depends(get_db)
     album = db.get(Album, album_id)
     if not album:
         raise HTTPException(404, "Albumet hittades inte")
+    if any(db.get(Photo, pid) is None for pid in data.photo_ids):
+        raise HTTPException(404, "En av bilderna finns inte kvar")
     existing = {e.photo_id for e in album.entries}
     pos = _next_position(db, album_id)
     added = 0
@@ -199,6 +202,8 @@ def add_photos(album_id: int, data: AlbumPhotosIn, db: Session = Depends(get_db)
 
 @router.delete("/api/albums/{album_id}/photos/{photo_id}")
 def remove_photo(album_id: int, photo_id: int, db: Session = Depends(get_db)):
+    if not db.get(Album, album_id):
+        raise HTTPException(404, "Albumet finns inte kvar")
     entry = db.get(AlbumPhoto, (album_id, photo_id))
     if entry:
         db.delete(entry)

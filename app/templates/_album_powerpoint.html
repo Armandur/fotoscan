@@ -1,0 +1,63 @@
+<button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#pptx-modal" {% if not entries %}disabled{% endif %}>Ladda ner PowerPoint</button>
+<div class="modal fade" id="pptx-modal" tabindex="-1" aria-labelledby="pptx-title">
+    <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+        <form id="pptx-form" action="/api/albums/{{ album.id }}/export-pptx" method="post" class="d-flex flex-column overflow-hidden">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="pptx-title">PowerPoint från albumet</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Stäng"></button>
+            </div>
+            <div class="modal-body">
+                <p>Ett foto per sida, i albumets ordning. Du kan ändra bilder, beskärning och text i PowerPoint.</p>
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label for="pptx-aspect" class="form-label">Sidformat</label>
+                        <select id="pptx-aspect" name="aspect" class="form-select">
+                            <option value="16:9">16:9 (bredbild)</option>
+                            <option value="4:3">4:3</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="pptx-fit" class="form-label">Bildpassning</label>
+                        <select id="pptx-fit" name="fit" class="form-select" aria-describedby="pptx-fit-help">
+                            <option value="contain">Visa hela bilden</option>
+                            <option value="cover">Fyll bildytan</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="pptx-fit-help" class="small text-secondary">Visa hela bilden lämnar svarta kanter vid behov. Fyll bildytan beskär kanterna och kan skära bort personer.</p>
+                <label for="pptx-metadata" class="form-label">Metadata</label>
+                <select id="pptx-metadata" name="metadata" class="form-select mb-3">
+                    <option value="slide">Bildtext under fotot</option>
+                    <option value="none">Ingen metadata</option>
+                    <option value="notes">Bara i talaranteckningar</option>
+                    <option value="both">Bildtext och talaranteckningar</option>
+                </select>
+                <fieldset id="pptx-fields" class="mb-3">
+                    <legend class="fs-6">Ta med dessa uppgifter</legend>
+                    <div class="row">
+                        {% for key, label in [('date','Datum'),('place','Plats'),('persons','Personer'),('source','Källa'),('tags','Taggar'),('notes','Anteckningar'),('filename','Filnamn')] %}
+                        <div class="col-6"><div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="{{ key }}" id="pptx-{{ key }}" {% if key in ['date','place'] %}checked{% endif %}>
+                            <label class="form-check-label" for="pptx-{{ key }}">{{ label }}</label>
+                        </div></div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <p class="small text-secondary">Bildtexten får högst tre rader. Längre texter hamnar i sin helhet i talaranteckningarna. Även talaranteckningar följer med filen.</p>
+                <label for="pptx-quality" class="form-label">Bildkvalitet</label>
+                <select id="pptx-quality" name="quality" class="form-select mb-3">
+                    <option value="normal">Normal (högst 1920 pixlar)</option>
+                    <option value="high">Hög (högst 3840 pixlar, större fil)</option>
+                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="pptx-cover" name="title_slide" value="true">
+                    <label class="form-check-label" for="pptx-cover">Titelsida med albumets namn</label>
+                </div>
+                <p class="small text-secondary mt-3">Exporten använder sparad metadata och sparade bildjusteringar. Originalen förblir orörda.</p>
+                <div id="pptx-status" role="status" aria-live="polite"></div>
+                <a id="pptx-download" class="btn btn-success mt-2" hidden download="fotoscan-album.pptx">Ladda ner PowerPoint-filen</a>
+            </div>
+            <div class="modal-footer"><button class="btn btn-primary" id="pptx-submit" type="submit">Skapa PowerPoint</button></div>
+        </form>
+    </div></div>
+</div>

@@ -10,6 +10,7 @@
 <div class="d-flex gap-2 flex-wrap mb-3">
 <button id="activate-album" data-album-id="{{ album.id }}" class="btn btn-outline-primary btn-sm">Använd för snabbval</button>
 {% include "_album_export.html" %}
+{% include "_album_powerpoint.html" %}
 </div>
 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap" data-album-id="{{ album.id }}">
     <div class="input-group" style="max-width:360px">
@@ -47,6 +48,7 @@
 {% block scripts %}
 <script src="/static/js/album-selection.js?v={{ asset_v }}"></script>
 <script src="/static/js/album-export.js?v={{ asset_v }}"></script>
+<script src="/static/js/album-powerpoint.js?v={{ asset_v }}"></script>
 <script>
 (() => {
     const wrap = document.querySelector("[data-album-id]");

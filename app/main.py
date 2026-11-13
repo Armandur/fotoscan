@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import BASE_DIR
 from app.database import init_db
 from app.routes import (
-    album_export, albums, backside, backup, dashboard, duplicates, export, faces, faces_ai,
+    album_powerpoint, album_export, albums, backside, backup, dashboard, duplicates, export, faces, faces_ai,
     geo, pairing, persons, photos, places, scan, tags, timeline,
 )
 
@@ -43,3 +43,5 @@ app.include_router(albums.router)
 app.include_router(backup.router)
 
 app.include_router(album_export.router)
+
+app.include_router(album_powerpoint.router)
